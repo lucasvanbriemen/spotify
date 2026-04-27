@@ -89,11 +89,8 @@
         const token = await fetchToken();
         if (!token) return;
 
-        if (window.Spotify) {
-            initPlayer();
-        } else {
-            window.onSpotifyWebPlaybackSDKReady = initPlayer;
-        }
+        await window.spotifySdkReady;
+        initPlayer();
     }
 
     async function spotifyApi(method, path, body) {
