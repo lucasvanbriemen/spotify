@@ -148,14 +148,6 @@
         try { await player.togglePlay(); } catch (e) { error = e.message; }
     }
 
-    async function next() {
-        try { await player.nextTrack(); } catch (e) { error = e.message; }
-    }
-
-    async function previous() {
-        try { await player.previousTrack(); } catch (e) { error = e.message; }
-    }
-
     async function loadLyrics(track) {
         const seq = ++lyricsSeq;
         lyricsTrackId = track.id;
@@ -274,26 +266,18 @@
 </script>
 
 <main>
-    <h1>Spotify Web Player</h1>
-
     {#if !authenticated}
         <p>Log in with Spotify to start playing music in this browser tab.</p>
         <a class="btn" href="/auth/spotify">Log in with Spotify</a>
     {:else if !ready}
         <p>Connecting player…</p>
     {:else}
-        <p class="status">
-            Device ready: <code>{deviceId}</code>
-        </p>
-
-        <div class="row">
             <input
                 bind:value={query}
                 oninput={onQueryInput}
                 placeholder="Search songs…"
                 autocomplete="off"
             />
-        </div>
 
         {#if searching}
             <p class="muted">Searching…</p>
@@ -351,9 +335,7 @@
         {/if}
 
         <div class="row">
-            <button class="btn" onclick={previous}>⏮</button>
             <button class="btn" onclick={togglePlay}>{paused ? '▶' : '⏸'}</button>
-            <button class="btn" onclick={next}>⏭</button>
         </div>
 
         <a class="logout" href="/auth/spotify/logout">Log out</a>
@@ -365,13 +347,6 @@
 </main>
 
 <style>
-    main {
-        font-family: system-ui, sans-serif;
-        max-width: 36rem;
-        margin: 4rem auto;
-        padding: 2rem;
-        text-align: center;
-    }
     h1 {
         font-size: 2rem;
         margin: 0 0 1.5rem;
@@ -381,14 +356,6 @@
         gap: 0.5rem;
         justify-content: center;
         margin: 1rem 0;
-    }
-    .row input {
-        flex: 1;
-        max-width: 24rem;
-        padding: 0.5rem 0.75rem;
-        border-radius: 0.5rem;
-        border: 1px solid #ccc;
-        font-family: monospace;
     }
     .btn {
         padding: 0.55rem 1.2rem;
