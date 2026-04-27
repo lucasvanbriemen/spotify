@@ -27,7 +27,7 @@ class IsLoggedIn
             app()->instance('current_user', $current_user);
             return $next($request);
         }
-        
+
         // Prod only
         if (app()->environment('local')) {
             $authToken = config('app.user_token');
