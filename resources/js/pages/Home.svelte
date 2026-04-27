@@ -26,8 +26,7 @@
     let lyricsContainer;
 
     async function fetchToken() {
-        const res = await fetch('/api/spotify/token', { credentials: 'same-origin' });
-        const data = await res.json();
+        const data = await api.get(route('spotify.token'));
         if (!data.authenticated) {
             authenticated = false;
             return null;
