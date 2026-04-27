@@ -1,3 +1,14 @@
+@php
+$routes = collect(Route::getRoutes())->map(function ($route) {
+    return [
+        'uri' => $route->uri(),
+        'name' => $route->getName(),
+        'method' => $route->methods()[0],
+    ];
+})->values();
+
+@endphp
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,7 +25,7 @@
 </head>
 <body>
     <script>
-        const API_ROUTES = [];
+        const API_ROUTES = @json($routes);;
         const currentDomain = window.location.origin;
 
         function route(name, params = {}) {
