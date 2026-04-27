@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spotify</title>
     <script src="https://sdk.scdn.co/spotify-player.js"></script>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/js/main.js'])
 </head>
 <body>
     <div id="app"></div>
