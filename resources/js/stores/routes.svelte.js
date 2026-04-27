@@ -1,16 +1,10 @@
 import Home from '../pages/Home.svelte';
-import About from '../pages/About.svelte';
 
 export const ROUTES = {
   home: {
     path: '/',
     component: Home,
     name: 'Home',
-  },
-  about: {
-    path: '/about',
-    component: About,
-    name: 'About',
   },
 };
 
