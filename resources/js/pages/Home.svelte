@@ -8,10 +8,7 @@
     let query = $state('');
     let results = $state([]);
     let searching = $state(false);
-    let lyricsLoading = $state(false);
-    let lyricsTrackId = $state(null);
     let syncedLines = $state([]);
-    let plainLyrics = $state('');
     let positionMs = $state(0);
     let trackDurationMs = $state(0);
 
@@ -20,7 +17,6 @@
     let tokenExpiresAt = 0;
     let searchSeq = 0;
     let searchTimer = null;
-    let lyricsSeq = 0;
     let lastSyncWallMs = 0;
     let lastSyncedPosMs = 0;
     let lyricsContainer;
@@ -148,72 +144,6 @@
         try { await player.togglePlay(); } catch (e) { error = e.message; }
     }
 
-    async function loadLyrics(track) {
-        const seq = ++lyricsSeq;
-        lyricsTrackId = track.id;
-        syncedLines = [];
-        plainLyrics = '';
-        lyricsLoading = true;
-
-        const artist = track.artists?.[0]?.name ?? '';
-        const title = stripFeatured(track.name);
-        const album = track.album?.name ?? '';
-        const duration = Math.round((track.duration_ms ?? trackDurationMs) / 1000);
-
-        const params = new URLSearchParams({
-            artist_name: artist,
-            track_name: title,
-            album_name: album,
-            duration: String(duration),
-        });
-
-        try {
-            let res = await fetch(`https://lrclib.net/api/get?${params}`);
-            if (res.status === 404) {
-                const sp = new URLSearchParams({ artist_name: artist, track_name: title });
-                res = await fetch(`https://lrclib.net/api/get?${sp}`);
-            }
-            if (seq !== lyricsSeq) return;
-            if (!res.ok) return;
-
-            const data = await res.json();
-            if (seq !== lyricsSeq) return;
-
-            syncedLines = data.syncedLyrics ? parseLrc(data.syncedLyrics) : [];
-            plainLyrics = (data.plainLyrics ?? '').trim();
-        } catch {
-            // ignore
-        } finally {
-            if (seq === lyricsSeq) lyricsLoading = false;
-        }
-    }
-
-    function stripFeatured(name) {
-        return name
-            .replace(/\s*[\(\[][^)\]]*(feat\.?|featuring|with)[^)\]]*[\)\]]/gi, '')
-            .replace(/\s*-\s*(feat\.?|featuring|with)\s.*$/i, '')
-            .trim();
-    }
-
-    function parseLrc(text) {
-        const lines = [];
-        for (const raw of text.split(/\r?\n/)) {
-            const stamps = [...raw.matchAll(/\[(\d+):(\d+)(?:[.:](\d+))?\]/g)];
-            if (!stamps.length) continue;
-            const lyric = raw.replace(/\[[^\]]+\]/g, '').trim();
-            for (const m of stamps) {
-                const min = +m[1];
-                const sec = +m[2];
-                const fracStr = m[3] ?? '0';
-                const frac = +`0.${fracStr}`;
-                const timeMs = (min * 60 + sec + frac) * 1000;
-                if (Number.isNaN(timeMs)) continue;
-                lines.push({ time: timeMs, text: lyric });
-            }
-        }
-        lines.sort((a, b) => a.time - b.time);
-        return lines;
-    }
 
     let activeIdx = $derived.by(() => {
         if (!syncedLines.length) return -1;
@@ -223,12 +153,6 @@
             else break;
         }
         return idx;
-    });
-
-    $effect(() => {
-        if (currentTrack && currentTrack.id !== lyricsTrackId) {
-            loadLyrics(currentTrack);
-        }
     });
 
     $effect(() => {
@@ -308,29 +232,6 @@
                     <strong>{currentTrack.name}</strong>
                     <div>{currentTrack.artists.map(a => a.name).join(', ')}</div>
                 </div>
-            </div>
-
-            <div class="lyrics" bind:this={lyricsContainer}>
-                {#if lyricsLoading}
-                    <p class="muted">Loading lyrics…</p>
-                {:else if syncedLines.length}
-                    <ol class="synced">
-                        {#each syncedLines as line, i (i)}
-                            <li
-                                data-idx={i}
-                                class:active={i === activeIdx}
-                                class:past={i < activeIdx}
-                            >
-                                {line.text || '♪'}
-                            </li>
-                        {/each}
-                    </ol>
-                {:else if plainLyrics}
-                    <p class="muted">No synced lyrics — showing plain text.</p>
-                    <pre>{plainLyrics}</pre>
-                {:else}
-                    <p class="muted">No lyrics found.</p>
-                {/if}
             </div>
         {/if}
 
