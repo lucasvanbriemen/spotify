@@ -196,31 +196,22 @@
     {:else if !ready}
         <p>Connecting player…</p>
     {:else}
-            <input
-                bind:value={query}
-                oninput={onQueryInput}
-                placeholder="Search songs…"
-                autocomplete="off"
-            />
+        <input
+            bind:value={query}
+            oninput={onQueryInput}
+            placeholder="Search songs…"
+            autocomplete="off"
+        />
 
         {#if searching}
             <p class="muted">Searching…</p>
-        {:else if results.length}
-            <ul class="results">
-                {#each results as track (track.id)}
-                    <li>
-                        <button class="result" onclick={() => playUri(track.uri)}>
-                            {#if track.album?.images?.at(-1)}
-                                <img src={track.album.images.at(-1).url} alt="" />
-                            {/if}
-                            <span class="meta">
-                                <strong>{track.name}</strong>
-                                <span class="artists">{track.artists.map(a => a.name).join(', ')}</span>
-                            </span>
-                        </button>
-                    </li>
-                {/each}
-            </ul>
+        {:else}
+            {#each results as track (track.id)}
+                <button class="result" onclick={() => playUri(track.uri)}>
+                    <strong>{track.name}</strong>
+                    <span class="artists">{track.artists.map(a => a.name).join(', ')}</span>
+                </button>
+            {/each}
         {/if}
 
         {#if currentTrack}
