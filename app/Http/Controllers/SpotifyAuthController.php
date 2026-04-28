@@ -84,12 +84,6 @@ class SpotifyAuthController extends Controller
         ]);
     }
 
-    public function logout(Request $request): RedirectResponse
-    {
-        $request->session()->forget('spotify_token');
-        return redirect('/');
-    }
-
     private function refresh(Request $request, string $refreshToken): ?array
     {
         $response = Http::asForm()->post('https://accounts.spotify.com/api/token', [

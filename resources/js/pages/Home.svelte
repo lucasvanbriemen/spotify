@@ -229,8 +229,6 @@
         <div class="row">
             <button class="btn" onclick={togglePlay}>{paused ? '▶' : '⏸'}</button>
         </div>
-
-        <a class="logout" href="/auth/spotify/logout">Log out</a>
     {/if}
 
     {#if error}
