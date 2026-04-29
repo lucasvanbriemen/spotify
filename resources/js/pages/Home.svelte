@@ -1,11 +1,11 @@
 <script>
+    import { searchQuery } from '../stores/search_query.svelte.js';
     let authenticated = $state(false);
     let ready = $state(false);
     let deviceId = $state(null);
     let currentTrack = $state(null);
     let paused = $state(true);
     let error = $state(null);
-    let query = $state('');
     let results = $state([]);
     let searching = $state(false);
     let syncedLines = $state([]);
@@ -137,7 +137,7 @@
 
     function onQueryInput() {
         clearTimeout(searchTimer);
-        searchTimer = setTimeout(() => runSearch(query), 250);
+        searchTimer = setTimeout(() => runSearch($searchQuery), 250);
     }
 
     async function togglePlay() {
@@ -197,7 +197,7 @@
         <p>Connecting player…</p>
     {:else}
         <input
-            bind:value={query}
+            bind:value={$searchQuery}
             oninput={onQueryInput}
             placeholder="Search songs…"
             autocomplete="off"
