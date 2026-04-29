@@ -31,30 +31,6 @@ header {
     transform: rotate(25deg);
   }
 
-  .organization {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-
-    div {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-
-      img {
-        width: 1.5rem;
-        height: 1.5rem;
-        border-radius: 50%;
-      }
-    }
-
-    .org, .repo {
-      font-size: 1rem;
-      font-weight: 500;
-      color: var(--text-color-secondary);
-    }
-  }
-
   a:not(.logo) {
     text-decoration: none;
     font-size: 1rem;
