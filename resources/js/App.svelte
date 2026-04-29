@@ -1,14 +1,10 @@
 <script>
     import { onMount } from 'svelte';
     import { router, initRouter } from './stores/router.svelte.js';
-    import { getAllRoutes } from './stores/routes.svelte.js';
     import Header from './components/Header.svelte';
     import api from './lib/api.js';
 
-    let routes = [];
-
     onMount(() => {
-        routes = getAllRoutes();
         initRouter();
     });
 
