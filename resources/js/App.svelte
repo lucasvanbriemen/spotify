@@ -2,6 +2,7 @@
     import { onMount } from 'svelte';
     import { router, initRouter } from './stores/router.svelte.js';
     import { getAllRoutes } from './stores/routes.svelte.js';
+    import Header from './components/Header.svelte';
     import api from './lib/api.js';
 
     let routes = [];
@@ -13,6 +14,8 @@
 
     window.api = api;
 </script>
+
+<Header />
 
 {#if router.currentComponent}
     <svelte:component this={router.currentComponent} {...router.params} />
