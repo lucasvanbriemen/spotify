@@ -11,7 +11,6 @@
         initRouter();
     });
 
-    // Expose api for components
     window.api = api;
 </script>
 
@@ -25,10 +24,5 @@
         padding: 0;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     }
-
-    main {
-        padding: 2rem;
-        max-width: 1200px;
-        margin: 0 auto;
-    }
+    
 </style>
