@@ -46,4 +46,9 @@ header {
       color: var(--text-color);
     }
   }
+
+  > span {
+    font-size: 1.1rem;
+    line-height: 0;
+  }
 }

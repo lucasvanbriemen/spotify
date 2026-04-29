@@ -11,4 +11,5 @@
 
   <div class="separator"></div>
 
+  <span>playlist #1</span>
 </header>
