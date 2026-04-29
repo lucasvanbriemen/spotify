@@ -31,24 +31,18 @@ header {
     transform: rotate(25deg);
   }
 
-  a:not(.logo) {
-    text-decoration: none;
-    font-size: 1rem;
-    color: var(--text-color-secondary);
-    font-weight: 500;
-    padding: 0.5rem;
-    border-radius: 0.5rem;
+  .logo  {
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
 
-    border: 2px solid var(--background-color-two);
-
-    &:hover {
-      color: var(--text-color);
-      background-color: var(--background-color-two);
+    svg {
+      width: 2rem;
+      height: 2rem;
     }
 
-    &.active {
-      border: 2px solid var(--primary-color-dark);
-      color: var(--text-color);
+    .title {
+      line-height: 0;
     }
   }
 }

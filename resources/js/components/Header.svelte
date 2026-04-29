@@ -6,7 +6,7 @@
 
 <header>
   <a class="logo" href="#/">
-    <Icon name="logo" />
+    <Icon name="logo" size="2rem" />
     <span class="title">Music</span>
   </a>
 
