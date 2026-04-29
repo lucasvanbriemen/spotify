@@ -32,7 +32,7 @@ header {
   }
 
   .logo  {
-    color: var(--text-color);
+    text-decoration: none;
     display: flex;
     align-items: center;
 
@@ -43,6 +43,7 @@ header {
 
     .title {
       line-height: 0;
+      color: var(--text-color);
     }
   }
 }

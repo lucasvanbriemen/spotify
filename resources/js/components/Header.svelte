@@ -1,7 +1,6 @@
 <script>
   import Icon from './Icon.svelte';
   import '../../scss/header.scss';
-
 </script>
 
 <header>
