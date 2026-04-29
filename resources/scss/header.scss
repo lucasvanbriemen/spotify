@@ -1,0 +1,78 @@
+header {
+  background-color: var(--background-color-one);
+  padding: 1rem;
+
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  .logo {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    :global(svg) {
+      width: 2rem;
+      height: 2rem;
+    }
+
+    .title {
+      font-size: 1.25rem;
+      font-weight: bold;
+    }
+  }
+
+  .separator {
+    width: 3px;
+    height: 2rem;
+    background-color: var(--border-color);
+    border-radius: 1rem;
+    transform: rotate(25deg);
+  }
+
+  .organization {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    div {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      img {
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: 50%;
+      }
+    }
+
+    .org, .repo {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--text-color-secondary);
+    }
+  }
+
+  a:not(.logo) {
+    text-decoration: none;
+    font-size: 1rem;
+    color: var(--text-color-secondary);
+    font-weight: 500;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+
+    border: 2px solid var(--background-color-two);
+
+    &:hover {
+      color: var(--text-color);
+      background-color: var(--background-color-two);
+    }
+
+    &.active {
+      border: 2px solid var(--primary-color-dark);
+      color: var(--text-color);
+    }
+  }
+}
