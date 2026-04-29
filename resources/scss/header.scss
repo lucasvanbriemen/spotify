@@ -5,6 +5,16 @@ header {
   display: flex;
   align-items: center;
   gap: 1rem;
+  justify-content: space-between;
+
+  position: relative;
+
+  >div {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+  }
 
   .logo {
     text-decoration: none;
@@ -50,5 +60,35 @@ header {
   > span {
     font-size: 1.1rem;
     line-height: 0;
+  }
+
+  .search-container {
+    background-color: var(--background-color-two);
+    padding: 1rem;
+    border-radius: 1.5rem;
+    outline: none;
+    position: relative;
+    overflow: hidden;
+    min-height: 1.5rem;
+
+    input {
+      position: absolute;
+      inset: 0;
+      padding: 1rem;
+      border: none;
+      background-color: transparent;
+      color: var(--text-color);
+    }
+
+    .search-icon {
+      position: absolute;
+      top: 50%;
+      right: 1rem;
+      transform: translateY(-50%);
+      color: var(--text-color-secondary);
+      cursor: pointer;
+      pointer-events: none;
+      transition: color 0.2s ease-in-out;
+    }
   }
 }

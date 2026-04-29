@@ -5,14 +5,21 @@
 </script>
 
 <header>
-  <a class="logo" href="#/">
-    <Icon name="logo" size="2rem" />
-    <span class="title">Music</span>
-  </a>
+  <div>
+    <a class="logo" href="#/">
+      <Icon name="logo" size="2rem" />
+      <span class="title">Music</span>
+    </a>
 
-  <div class="separator"></div>
+    <div class="separator"></div>
 
-  <span>playlist #1</span>
+    <span>playlist #1</span>
+  </div>
 
-  <input type="text" placeholder="search" bind:value={$searchQuery}>
+  <div class="search-container">
+    <input type="text" placeholder="search" bind:value={$searchQuery}>
+    <Icon name="search" size="1.25rem" className="search-icon" />
+  </div>
+
+  <div></div>
 </header>
