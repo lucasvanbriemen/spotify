@@ -17,7 +17,7 @@
 
   function onQueryInput() {
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => runSearch($searchQuery), 250);
+    searchTimer = setTimeout(() => getResults(), 250);
   }
 
   async function playVideo(video) {
@@ -42,12 +42,12 @@
   </div>
 
   <div class="search-container">
-    <input type="text" placeholder="search" bind:value={$searchQuery} oninput={onQueryInput} />
+    <input type="text" placeholder="search" bind:value={$searchQuery} on:input={onQueryInput} />
     <Icon name="search" size="1.25rem" className="search-icon" />
 
     <div class="search-results">
       {#each results as result}
-        <button class="result" onclick={() => playVideo(result)}>{result.title}</button>
+        <button class="result" on:click={() => playVideo(result)}>{result.title}</button>
       {/each}
     </div>
   </div>
