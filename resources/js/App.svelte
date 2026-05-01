@@ -2,6 +2,7 @@
     import { onMount } from 'svelte';
     import { router, initRouter } from './stores/router.svelte.js';
     import Header from './components/Header.svelte';
+    import Player from './components/Player.svelte';
     import api from './lib/api.js';
 
     onMount(() => {
@@ -16,6 +17,8 @@
 {#if router.currentComponent}
     <svelte:component this={router.currentComponent} {...router.params} />
 {/if}
+
+<Player />
 
 <style>
     :global(body) {
