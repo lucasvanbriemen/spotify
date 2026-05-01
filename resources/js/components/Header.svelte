@@ -5,7 +5,7 @@
   import '../../scss/header.scss';
 
   let results = $state([]);
-  let resultsVisible = false;
+  let resultsVisible = $state(true);
   let searchTimer = null;
 
   async function getResults() {

@@ -117,10 +117,12 @@ header {
           background-color: var(--background-color-one);
         }
       }
+
+            &.visible {
+              display: block;
+            }
     }
 
-    &.visible {
-      display: block;
-    }
+    
   }
 }
