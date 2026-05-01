@@ -1,0 +1,40 @@
+footer {
+  background-color: var(--background-color-one);
+  padding: 1rem;
+
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-content: space-between;
+
+  position: relative;
+
+  >div {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+  }
+
+  .separator {
+    width: 3px;
+    height: 2rem;
+    background-color: var(--border-color);
+    border-radius: 1rem;
+    transform: rotate(25deg);
+  }
+
+  >span {
+    font-size: 1.1rem;
+    line-height: 0;
+  }
+
+  .search-container {
+    background-color: var(--background-color-two);
+    padding: 0.75rem 1rem;
+    border-radius: 1.5rem;
+    outline: none;
+    position: relative;
+    min-height: 1.5rem;
+  }
+}

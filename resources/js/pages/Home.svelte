@@ -1,7 +1,6 @@
 <script>
     import { searchQuery } from '../stores/search_query.svelte.js';
     import { currentlyPlaying } from '../stores/currently_playing.svelte.js';
-    let error = $state(null);
     let youtubeResults = $state([]);
     let searching = $state(false);
     let activeVideo = $state(null);
@@ -9,18 +8,12 @@
     let searchTimer = null;
 
     async function playVideo(video) {
-        error = null;
-        try {
             const data = await api.get(`${route('youtube.audio')}?id=${encodeURIComponent(video.id)}`);
             if (!data?.stream_url) {
-                error = data?.detail || data?.error || 'Could not load audio';
                 return;
             }
             activeVideo = { ...video, stream_url: data.stream_url };
             currentlyPlaying.set(activeVideo);
-        } catch (e) {
-            error = e.message;
-        }
     }
 
     async function runSearch(q) {
@@ -33,11 +26,7 @@
         const [youtubeRes] = await Promise.allSettled([
             api.get(`${route('youtube.search')}?q=${encodeURIComponent(q)}`),
         ]);
-        if (youtubeRes.status === 'fulfilled') {
             youtubeResults = youtubeRes.value?.items ?? [];
-        } else {
-            error = youtubeRes.reason?.message ?? 'YouTube search failed';
-        }
         searching = false;
     }
 
@@ -74,8 +63,4 @@
                 {/each}
             {/if}
         {/if}
-
-    {#if error}
-        <p class="error">{error}</p>
-    {/if}
 </main>

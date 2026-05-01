@@ -1,6 +1,6 @@
 <script>
   import { currentlyPlaying } from '../stores/currently_playing.svelte.js';
-  import '../../scss/header.scss';
+  import '../../scss/player.scss';
 
   console.log('currentlyPlaying', $currentlyPlaying);
 </script>
