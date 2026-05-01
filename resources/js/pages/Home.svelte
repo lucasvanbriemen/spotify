@@ -1,5 +1,6 @@
 <script>
     import { searchQuery } from '../stores/search_query.svelte.js';
+    import { currentlyPlaying } from '../stores/currently_playing.svelte.js';
     let error = $state(null);
     let youtubeResults = $state([]);
     let searching = $state(false);
@@ -16,6 +17,7 @@
                 return;
             }
             activeVideo = { ...video, stream_url: data.stream_url };
+            currentlyPlaying.set(activeVideo);
         } catch (e) {
             error = e.message;
         }
@@ -71,15 +73,6 @@
                     </button>
                 {/each}
             {/if}
-        {/if}
-
-        {#if activeVideo}
-            <div class="video-player">
-                <strong>{activeVideo.title}</strong>
-                <span class="artists">{activeVideo.channel}</span>
-                <audio src={activeVideo.stream_url} autoplay controls></audio>
-                <button class="btn" onclick={() => activeVideo = null}>Close</button>
-            </div>
         {/if}
 
     {#if error}
