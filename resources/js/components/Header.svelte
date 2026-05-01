@@ -5,6 +5,7 @@
   import '../../scss/header.scss';
 
   let results = $state([]);
+  let searchTimer = null;
 
   async function getResults() {
     const query = $searchQuery;
@@ -12,6 +13,11 @@
     results = await api.get(route('search') + '?q=' + encodeURIComponent(query));
 
     console.log('results', results);
+  }
+
+  function onQueryInput() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => runSearch($searchQuery), 250);
   }
 
   async function playVideo(video) {
@@ -36,12 +42,12 @@
   </div>
 
   <div class="search-container">
-    <input type="text" placeholder="search" bind:value={$searchQuery} on:input={getResults} />
+    <input type="text" placeholder="search" bind:value={$searchQuery} oninput={onQueryInput} />
     <Icon name="search" size="1.25rem" className="search-icon" />
 
     <div class="search-results">
       {#each results as result}
-        <button class="result" on:click={() => playVideo(result)}>{result.title}</button>
+        <button class="result" onclick={() => playVideo(result)}>{result.title}</button>
       {/each}
     </div>
   </div>
