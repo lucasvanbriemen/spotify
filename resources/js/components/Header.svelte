@@ -29,6 +29,12 @@
   <div class="search-container">
     <input type="text" placeholder="search" bind:value={$searchQuery} on:input={getResults} />
     <Icon name="search" size="1.25rem" className="search-icon" />
+
+    <div class="search-results">
+      {#each results as result}
+        <div class="result">{result.title}</div>
+      {/each}
+    </div>
   </div>
 
   <div></div>

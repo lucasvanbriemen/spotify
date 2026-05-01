@@ -85,6 +85,6 @@ class YouTubeController extends Controller
                 ?? null,
         ])->filter(fn ($i) => $i['id'] !== null)->values();
 
-        return response()->json(['items' => $items]);
+        return response()->json($items);
     }
 }
