@@ -288,6 +288,3 @@
         <p class="error">{error}</p>
     {/if}
 </main>
-
-<iframe width="560" height="315" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen="" src="https://www.youtube.com/embed/FL9RuGRkM9A" title="Adam Warlock&amp;#39;s Entrance but in HD | Guardians of the Galaxy Vol. 3"></iframe>
-<iframe width="560" height="315" src="https://www.youtube.com/embed/FL9RuGRkM9A?si=WDMulnydI_tK08DV" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
