@@ -21,7 +21,7 @@
   }
 
   async function playVideo(video) {
-    const data = await api.get(`${route('youtube.audio')}?id=${encodeURIComponent(video.id)}`);
+    const data = await api.get(`${route('get-mp3')}?id=${encodeURIComponent(video.id)}`);
     if (!data?.stream_url) {
       return;
     }
