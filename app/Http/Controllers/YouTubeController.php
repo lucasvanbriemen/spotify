@@ -52,39 +52,4 @@ class YouTubeController extends Controller
 
         return response()->json(['stream_url' => $url]);
     }
-
-
-    public function search(Request $request): JsonResponse
-    {
-        $query = trim((string) $request->query('q', ''));
-        if ($query === '') {
-            return response()->json(['items' => []]);
-        }
-
-        $apiKey = config('services.youtube.api_key');
-        $response = Http::get('https://www.googleapis.com/youtube/v3/search', [
-            'part' => 'snippet',
-            'type' => 'video',
-            'videoEmbeddable' => 'true',
-            'videoSyndicated' => 'true',
-            'maxResults' => 10,
-            'q' => $query,
-            'key' => $apiKey,
-        ]);
-
-        if ($response->failed()) {
-            return response()->json(['items' => [], 'error' => $response->body()], $response->status());
-        }
-
-        $items = collect($response->json('items', []))->map(fn ($item) => [
-            'id' => $item['id']['videoId'] ?? null,
-            'title' => $item['snippet']['title'] ?? '',
-            'channel' => $item['snippet']['channelTitle'] ?? '',
-            'thumbnail' => $item['snippet']['thumbnails']['medium']['url']
-                ?? $item['snippet']['thumbnails']['default']['url']
-                ?? null,
-        ])->filter(fn ($i) => $i['id'] !== null)->values();
-
-        return response()->json($items);
-    }
 }
