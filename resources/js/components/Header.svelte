@@ -5,14 +5,14 @@
   import '../../scss/header.scss';
 
   let results = $state([]);
+  let resultsVisible = false;
   let searchTimer = null;
 
   async function getResults() {
     const query = $searchQuery;
 
     results = await api.get(route('search') + '?q=' + encodeURIComponent(query));
-
-    console.log('results', results);
+    resultsVisible = true;
   }
 
   function onQueryInput() {
@@ -25,6 +25,9 @@
     if (!data?.stream_url) {
       return;
     }
+
+    resultsVisible = false;
+
     currentlyPlaying.set({ ...video, stream_url: data.stream_url });
   }
 </script>
@@ -45,7 +48,7 @@
     <input type="text" placeholder="search" bind:value={$searchQuery} on:input={onQueryInput} />
     <Icon name="search" size="1.25rem" className="search-icon" />
 
-    <div class="search-results">
+    <div class="search-results" class:visible={resultsVisible}>
       {#each results as result}
         <button class="result" on:click={() => playVideo(result)}>{result.title}</button>
       {/each}
