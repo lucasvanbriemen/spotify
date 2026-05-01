@@ -64,20 +64,25 @@ header {
 
   .search-container {
     background-color: var(--background-color-two);
-    padding: 1rem;
+    padding: 0.75rem 1rem;
     border-radius: 1.5rem;
     outline: none;
     position: relative;
-    overflow: hidden;
     min-height: 1.5rem;
 
     input {
       position: absolute;
       inset: 0;
-      padding: 1rem;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
       border: none;
       background-color: transparent;
       color: var(--text-color);
+      border-radius: 1.5rem;
+
+      &:focus {
+        outline: 2px solid var(--primary-color);
+      }
     }
 
     .search-icon {
