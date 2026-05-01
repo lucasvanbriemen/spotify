@@ -1,22 +1,14 @@
 <script>
     import { searchQuery } from '../stores/search_query.svelte.js';
-    let currentTrack = $state(null);
-    let paused = $state(true);
     let error = $state(null);
     let youtubeResults = $state([]);
     let searching = $state(false);
     let activeVideo = $state(null);
-    let trackDurationMs = $state(0);
 
-    let player = null;
-    let searchSeq = 0;
     let searchTimer = null;
-    let lastSyncWallMs = 0;
-    let lastSyncedPosMs = 0;
 
     async function playVideo(video) {
         error = null;
-        try { await player?.pause(); } catch {}
         try {
             const data = await api.get(`${route('youtube.audio')}?id=${encodeURIComponent(video.id)}`);
             if (!data?.stream_url) {
@@ -30,7 +22,6 @@
     }
 
     async function runSearch(q) {
-        const seq = ++searchSeq;
         if (!q.trim()) {
             spotifyResults = [];
             youtubeResults = [];
@@ -53,37 +44,6 @@
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => runSearch($searchQuery), 250);
     }
-
-    async function togglePlay() {
-        try { await player.togglePlay(); } catch (e) { error = e.message; }
-    }
-
-
-
-    $effect(() => {
-        if (paused) return;
-        const id = setInterval(() => {
-            const wall = performance.now();
-            positionMs = Math.min(
-                lastSyncedPosMs + (wall - lastSyncWallMs),
-                trackDurationMs || Number.POSITIVE_INFINITY
-            );
-        }, 100);
-        return () => clearInterval(id);
-    });
-
-    $effect(() => {
-        if (!player) return;
-        const id = setInterval(async () => {
-            const state = await player.getCurrentState();
-            if (!state) return;
-            lastSyncedPosMs = state.position;
-            lastSyncWallMs = performance.now();
-            paused = state.paused;
-            trackDurationMs = state.duration;
-        }, 2000);
-        return () => clearInterval(id);
-    });
 
 </script>
 
@@ -122,22 +82,6 @@
                 <button class="btn" onclick={() => activeVideo = null}>Close</button>
             </div>
         {/if}
-
-        {#if currentTrack}
-            <div class="now-playing">
-                {#if currentTrack.album?.images?.[0]}
-                    <img src={currentTrack.album.images[0].url} alt="" />
-                {/if}
-                <div>
-                    <strong>{currentTrack.name}</strong>
-                    <div>{currentTrack.artists.map(a => a.name).join(', ')}</div>
-                </div>
-            </div>
-        {/if}
-
-        <div class="row">
-            <button class="btn" onclick={togglePlay}>{paused ? '▶' : '⏸'}</button>
-        </div>
 
     {#if error}
         <p class="error">{error}</p>
