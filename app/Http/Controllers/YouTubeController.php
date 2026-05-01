@@ -62,10 +62,6 @@ class YouTubeController extends Controller
         }
 
         $apiKey = config('services.youtube.api_key');
-        if (! $apiKey) {
-            return response()->json(['items' => [], 'error' => 'YouTube API key not configured'], 500);
-        }
-
         $response = Http::get('https://www.googleapis.com/youtube/v3/search', [
             'part' => 'snippet',
             'type' => 'video',

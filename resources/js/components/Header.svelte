@@ -7,9 +7,6 @@
 
   async function getResults() {
     const query = $searchQuery;
-    if (!query.trim()) {
-      return;
-    }
 
     results = await api.get(route('search') + '?q=' + encodeURIComponent(query));
 
