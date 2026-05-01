@@ -6,8 +6,10 @@
     let currentTrack = $state(null);
     let paused = $state(true);
     let error = $state(null);
-    let results = $state([]);
+    let spotifyResults = $state([]);
+    let youtubeResults = $state([]);
     let searching = $state(false);
+    let activeVideo = $state(null);
     let syncedLines = $state([]);
     let positionMs = $state(0);
     let trackDurationMs = $state(0);
@@ -107,6 +109,7 @@
 
     async function playUri(uri) {
         error = null;
+        activeVideo = null;
         try {
             await spotifyApi('PUT', `/me/player/play?device_id=${deviceId}`, {
                 uris: [uri],
@@ -116,23 +119,46 @@
         }
     }
 
+    async function playVideo(video) {
+        error = null;
+        try { await player?.pause(); } catch {}
+        try {
+            const data = await api.get(`${route('youtube.audio')}?id=${encodeURIComponent(video.id)}`);
+            if (!data?.stream_url) {
+                error = data?.detail || data?.error || 'Could not load audio';
+                return;
+            }
+            activeVideo = { ...video, stream_url: data.stream_url };
+        } catch (e) {
+            error = e.message;
+        }
+    }
+
     async function runSearch(q) {
         const seq = ++searchSeq;
         if (!q.trim()) {
-            results = [];
+            spotifyResults = [];
+            youtubeResults = [];
             searching = false;
             return;
         }
         searching = true;
-        try {
-            const data = await spotifyApi('GET', `/search?type=track&limit=10&q=${encodeURIComponent(q)}`);
-            if (seq !== searchSeq) return;
-            results = data?.tracks?.items ?? [];
-        } catch (e) {
-            if (seq === searchSeq) error = e.message;
-        } finally {
-            if (seq === searchSeq) searching = false;
+        const [spotifyRes, youtubeRes] = await Promise.allSettled([
+            spotifyApi('GET', `/search?type=track&limit=10&q=${encodeURIComponent(q)}`),
+            api.get(`${route('youtube.search')}?q=${encodeURIComponent(q)}`),
+        ]);
+        if (seq !== searchSeq) return;
+        if (spotifyRes.status === 'fulfilled') {
+            spotifyResults = spotifyRes.value?.tracks?.items ?? [];
+        } else {
+            error = spotifyRes.reason?.message ?? 'Spotify search failed';
         }
+        if (youtubeRes.status === 'fulfilled') {
+            youtubeResults = youtubeRes.value?.items ?? [];
+        } else {
+            error = youtubeRes.reason?.message ?? 'YouTube search failed';
+        }
+        searching = false;
     }
 
     function onQueryInput() {
@@ -206,12 +232,39 @@
         {#if searching}
             <p class="muted">Searching…</p>
         {:else}
-            {#each results as track (track.id)}
-                <button class="result" onclick={() => playUri(track.uri)}>
-                    <strong>{track.name}</strong>
-                    <span class="artists">{track.artists.map(a => a.name).join(', ')}</span>
-                </button>
-            {/each}
+            {#if spotifyResults.length}
+                <h3>Songs</h3>
+                {#each spotifyResults as track (track.id)}
+                    <button class="result" onclick={() => playUri(track.uri)}>
+                        <strong>{track.name}</strong>
+                        <span class="artists">{track.artists.map(a => a.name).join(', ')}</span>
+                    </button>
+                {/each}
+            {/if}
+
+            {#if youtubeResults.length}
+                <h3>Videos</h3>
+                {#each youtubeResults as video (video.id)}
+                    <button class="result video" onclick={() => playVideo(video)}>
+                        {#if video.thumbnail}
+                            <img src={video.thumbnail} alt="" />
+                        {/if}
+                        <span class="meta">
+                            <strong>{video.title}</strong>
+                            <span class="artists">{video.channel}</span>
+                        </span>
+                    </button>
+                {/each}
+            {/if}
+        {/if}
+
+        {#if activeVideo}
+            <div class="video-player">
+                <strong>{activeVideo.title}</strong>
+                <span class="artists">{activeVideo.channel}</span>
+                <audio src={activeVideo.stream_url} autoplay controls></audio>
+                <button class="btn" onclick={() => activeVideo = null}>Close</button>
+            </div>
         {/if}
 
         {#if currentTrack}
@@ -235,3 +288,6 @@
         <p class="error">{error}</p>
     {/if}
 </main>
+
+<iframe width="560" height="315" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen="" src="https://www.youtube.com/embed/FL9RuGRkM9A" title="Adam Warlock&amp;#39;s Entrance but in HD | Guardians of the Galaxy Vol. 3"></iframe>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/FL9RuGRkM9A?si=WDMulnydI_tK08DV" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
