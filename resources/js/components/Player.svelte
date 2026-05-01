@@ -1,5 +1,4 @@
 <script>
-  import Icon from './Icon.svelte';
   import { currentlyPlaying } from '../stores/currently_playing.svelte.js';
   import '../../scss/header.scss';
 
