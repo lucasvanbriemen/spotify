@@ -1,24 +1,22 @@
 <script>
   import Icon from './Icon.svelte';
-  import { searchQuery } from '../stores/search_query.svelte.js';
+  import { currentlyPlaying } from '../stores/currently_playing.svelte.js';
   import '../../scss/header.scss';
+
+  console.log('currentlyPlaying', $currentlyPlaying);
 </script>
 
 <header>
   <div>
-    <a class="logo" href="#/">
-      <Icon name="logo" size="2rem" />
-      <span class="title">Music</span>
-    </a>
-
+    <span class="artist">{$currentlyPlaying.artist}</span>
     <div class="separator"></div>
-
-    <span>playlist #1</span>
+    <span class="album">{$currentlyPlaying.album}</span>
+    <div class="separator"></div>
+    <span class="title">{$currentlyPlaying.title}</span>
   </div>
 
   <div class="search-container">
-    <input type="text" placeholder="search" bind:value={$searchQuery}>
-    <Icon name="search" size="1.25rem" className="search-icon" />
+    <audio src="{$currentlyPlaying.stream_url}" autoplay controls></audio>
   </div>
 
   <div></div>
