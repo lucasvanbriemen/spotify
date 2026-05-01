@@ -23,7 +23,6 @@
 
     async function runSearch(q) {
         if (!q.trim()) {
-            spotifyResults = [];
             youtubeResults = [];
             searching = false;
             return;
