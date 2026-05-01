@@ -1,6 +1,7 @@
 <script>
   import Icon from './Icon.svelte';
   import { searchQuery } from '../stores/search_query.svelte.js';
+  import { currentlyPlaying } from '../stores/currently_playing.svelte.js';
   import '../../scss/header.scss';
 
   let results = $state([]);
@@ -11,6 +12,14 @@
     results = await api.get(route('search') + '?q=' + encodeURIComponent(query));
 
     console.log('results', results);
+  }
+
+  async function playVideo(video) {
+    const data = await api.get(`${route('youtube.audio')}?id=${encodeURIComponent(video.id)}`);
+    if (!data?.stream_url) {
+      return;
+    }
+    currentlyPlaying.set({ ...video, stream_url: data.stream_url });
   }
 </script>
 
@@ -32,7 +41,7 @@
 
     <div class="search-results">
       {#each results as result}
-        <div class="result">{result.title}</div>
+        <button class="result" on:click={() => playVideo(result)}>{result.title}</button>
       {/each}
     </div>
   </div>
