@@ -2,6 +2,19 @@
   import Icon from './Icon.svelte';
   import { searchQuery } from '../stores/search_query.svelte.js';
   import '../../scss/header.scss';
+
+  let results = $state([]);
+
+  async function getResults() {
+    const query = $searchQuery;
+    if (!query.trim()) {
+      return;
+    }
+
+    results = await api.get(route('search') + '?q=' + encodeURIComponent(query));
+
+    console.log('results', results);
+  }
 </script>
 
 <header>
@@ -17,7 +30,7 @@
   </div>
 
   <div class="search-container">
-    <input type="text" placeholder="search" bind:value={$searchQuery}>
+    <input type="text" placeholder="search" bind:value={$searchQuery} on:input={getResults} />
     <Icon name="search" size="1.25rem" className="search-icon" />
   </div>
 
