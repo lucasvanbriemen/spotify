@@ -43,7 +43,6 @@ return [
 
     'youtube' => [
         'api_key' => env('YOUTUBE_API_KEY'),
-        'yt_dlp_path' => env('YT_DLP_PATH', 'yt-dlp'),
     ],
 
 ];

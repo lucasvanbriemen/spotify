@@ -28,38 +28,18 @@ class SpotifyController extends Controller
         $artist = (string) $meta->json('artists.0.name', '');
         $query = trim($artist.' '.$name);
 
-        $temp = sys_get_temp_dir();
-        $path = $this->resolvedPath();
-        $args = [
-            config('services.youtube.yt_dlp_path', 'yt-dlp'),
+        $process = new Process([
+            $this->bin('yt-dlp'),
             '--no-playlist',
             '--extract-audio',
             '--audio-format', 'mp3',
             '--audio-quality', '0',
             '--restrict-filenames',
             '--no-progress',
+            '--ffmpeg-location', base_path('bin'),
             '--output', "{$publicRoot}/{$id}",
-        ];
-        $ffmpeg = $this->findExecutable('ffmpeg', $path);
-        if ($ffmpeg !== null) {
-            $args[] = '--ffmpeg-location';
-            $args[] = dirname($ffmpeg);
-        }
-        $args[] = "ytsearch1:{$query} audio";
-
-        $process = new Process(
-            $args,
-            null,
-            [
-                'TEMP' => $temp,
-                'TMP' => $temp,
-                'USERPROFILE' => $_SERVER['USERPROFILE'] ?? getenv('USERPROFILE'),
-                'APPDATA' => $_SERVER['APPDATA'] ?? getenv('APPDATA'),
-                'LOCALAPPDATA' => $_SERVER['LOCALAPPDATA'] ?? getenv('LOCALAPPDATA'),
-                'SYSTEMROOT' => $_SERVER['SYSTEMROOT'] ?? getenv('SYSTEMROOT'),
-                'PATH' => $path,
-            ]
-        );
+            "ytsearch1:{$query} audio",
+        ]);
         $process->setTimeout(180);
         $process->run();
 
@@ -95,59 +75,9 @@ class SpotifyController extends Controller
         return asset('storage/audio/'.implode('/', $segments));
     }
 
-    private function findExecutable(string $name, string $path): ?string
+    private function bin(string $name): string
     {
-        $isWin = PHP_OS_FAMILY === 'Windows';
-        $separator = $isWin ? ';' : ':';
-        $exts = $isWin ? ['.exe', '.cmd', '.bat', ''] : [''];
-        foreach (explode($separator, $path) as $dir) {
-            $dir = trim($dir, " \t\"");
-            if ($dir === '') {
-                continue;
-            }
-            foreach ($exts as $ext) {
-                $candidate = $dir.DIRECTORY_SEPARATOR.$name.$ext;
-                if (@is_file($candidate)) {
-                    return $candidate;
-                }
-            }
-        }
-        if ($isWin && $name === 'ffmpeg') {
-            $glob = glob(($_SERVER['LOCALAPPDATA'] ?? getenv('LOCALAPPDATA'))
-                .'\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_*\\ffmpeg-*-full_build\\bin\\ffmpeg.exe');
-            if (! empty($glob)) {
-                return $glob[0];
-            }
-        }
-        return null;
-    }
-
-    private function resolvedPath(): string
-    {
-        $parts = [];
-        $local = base_path('bin');
-        if (@is_dir($local)) {
-            $parts[] = $local;
-        }
-        if (PHP_OS_FAMILY === 'Windows') {
-            foreach (['Machine', 'User'] as $scope) {
-                $proc = new Process([
-                    'powershell', '-NoProfile', '-Command',
-                    "[Environment]::GetEnvironmentVariable('Path','{$scope}')",
-                ]);
-                $proc->run();
-                if ($proc->isSuccessful()) {
-                    $value = trim($proc->getOutput());
-                    if ($value !== '') {
-                        $parts[] = $value;
-                    }
-                }
-            }
-        }
-        if ($current = ($_SERVER['PATH'] ?? getenv('PATH'))) {
-            $parts[] = $current;
-        }
-        return implode(PHP_OS_FAMILY === 'Windows' ? ';' : ':', array_filter($parts));
+        return base_path('bin/'.$name.(PHP_OS_FAMILY === 'Windows' ? '.exe' : ''));
     }
 
     public function search(Request $request): JsonResponse
