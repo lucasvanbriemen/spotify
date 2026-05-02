@@ -26,22 +26,6 @@ class SpotifyController extends Controller
         $name = $metaData->json('name', '');
         $artist = $metaData->json('artists.0.name', '');
 
-        $tmpDir = storage_path('app/tmp');
-        if (! is_dir($tmpDir)) {
-            @mkdir($tmpDir, 0775, true);
-        }
-
-        $env = [
-            'TMP' => $tmpDir,
-            'TEMP' => $tmpDir,
-            'TMPDIR' => $tmpDir,
-        ];
-        if (PHP_OS_FAMILY === 'Windows') {
-            $env['SystemRoot'] = getenv('SystemRoot') ?: 'C:\\Windows';
-            $env['PATH'] = getenv('PATH') ?: 'C:\\Windows\\System32;C:\\Windows';
-            $env['USERPROFILE'] = getenv('USERPROFILE') ?: '';
-        }
-
         $process = new Process([
             $this->bin('yt-dlp'),
             '--no-playlist',
@@ -55,7 +39,7 @@ class SpotifyController extends Controller
             '--ffmpeg-location', base_path('bin'),
             '--output', "{$publicRoot}/{$id}",
             "ytsearch5: {$artist} {$name} audio",
-        ], null, $env);
+        ], null, $this->setupEnv());
         $process->setTimeout(180);
         $process->run();
 
@@ -68,20 +52,6 @@ class SpotifyController extends Controller
         }
 
         return response()->json(['stream_url' => $produced]);
-    }
-
-    private function findMp3($id)
-    {
-        if (@is_file(storage_path("app/public/audio/{$id}.mp3"))) {
-            return asset("storage/audio/{$id}.mp3");
-        }
-
-        return null;
-    }
-
-    private function bin($name)
-    {
-        return base_path('bin/'.$name.(PHP_OS_FAMILY === 'Windows' ? '.exe' : ''));
     }
 
     public function search(Request $request): JsonResponse
@@ -139,5 +109,39 @@ class SpotifyController extends Controller
 
             return $response->json('access_token');
         });
+    }
+
+    private function findMp3($id)
+    {
+        if (@is_file(storage_path("app/public/audio/{$id}.mp3"))) {
+            return asset("storage/audio/{$id}.mp3");
+        }
+
+        return null;
+    }
+
+    private function bin($name)
+    {
+        return base_path('bin/' . $name . (PHP_OS_FAMILY === 'Windows' ? '.exe' : ''));
+    }
+
+    private function setupEnv() {
+        $tmpDir = storage_path('app/tmp');
+        if (! is_dir($tmpDir)) {
+            @mkdir($tmpDir, 0775, true);
+        }
+
+        $env = [
+            'TMP' => $tmpDir,
+            'TEMP' => $tmpDir,
+            'TMPDIR' => $tmpDir,
+        ];
+        if (PHP_OS_FAMILY === 'Windows') {
+            $env['SystemRoot'] = getenv('SystemRoot') ?: 'C:\\Windows';
+            $env['PATH'] = getenv('PATH') ?: 'C:\\Windows\\System32;C:\\Windows';
+            $env['USERPROFILE'] = getenv('USERPROFILE') ?: '';
+        }
+
+        return $env;
     }
 }
