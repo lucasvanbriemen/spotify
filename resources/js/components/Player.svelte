@@ -2,7 +2,13 @@
   import { currentlyPlaying } from '../stores/currently_playing.svelte.js';
   import '../../scss/player.scss';
 
-  console.log('currentlyPlaying', $currentlyPlaying);
+  let audioEl;
+
+  $: if (audioEl && $currentlyPlaying.stream_url) {
+    audioEl.src = $currentlyPlaying.stream_url;
+    audioEl.load();
+    audioEl.play().catch(() => {});
+  }
 </script>
 
 <header>
@@ -15,7 +21,7 @@
   </div>
 
   <div class="search-container">
-    <audio src="{$currentlyPlaying.stream_url}" autoplay controls></audio>
+    <audio bind:this={audioEl} controls></audio>
   </div>
 
   <div></div>

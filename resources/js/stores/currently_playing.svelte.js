@@ -9,5 +9,5 @@ export const currentlyPlaying = writable({
   duration: (60  * 4) + 29, // 4:29
   position: 0,
   isPaused: false,
-  stream_url: 'https://example.com/audio.mp3',
+  stream_url: '',
 });
