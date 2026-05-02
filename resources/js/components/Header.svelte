@@ -1,7 +1,7 @@
 <script>
   import Icon from './Icon.svelte';
+  import SearchResult from './SearchResult.svelte';
   import { searchQuery } from '../stores/search_query.svelte.js';
-  import { currentlyPlaying } from '../stores/currently_playing.svelte.js';
   import '../../scss/header.scss';
 
   let results = $state([]);
@@ -18,17 +18,6 @@
   function onQueryInput() {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => getResults(), 250);
-  }
-
-  async function playVideo(video) {
-    const data = await api.get(`${route('get-mp3')}?id=${encodeURIComponent(video.id)}`);
-    if (!data?.stream_url) {
-      return;
-    }
-
-    resultsVisible = false;
-
-    currentlyPlaying.set({ ...video, stream_url: data.stream_url });
   }
 </script>
 
@@ -50,7 +39,7 @@
 
     <div class="search-results" class:visible={resultsVisible}>
       {#each results as result}
-        <button class="result" on:click={() => playVideo(result)}>{result.title}</button>
+        <SearchResult {result} on:click={() => playVideo(result)} />
       {/each}
     </div>
   </div>
