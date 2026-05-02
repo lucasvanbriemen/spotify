@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
 
-  let playlists = [];
+  let playlists = $state([]);
 
   onMount(async () => {
     playlists = await api.get(route('playlists'));
@@ -11,6 +11,9 @@
 
 <main>
   {#each playlists as playlist}
-    <div>{playlist.name}</div>
+    <div>
+      <img src={playlist.image_url} alt={playlist.name} />
+      {playlist.name}
+    </div>
   {/each}
 </main>
