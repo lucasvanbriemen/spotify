@@ -15,6 +15,7 @@
 
 <footer>
   <div>
+    <img class="thumbnail" src={$currentlyPlaying.thumbnail} alt={$currentlyPlaying.title} />
     <span class="artist">{$currentlyPlaying.artist}</span>
     <div class="separator"></div>
     <span class="album">{$currentlyPlaying.album}</span>

@@ -32,12 +32,9 @@ footer {
     line-height: 0;
   }
 
-  .search-container {
-    background-color: var(--background-color-two);
-    padding: 0.75rem 1rem;
-    border-radius: 1.5rem;
-    outline: none;
-    position: relative;
-    min-height: 1.5rem;
+  img {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.75rem;
   }
 }
