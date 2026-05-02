@@ -209,26 +209,12 @@
       border: none;
     }
 
-    &::-moz-range-track {
-      height: 14px;
-      background: transparent;
-      border: none;
-    }
-
     &::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
       width: 12px;
       height: 12px;
       margin-top: 1px;
-      border-radius: 50%;
-      background: var(--text-color);
-      border: none;
-    }
-
-    &::-moz-range-thumb {
-      width: 12px;
-      height: 12px;
       border-radius: 50%;
       background: var(--text-color);
       border: none;
