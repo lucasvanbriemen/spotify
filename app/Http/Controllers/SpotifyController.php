@@ -19,14 +19,13 @@ class SpotifyController extends Controller
 
         $existing = $this->findMp3($trackDir);
         if ($existing !== null) {
-            return response()->json(['stream_url' => $this->publicUrl($publicRoot, $existing)]);
+            return response()->json(['stream_url' => $existing]);
         }
 
         $token = $this->accessToken();
         $meta = Http::withToken($token)->get("https://api.spotify.com/v1/tracks/{$id}");
         $name = (string) $meta->json('name', '');
         $artist = (string) $meta->json('artists.0.name', '');
-        $query = trim($artist.' '.$name);
 
         $process = new Process([
             $this->bin('yt-dlp'),
@@ -38,7 +37,7 @@ class SpotifyController extends Controller
             '--no-progress',
             '--ffmpeg-location', base_path('bin'),
             '--output', "{$publicRoot}/{$id}",
-            "ytsearch1:{$query} audio",
+            "ytsearch1: {$artist} {$name} audio",
         ]);
         $process->setTimeout(180);
         $process->run();
@@ -55,24 +54,17 @@ class SpotifyController extends Controller
             return response()->json(['error' => 'No audio file produced'], 500);
         }
 
-        return response()->json(['stream_url' => $this->publicUrl($publicRoot, $produced)]);
+        return response()->json(['stream_url' => $produced]);
     }
 
     private function findMp3(string $dir): ?string
     {
         $file_path = "{$dir}.mp3";
         if (@is_file($file_path)) {
-            return $file_path;
+            return asset("storage/audio/{$file_path}");
         }    
 
         return null;
-    }
-
-    private function publicUrl(string $publicRoot, string $absolutePath): string
-    {
-        $relative = ltrim(str_replace('\\', '/', substr($absolutePath, strlen($publicRoot))), '/');
-        $segments = array_map('rawurlencode', explode('/', $relative));
-        return asset('storage/audio/'.implode('/', $segments));
     }
 
     private function bin(string $name): string
