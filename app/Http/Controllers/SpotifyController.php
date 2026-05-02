@@ -22,9 +22,9 @@ class SpotifyController extends Controller
         }
 
         $token = $this->accessToken();
-        $meta = Http::withToken($token)->get("https://api.spotify.com/v1/tracks/{$id}");
-        $name = (string) $meta->json('name', '');
-        $artist = (string) $meta->json('artists.0.name', '');
+        $metaData = Http::withToken($token)->get("https://api.spotify.com/v1/tracks/{$id}");
+        $name = $metaData->json('name', '');
+        $artist = $metaData->json('artists.0.name', '');
 
         $tmpDir = storage_path('app/tmp');
         if (! is_dir($tmpDir)) {
@@ -70,7 +70,7 @@ class SpotifyController extends Controller
         return response()->json(['stream_url' => $produced]);
     }
 
-    private function findMp3(string $id): ?string
+    private function findMp3($id)
     {
         if (@is_file(storage_path("app/public/audio/{$id}.mp3"))) {
             return asset("storage/audio/{$id}.mp3");
@@ -79,7 +79,7 @@ class SpotifyController extends Controller
         return null;
     }
 
-    private function bin(string $name): string
+    private function bin($name)
     {
         return base_path('bin/'.$name.(PHP_OS_FAMILY === 'Windows' ? '.exe' : ''));
     }
