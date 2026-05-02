@@ -1,0 +1,15 @@
+.result {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  background-color: transparent;
+  border: none;
+  color: var(--text-color);
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+
+  &:hover {
+    background-color: var(--background-color-one);
+  }
+}

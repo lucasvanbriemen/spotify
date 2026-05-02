@@ -1,5 +1,6 @@
 <script>
   import { currentlyPlaying } from '../stores/currently_playing.svelte.js';
+  import '../../scss/search_result.scss';
 
   let { result } = $props();
 
@@ -13,4 +14,8 @@
   }
 </script>
 
-<button class="result" onclick={() => playVideo(result)}>{result.title}</button>
+<button class="result" onclick={() => playVideo(result)}>
+  <span>{result.title}</span>
+  <span>{result.artist}</span>
+  <img src={result.thumbnail} alt={result.title} />
+</button>
