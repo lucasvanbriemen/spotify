@@ -1,12 +1,13 @@
 @php
-$routes = collect(Route::getRoutes())->map(function ($route) {
-    return [
+$exposedRouteNames = ['search', 'get-mp3'];
+$routes = collect(Route::getRoutes())
+    ->filter(fn ($route) => in_array($route->getName(), $exposedRouteNames, true))
+    ->map(fn ($route) => [
         'uri' => $route->uri(),
         'name' => $route->getName(),
         'method' => $route->methods()[0],
-    ];
-})->values();
-
+    ])
+    ->values();
 @endphp
 
 <!DOCTYPE html>
@@ -25,7 +26,7 @@ $routes = collect(Route::getRoutes())->map(function ($route) {
 </head>
 <body>
     <script>
-        const API_ROUTES = @json($routes);;
+        const API_ROUTES = @json($routes);
         const currentDomain = window.location.origin;
 
         function route(name, params = {}) {

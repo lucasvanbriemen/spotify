@@ -13,10 +13,7 @@ class SpotifyController extends Controller
 
     public function getMp3(Request $request): JsonResponse
     {
-        $id = trim((string) $request->query('id', ''));
-        if (! preg_match('/^[A-Za-z0-9]{22}$/', $id)) {
-            return response()->json(['error' => 'Invalid Spotify track id'], 422);
-        }
+        $id = $request->query('id');
 
         $publicRoot = storage_path('app'.DIRECTORY_SEPARATOR.'public'.DIRECTORY_SEPARATOR.'audio');
         $trackDir = $publicRoot.DIRECTORY_SEPARATOR.$id;
