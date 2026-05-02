@@ -6,11 +6,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\Process\Process;
 
 class SpotifyController extends Controller
 {
-    public function getMp3(Request $request): JsonResponse
+    public function getMp3Url(Request $request): JsonResponse
     {
         $id = $request->query('id');
 
@@ -111,10 +112,25 @@ class SpotifyController extends Controller
         });
     }
 
+    public function streamMp3(Request $request, string $id): BinaryFileResponse
+    {
+        $path = storage_path("app/public/audio/{$id}.mp3");
+        abort_unless(@is_file($path), 404);
+
+        $response = new BinaryFileResponse($path);
+        $response->headers->set('Content-Type', 'audio/mpeg');
+        $response->headers->set('Accept-Ranges', 'bytes');
+        $response->setAutoEtag();
+        $response->setAutoLastModified();
+        $response->prepare($request);
+
+        return $response;
+    }
+
     private function findMp3($id)
     {
         if (@is_file(storage_path("app/public/audio/{$id}.mp3"))) {
-            return asset("storage/audio/{$id}.mp3");
+            return route('stream-mp3', ['id' => $id]);
         }
 
         return null;
