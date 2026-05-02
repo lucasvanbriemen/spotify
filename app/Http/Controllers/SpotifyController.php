@@ -126,7 +126,7 @@ class SpotifyController extends Controller
             }
             foreach ($exts as $ext) {
                 $candidate = $dir.DIRECTORY_SEPARATOR.$name.$ext;
-                if (is_file($candidate)) {
+                if (@is_file($candidate)) {
                     return $candidate;
                 }
             }
@@ -144,6 +144,10 @@ class SpotifyController extends Controller
     private function resolvedPath(): string
     {
         $parts = [];
+        $local = base_path('bin');
+        if (@is_dir($local)) {
+            $parts[] = $local;
+        }
         if (PHP_OS_FAMILY === 'Windows') {
             foreach (['Machine', 'User'] as $scope) {
                 $proc = new Process([
