@@ -6,8 +6,6 @@
   let isPlaying = $state(false);
   let duration = $state(0);
   let isMuted = $state(false);
-  let isShuffle = $state(false);
-  let repeatMode = $state(0); // 0 = off, 1 = all, 2 = one
   let isSeeking = $state(false);
   let pendingSeek = $state(false);
   let seekValue = $state(0);
@@ -46,14 +44,6 @@
 
   function toggleMute() {
     isMuted = !isMuted;
-  }
-
-  function toggleShuffle() {
-    isShuffle = !isShuffle;
-  }
-
-  function cycleRepeat() {
-    repeatMode = (repeatMode + 1) % 3;
   }
 
   function onSeekInput() {
@@ -96,27 +86,11 @@
 
   <div class="controls">
     <div class="buttons">
-      <button class="ctrl" class:active={isShuffle} onclick={toggleShuffle} aria-label="Shuffle">
-        <svg viewBox="0 0 24 24"><path d="M16 3h5v5M4 20l16.2-16.2M21 16v5h-5M15 15l5.1 5.1M4 4l5 5"/></svg>
-      </button>
-      <button class="ctrl" aria-label="Previous">
-        <svg viewBox="0 0 24 24"><path d="M19 20L9 12l10-8v16zM5 19V5"/></svg>
-      </button>
       <button class="ctrl ctrl--play" onclick={togglePlay} aria-label={isPlaying ? 'Pause' : 'Play'}>
         {#if isPlaying}
           <svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
         {:else}
           <svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4z"/></svg>
-        {/if}
-      </button>
-      <button class="ctrl" aria-label="Next">
-        <svg viewBox="0 0 24 24"><path d="M5 4l10 8-10 8V4zM19 5v14"/></svg>
-      </button>
-      <button class="ctrl" class:active={repeatMode > 0} onclick={cycleRepeat} aria-label="Repeat">
-        {#if repeatMode === 2}
-          <svg viewBox="0 0 24 24"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/><text x="9" y="16" font-size="8" font-weight="bold" fill="currentColor" stroke="none">1</text></svg>
-        {:else}
-          <svg viewBox="0 0 24 24"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/></svg>
         {/if}
       </button>
     </div>
