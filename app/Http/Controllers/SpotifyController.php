@@ -16,9 +16,6 @@ class SpotifyController extends Controller
 
         $publicRoot = storage_path('app/public/audio');
         $trackDir = "{$publicRoot}/{$id}";
-        if (! is_dir($trackDir) && ! @mkdir($trackDir, 0775, true) && ! is_dir($trackDir)) {
-            return response()->json(['error' => 'Could not create output directory'], 500);
-        }
 
         $existing = $this->findMp3($trackDir);
         if ($existing !== null) {
@@ -41,7 +38,7 @@ class SpotifyController extends Controller
             '--audio-quality', '0',
             '--restrict-filenames',
             '--no-progress',
-            '-o', $trackDir.DIRECTORY_SEPARATOR.'%(title)s.%(ext)s',
+            '--output', "{$publicRoot}/{$id}",
         ];
         $ffmpeg = $this->findExecutable('ffmpeg', $path);
         if ($ffmpeg !== null) {
@@ -83,17 +80,11 @@ class SpotifyController extends Controller
 
     private function findMp3(string $dir): ?string
     {
-        if (! is_dir($dir)) {
-            return null;
-        }
-        $it = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS)
-        );
-        foreach ($it as $file) {
-            if ($file->isFile() && strtolower($file->getExtension()) === 'mp3') {
-                return $file->getPathname();
-            }
-        }
+        $file_path = "{$dir}.mp3";
+        if (@is_file($file_path)) {
+            return $file_path;
+        }    
+
         return null;
     }
 
