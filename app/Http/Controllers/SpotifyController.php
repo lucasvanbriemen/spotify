@@ -10,13 +10,12 @@ use Symfony\Component\Process\Process;
 
 class SpotifyController extends Controller
 {
-
     public function getMp3(Request $request): JsonResponse
     {
         $id = $request->query('id');
 
-        $publicRoot = storage_path('app'.DIRECTORY_SEPARATOR.'public'.DIRECTORY_SEPARATOR.'audio');
-        $trackDir = $publicRoot.DIRECTORY_SEPARATOR.$id;
+        $publicRoot = storage_path('app/public/audio');
+        $trackDir = "{$publicRoot}/{$id}";
         if (! is_dir($trackDir) && ! @mkdir($trackDir, 0775, true) && ! is_dir($trackDir)) {
             return response()->json(['error' => 'Could not create output directory'], 500);
         }
@@ -27,19 +26,10 @@ class SpotifyController extends Controller
         }
 
         $token = $this->accessToken();
-        if ($token === null) {
-            return response()->json(['error' => 'Failed to obtain Spotify access token'], 500);
-        }
         $meta = Http::withToken($token)->get("https://api.spotify.com/v1/tracks/{$id}");
-        if ($meta->failed()) {
-            return response()->json(['error' => 'Spotify lookup failed', 'detail' => $meta->body()], $meta->status());
-        }
         $name = (string) $meta->json('name', '');
         $artist = (string) $meta->json('artists.0.name', '');
         $query = trim($artist.' '.$name);
-        if ($query === '') {
-            return response()->json(['error' => 'Empty track metadata'], 500);
-        }
 
         $temp = sys_get_temp_dir();
         $path = $this->resolvedPath();
