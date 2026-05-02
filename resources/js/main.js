@@ -5,6 +5,7 @@ import theme from './lib/theme.js';
 
 // Initialize theme
 theme.init();
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => theme.applyTheme());
 
 // Expose api globally for debugging
 window.api = api;
