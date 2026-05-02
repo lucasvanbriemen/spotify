@@ -1,7 +1,5 @@
 @php
-$exposedRouteNames = ['search', 'get-mp3'];
 $routes = collect(Route::getRoutes())
-    ->filter(fn ($route) => in_array($route->getName(), $exposedRouteNames, true))
     ->map(fn ($route) => [
         'uri' => $route->uri(),
         'name' => $route->getName(),
