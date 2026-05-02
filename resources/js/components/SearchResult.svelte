@@ -1,7 +1,6 @@
 <script>
   import { currentlyPlaying } from '../stores/currently_playing.svelte.js';
 
-
   let { result } = $props();
 
   async function playVideo(video) {
