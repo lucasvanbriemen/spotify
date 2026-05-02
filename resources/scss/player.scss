@@ -11,7 +11,6 @@ footer {
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 50;
   
   >* { flex: 1; }
   audio { display: none; }
@@ -28,10 +27,6 @@ footer {
       border-radius: 0.6rem;
       object-fit: cover;
       flex-shrink: 0;
-
-      &--placeholder {
-        background: linear-gradient(135deg, var(--background-color-two), var(--border-color));
-      }
     }
 
     .track-meta {
@@ -129,23 +124,6 @@ footer {
       transform: scale(1.08);
     }
 
-    &.active {
-      color: #1db954;
-      position: relative;
-
-      &::after {
-        content: '';
-        position: absolute;
-        bottom: 0.05rem;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 4px;
-        height: 4px;
-        border-radius: 50%;
-        background-color: #1db954;
-      }
-    }
-
     &--play {
       background-color: var(--text-color);
       color: var(--background-color-one);
@@ -195,7 +173,7 @@ footer {
     &:hover,
     &:active,
     &:focus-visible {
-      --track-color: #1db954;
+      --track-color: var(--primary-color);
       background-size: 100% 6px;
     }
 
