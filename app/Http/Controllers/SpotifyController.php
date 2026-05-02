@@ -11,7 +11,7 @@ use Symfony\Component\Process\Process;
 
 class SpotifyController extends Controller
 {
-    public function getMp3(Request $request): JsonResponse
+    public function getMp3Url(Request $request): JsonResponse
     {
         $id = $request->query('id');
 
