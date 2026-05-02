@@ -75,12 +75,10 @@
   <div class="track">
     {#if $currentlyPlaying.thumbnail}
       <img class="thumbnail" src={$currentlyPlaying.thumbnail} alt={$currentlyPlaying.title} />
-    {:else}
-      <div class="thumbnail thumbnail--placeholder"></div>
     {/if}
     <div class="track-meta">
-      <span class="title">{$currentlyPlaying.title || '—'}</span>
-      <span class="artist">{$currentlyPlaying.artist || ''}</span>
+      <span class="title">{$currentlyPlaying.title}</span>
+      <span class="artist">{$currentlyPlaying.artist}</span>
     </div>
   </div>
 

@@ -1,8 +1,8 @@
 import { writable } from 'svelte/store';
 
 export const currentlyPlaying = writable({
-  title: '',
-  artist: '',
+  title: 'No track playing',
+  artist: 'Nothing to see here',
   album: '',
 
   thumbnail: '',
