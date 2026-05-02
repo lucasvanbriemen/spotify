@@ -4,11 +4,13 @@
 
   let audioEl;
 
-  $: if (audioEl && $currentlyPlaying.stream_url) {
-    audioEl.src = $currentlyPlaying.stream_url;
-    audioEl.load();
-    audioEl.play().catch(() => {});
-  }
+  $effect(() => {
+    if (audioEl && $currentlyPlaying.stream_url) {
+      audioEl.src = $currentlyPlaying.stream_url;
+      audioEl.load();
+      audioEl.play().catch(() => {});
+    }
+  });
 </script>
 
 <header>

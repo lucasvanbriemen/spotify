@@ -15,9 +15,8 @@ class SpotifyController extends Controller
         $id = $request->query('id');
 
         $publicRoot = storage_path('app/public/audio');
-        $trackDir = "{$publicRoot}/{$id}";
 
-        $existing = $this->findMp3($trackDir);
+        $existing = $this->findMp3($id);
         if ($existing !== null) {
             return response()->json(['stream_url' => $existing]);
         }
@@ -27,6 +26,22 @@ class SpotifyController extends Controller
         $name = (string) $meta->json('name', '');
         $artist = (string) $meta->json('artists.0.name', '');
 
+        $tmpDir = storage_path('app/tmp');
+        if (! is_dir($tmpDir)) {
+            @mkdir($tmpDir, 0775, true);
+        }
+
+        $env = [
+            'TMP' => $tmpDir,
+            'TEMP' => $tmpDir,
+            'TMPDIR' => $tmpDir,
+        ];
+        if (PHP_OS_FAMILY === 'Windows') {
+            $env['SystemRoot'] = getenv('SystemRoot') ?: 'C:\\Windows';
+            $env['PATH'] = getenv('PATH') ?: 'C:\\Windows\\System32;C:\\Windows';
+            $env['USERPROFILE'] = getenv('USERPROFILE') ?: '';
+        }
+
         $process = new Process([
             $this->bin('yt-dlp'),
             '--no-playlist',
@@ -35,34 +50,31 @@ class SpotifyController extends Controller
             '--audio-quality', '0',
             '--restrict-filenames',
             '--no-progress',
+            '--match-filter', 'age_limit<18',
+            '--max-downloads', '1',
             '--ffmpeg-location', base_path('bin'),
             '--output', "{$publicRoot}/{$id}",
-            "ytsearch1: {$artist} {$name} audio",
-        ]);
+            "ytsearch5: {$artist} {$name} audio",
+        ], null, $env);
         $process->setTimeout(180);
         $process->run();
 
-        if (! $process->isSuccessful()) {
+        $produced = $this->findMp3($id);
+        if ($produced === null) {
             return response()->json([
                 'error' => 'yt-dlp failed',
                 'detail' => trim($process->getErrorOutput() ?: $process->getOutput()),
             ], 500);
         }
 
-        $produced = $this->findMp3($trackDir);
-        if ($produced === null) {
-            return response()->json(['error' => 'No audio file produced'], 500);
-        }
-
         return response()->json(['stream_url' => $produced]);
     }
 
-    private function findMp3(string $dir): ?string
+    private function findMp3(string $id): ?string
     {
-        $file_path = "{$dir}.mp3";
-        if (@is_file($file_path)) {
-            return asset("storage/audio/{$file_path}");
-        }    
+        if (@is_file(storage_path("app/public/audio/{$id}.mp3"))) {
+            return asset("storage/audio/{$id}.mp3");
+        }
 
         return null;
     }
