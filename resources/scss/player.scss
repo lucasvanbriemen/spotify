@@ -1,19 +1,20 @@
-.player {
+footer {
   background-color: var(--background-color-one);
-  border-top: 1px solid var(--border-color);
   padding: 0.75rem 1.25rem;
 
-  display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(0, 2fr) minmax(180px, 1fr);
+  display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 1.5rem;
 
+  
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   z-index: 50;
-
+  
+  >* { flex: 1; }
   audio { display: none; }
 
   .track {
