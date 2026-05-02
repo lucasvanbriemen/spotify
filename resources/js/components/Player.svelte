@@ -72,11 +72,11 @@
 </script>
 
 <footer class="player">
-  <div class="track">
+  <div class="currently-playing">
     {#if $currentlyPlaying.thumbnail}
       <img class="thumbnail" src={$currentlyPlaying.thumbnail} alt={$currentlyPlaying.title} />
     {/if}
-    <div class="track-meta">
+    <div class="info">
       <span class="title">{$currentlyPlaying.title}</span>
       <span class="artist">{$currentlyPlaying.artist}</span>
     </div>

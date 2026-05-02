@@ -15,7 +15,7 @@ footer {
   >* { flex: 1; }
   audio { display: none; }
 
-  .track {
+  .currently-playing {
     display: flex;
     align-items: center;
     gap: 0.85rem;
@@ -25,11 +25,9 @@ footer {
       width: 3.5rem;
       height: 3.5rem;
       border-radius: 0.6rem;
-      object-fit: cover;
-      flex-shrink: 0;
     }
 
-    .track-meta {
+    .info {
       display: flex;
       flex-direction: column;
       gap: 0.15rem;
@@ -168,7 +166,6 @@ footer {
     background-size: 100% 4px;
     background-position: center;
     background-repeat: no-repeat;
-    transition: background-size 120ms ease;
 
     &:hover,
     &:active,
