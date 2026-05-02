@@ -15,7 +15,9 @@
 </script>
 
 <button class="result" onclick={() => playVideo(result)}>
-  <span>{result.title}</span>
-  <span>{result.artist}</span>
   <img src={result.thumbnail} alt={result.title} />
+  <div class="info">
+    <span class="title">{result.title}</span>
+    <span class="artist">{result.artist}</span>
+  </div>
 </button>

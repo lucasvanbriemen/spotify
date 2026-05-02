@@ -7,7 +7,29 @@
   width: 100%;
   text-align: left;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+
+  img {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.75rem;
+  }
+
+  .info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: .9rem;
+
+    .title {
+      font-weight: bold;
+    }
+
+    .artist {
+      color: var(--text-color-secondary);
+    }
+  }
 
   &:hover {
     background-color: var(--background-color-one);
