@@ -13,7 +13,7 @@
   });
 </script>
 
-<header>
+<footer>
   <div>
     <span class="artist">{$currentlyPlaying.artist}</span>
     <div class="separator"></div>
@@ -27,4 +27,4 @@
   </div>
 
   <div></div>
-</header>
+</footer>

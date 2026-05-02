@@ -7,7 +7,10 @@ footer {
   gap: 1rem;
   justify-content: space-between;
 
-  position: relative;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
 
   >div {
     display: flex;
