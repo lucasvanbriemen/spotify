@@ -27,7 +27,12 @@
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
         background-color: var(--background-color);
         color: var(--text-color-secondary);
+        transition: all 0.3s ease-in-out;
 
         min-height: 100vh;
+    }
+
+    * {
+        transition: all 0.3s ease-in-out !important;
     }
 </style>
