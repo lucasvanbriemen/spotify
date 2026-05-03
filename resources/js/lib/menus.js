@@ -1,6 +1,6 @@
 import { playlistsState } from '../stores/playlists.svelte.js';
 
-export function songFromSearchResult(track) {
+export function songData(track) {
   return {
     spotify_id: track.id,
     name: track.title,
@@ -13,17 +13,16 @@ export function songFromSearchResult(track) {
 
 export function addToPlaylistItems(song) {
   return [
-    { type: 'header', label: 'Add to playlist' },
+    { 
+      type: 'header', 
+      label: 'Add to playlist' 
+    },
     ...playlistsState.list.map((p) => ({
       type: 'item',
       label: p.name,
       image_url: p.image_url,
       onSelect: () =>
-        window.api.post(route('playlist.songs.store', { playlist: p.id }), song),
+        window.api.post(route('playlist.songs.store', { playlist: p.id }), songData(song)),
     })),
   ];
-}
-
-export function songItems(song) {
-  return addToPlaylistItems(song);
 }

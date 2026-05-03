@@ -1,7 +1,7 @@
 <script>
   import { currentlyPlaying } from '../stores/currently_playing.svelte.js';
   import { openContextMenu } from '../stores/context_menu.svelte.js';
-  import { songItems, songFromSearchResult } from '../lib/menus.js';
+  import { addToPlaylistItems } from '../lib/menus.js';
   import '../../scss/player.scss';
 
   let audioEl;
@@ -56,8 +56,7 @@
   <div
     class="currently-playing"
     oncontextmenu={(e) => {
-      const song = songFromSearchResult($currentlyPlaying);
-      if (song) openContextMenu(e, songItems(song));
+      if ($currentlyPlaying) openContextMenu(e, addToPlaylistItems($currentlyPlaying));
     }}
     role="presentation"
   >

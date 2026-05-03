@@ -33,29 +33,19 @@
     closeContextMenu();
   }
 
-  function onKey(e) {
-    if (e.key === 'Escape') closeContextMenu();
-  }
-
   async function pick(item) {
     closeContextMenu();
-    try {
-      await item.onSelect?.();
-    } catch (err) {
-      console.error(err);
-    }
+    await item.onSelect?.();
   }
 
   onMount(() => {
     document.addEventListener('mousedown', onDocMouseDown);
     document.addEventListener('contextmenu', onDocContextMenu, true);
-    window.addEventListener('keydown', onKey);
     window.addEventListener('blur', closeContextMenu);
     window.addEventListener('resize', closeContextMenu);
     return () => {
       document.removeEventListener('mousedown', onDocMouseDown);
       document.removeEventListener('contextmenu', onDocContextMenu, true);
-      window.removeEventListener('keydown', onKey);
       window.removeEventListener('blur', closeContextMenu);
       window.removeEventListener('resize', closeContextMenu);
     };
