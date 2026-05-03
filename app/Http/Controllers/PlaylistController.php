@@ -15,7 +15,7 @@ class PlaylistController extends Controller
 
     public function show(Playlist $playlist)
     {
-        return response()->json($playlist);
+        return response()->json($playlist->load('songs'));
     }
 
     public function addSong(Request $request, Playlist $playlist)
