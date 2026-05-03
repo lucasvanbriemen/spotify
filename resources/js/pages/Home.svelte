@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import Playlist from '../components/home/Playlist.svelte';
 
   let playlists = $state([]);
 
@@ -11,9 +12,6 @@
 
 <main>
   {#each playlists as playlist}
-    <a href="/playlist/{playlist.id}">
-      <img src={playlist.image_url} alt={playlist.name} />
-      {playlist.name}
-    </a>
+    <Playlist {playlist} />
   {/each}
 </main>
