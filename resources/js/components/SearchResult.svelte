@@ -16,11 +16,7 @@
   }
 </script>
 
-<button
-  class="result"
-  onclick={() => playVideo(result)}
-  oncontextmenu={(e) => openContextMenu(e, addToPlaylistItems(result))}
->
+<button class="result" onclick={() => playVideo(result)} oncontextmenu={(e) => openContextMenu(e, addToPlaylistItems(result))}>
   <img src={result.thumbnail} alt={result.title} />
   <div class="info">
     <span class="title">{result.title}</span>
