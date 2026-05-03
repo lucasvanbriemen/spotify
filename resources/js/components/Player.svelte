@@ -30,7 +30,6 @@
   }
 
   function togglePlay() {
-    if (!audioEl) return;
     if (audioEl.paused) audioEl.play().catch(() => {});
     else audioEl.pause();
   }
@@ -72,15 +71,13 @@
   </div>
 
   <div class="controls">
-    <div class="buttons">
-      <button class="ctrl ctrl--play" onclick={togglePlay} aria-label={isPlaying ? 'Pause' : 'Play'}>
-        {#if isPlaying}
-          <svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
-        {:else}
-          <svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4z"/></svg>
-        {/if}
-      </button>
-    </div>
+    <button class="ctrl ctrl--play" onclick={togglePlay} aria-label={isPlaying ? 'Pause' : 'Play'}>
+      {#if isPlaying}
+        <svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+      {:else}
+        <svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4z"/></svg>
+      {/if}
+    </button>
 
     <div class="progress">
       <span class="time">{formatTime(seekValue)}</span>
