@@ -32,7 +32,7 @@
         min-height: 100vh;
     }
 
-    * {
+    :global(*, *::before, *::after) {
         transition: all 0.3s ease-in-out !important;
     }
 </style>

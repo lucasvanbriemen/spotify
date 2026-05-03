@@ -18,9 +18,8 @@
     bottom: 0;
     left: 0;
     right: 0;
-    background: linear-gradient(0deg, rgba(0, 0, 0, 0.637) 10%, rgba(0, 0, 0, 0) 100%);    
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.637) 10%, rgba(0, 0, 0, 0) 100%);
     color: white;
-    padding: 0.25rem;
     height: 50%;
     font-size: 1.5rem;
     display: flex;
@@ -28,13 +27,25 @@
     align-items: flex-end;
     padding: 1rem;
     font-weight: 600;
+    isolation: isolate;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background: linear-gradient(0deg, rgba(0, 0, 0, 0.733) 10%, rgba(0, 0, 0, 0.171) 100%);
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+    }
   }
 
   &:hover {
     img { transform: scale(1.1); }
     span {
       height: 100%;
-      background: linear-gradient(0deg, rgba(0, 0, 0, 0.733) 10%, rgba(0, 0, 0, 0.171) 100%);
+
+      &::after { opacity: 1; }
     }
   }
 }
