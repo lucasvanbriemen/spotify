@@ -1,23 +1,11 @@
 import { playlistsState } from '../stores/playlists.svelte.js';
 
-export function songFromSearchResult(result) {
-  return {
-    spotify_id: result.id,
-    name: result.title,
-    artist: result.artist,
-    album: result.album,
-    image_url: result.thumbnail,
-    duration_ms: (result.duration ?? 0) * 1000,
-  };
-}
-
-export function songFromCurrentlyPlaying(track) {
-  if (!track?.id) return null;
+export function songFromSearchResult(track) {
   return {
     spotify_id: track.id,
     name: track.title,
     artist: track.artist,
-    album: track.album ?? '',
+    album: track.album,
     image_url: track.thumbnail,
     duration_ms: (track.duration ?? 0) * 1000,
   };
