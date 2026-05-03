@@ -7,8 +7,8 @@
   padding: 0.35rem;
   background-color: var(--background-color-two);
   border: 1px solid var(--border-color);
-  border-radius: 0.5rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  border-radius: 1rem;
+  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.5);
   color: var(--text-color);
 
   .header {
@@ -44,10 +44,6 @@
       height: 1.5rem;
       border-radius: 0.25rem;
       object-fit: cover;
-    }
-
-    &.danger {
-      color: #f87171;
     }
 
     &:hover {

@@ -63,27 +63,13 @@
 </script>
 
 {#if contextMenu.open}
-  <div
-    class="context-menu"
-    bind:this={menuEl}
-    style="left: {position.x}px; top: {position.y}px;"
-    role="menu"
-  >
+  <div class="context-menu" bind:this={menuEl} style="left: {position.x}px; top: {position.y}px;">
     {#each contextMenu.items as item}
       {#if item.type === 'header'}
         <div class="header">{item.label}</div>
-      {:else if item.type === 'divider'}
-        <div class="divider"></div>
       {:else}
-        <button
-          class="item"
-          class:danger={item.danger}
-          role="menuitem"
-          onclick={() => pick(item)}
-        >
-          {#if item.image_url}
-            <img src={item.image_url} alt="" />
-          {/if}
+        <button class="item" onclick={() => pick(item)}>
+          <img src={item.image_url} alt="" />
           <span>{item.label}</span>
         </button>
       {/if}
