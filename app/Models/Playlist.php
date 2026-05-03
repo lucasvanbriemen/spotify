@@ -10,4 +10,9 @@ class Playlist extends Model
         'name',
         'image_url',
     ];
+
+    public function songs()
+    {
+        return $this->hasMany(PlaylistSong::class);
+    }
 }
