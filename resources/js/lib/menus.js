@@ -39,28 +39,3 @@ export function addToPlaylistItems(song) {
 export function songItems(song) {
   return addToPlaylistItems(song);
 }
-
-export function playlistSongItems(playlist, song, { onChanged } = {}) {
-  return [
-    {
-      type: 'item',
-      label: 'Remove from this playlist',
-      danger: true,
-      onSelect: async () => {
-        await window.api.delete(
-          route('playlist.songs.destroy', { playlist: playlist.id, song: song.id })
-        );
-        onChanged?.();
-      },
-    },
-    { type: 'divider' },
-    ...addToPlaylistItems({
-      spotify_id: song.mp3_url,
-      name: song.name,
-      artist: song.artist,
-      album: song.album,
-      image_url: song.image_url,
-      duration_ms: song.duration_ms,
-    }),
-  ];
-}

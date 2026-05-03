@@ -41,12 +41,4 @@ class PlaylistController extends Controller
 
         return response()->json($song);
     }
-
-
-    public function removeSong(Playlist $playlist, PlaylistSong $song)
-    {
-        abort_unless($song->playlist_id === $playlist->id, 404);
-        $song->delete();
-        return response()->json(['ok' => true]);
-    }
 }
