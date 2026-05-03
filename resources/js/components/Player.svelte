@@ -6,7 +6,6 @@
   let isPlaying = $state(false);
   let duration = $state(0);
   let isSeeking = $state(false);
-  let pendingSeek = $state(false);
   let seekValue = $state(0);
 
   let sliderMax = $derived(duration || 100);
@@ -21,12 +20,8 @@
   });
 
   function onTimeUpdate() {
-    if (isSeeking || pendingSeek || audioEl.seeking) return;
+    if (isSeeking || audioEl.seeking) return;
     seekValue = audioEl.currentTime || 0;
-  }
-
-  function onSeeked() {
-    pendingSeek = false;
   }
 
   function togglePlay() {
@@ -40,11 +35,8 @@
 
   function onSeekCommit(e) {
     const target = Number(e.target.value);
-    pendingSeek = true;
     if (Number.isFinite(audioEl.duration) && audioEl.duration > 0) {
       audioEl.currentTime = target;
-    } else {
-      pendingSeek = false;
     }
     seekValue = target;
     isSeeking = false;
@@ -89,5 +81,5 @@
 
   <div></div>
 
-  <audio bind:this={audioEl} bind:duration ontimeupdate={onTimeUpdate} onseeked={onSeeked} onplay={() => (isPlaying = true)} onpause={() => (isPlaying = false)} onended={() => (isPlaying = false)}></audio>
+  <audio bind:this={audioEl} bind:duration ontimeupdate={onTimeUpdate} onplay={() => (isPlaying = true)} onpause={() => (isPlaying = false)} onended={() => (isPlaying = false)}></audio>
 </footer>
