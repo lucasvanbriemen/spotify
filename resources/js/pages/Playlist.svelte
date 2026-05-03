@@ -1,18 +1,16 @@
 <script>
   import { onMount } from 'svelte';
-  import '../../scss/playlist.scss';
 
-  let playlist = $state({ songs: [] });
+  let playlist = $state();
   let { id } = $props();
 
-  onMount(loadPlaylist);
-
-  async function loadPlaylist() {
-    playlist = await api.get(route('playlist.show', { playlist: id }));
-  }
+  onMount(async () => {
+    playlist = await window.api.get(route('playlist.show', { playlist: id }));
+    console.log(playlist);
+  });
 </script>
 
-<main class="playlist-page">
+<main>
   <img src={playlist.image_url} alt={playlist.name} />
-  <h1>{playlist.name}</h1>
+  {playlist.name}
 </main>
