@@ -3,31 +3,32 @@
   import { contextMenu, closeContextMenu } from '../stores/context_menu.svelte.js';
   import '../../scss/context_menu.scss';
 
-  let menuEl;
+  let menuEl = $state(null);
   let position = $state({ x: 0, y: 0 });
 
   $effect(() => {
-    if ($contextMenu.open) {
-      adjustPosition($contextMenu.x, $contextMenu.y);
-    }
-  });
-
-  function adjustPosition(x, y) {
-    position = { x, y };
+    if (!contextMenu.open) return;
+    position = { x: contextMenu.x, y: contextMenu.y };
     queueMicrotask(() => {
       if (!menuEl) return;
       const rect = menuEl.getBoundingClientRect();
       const overflowX = rect.right - window.innerWidth;
       const overflowY = rect.bottom - window.innerHeight;
       position = {
-        x: overflowX > 0 ? Math.max(8, x - overflowX - 8) : x,
-        y: overflowY > 0 ? Math.max(8, y - overflowY - 8) : y,
+        x: overflowX > 0 ? Math.max(8, contextMenu.x - overflowX - 8) : contextMenu.x,
+        y: overflowY > 0 ? Math.max(8, contextMenu.y - overflowY - 8) : contextMenu.y,
       };
     });
+  });
+
+  function onDocMouseDown(e) {
+    if (!contextMenu.open) return;
+    if (menuEl && menuEl.contains(e.target)) return;
+    closeContextMenu();
   }
 
-  function onDocClick(e) {
-    if (!$contextMenu.open) return;
+  function onDocContextMenu(e) {
+    if (!contextMenu.open) return;
     if (menuEl && menuEl.contains(e.target)) return;
     closeContextMenu();
   }
@@ -46,14 +47,14 @@
   }
 
   onMount(() => {
-    document.addEventListener('mousedown', onDocClick);
-    document.addEventListener('contextmenu', onDocClick, true);
+    document.addEventListener('mousedown', onDocMouseDown);
+    document.addEventListener('contextmenu', onDocContextMenu, true);
     window.addEventListener('keydown', onKey);
     window.addEventListener('blur', closeContextMenu);
     window.addEventListener('resize', closeContextMenu);
     return () => {
-      document.removeEventListener('mousedown', onDocClick);
-      document.removeEventListener('contextmenu', onDocClick, true);
+      document.removeEventListener('mousedown', onDocMouseDown);
+      document.removeEventListener('contextmenu', onDocContextMenu, true);
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('blur', closeContextMenu);
       window.removeEventListener('resize', closeContextMenu);
@@ -61,14 +62,14 @@
   });
 </script>
 
-{#if $contextMenu.open}
+{#if contextMenu.open}
   <div
     class="context-menu"
     bind:this={menuEl}
     style="left: {position.x}px; top: {position.y}px;"
     role="menu"
   >
-    {#each $contextMenu.items as item}
+    {#each contextMenu.items as item}
       {#if item.type === 'header'}
         <div class="header">{item.label}</div>
       {:else if item.type === 'divider'}

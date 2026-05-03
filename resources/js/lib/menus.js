@@ -1,6 +1,4 @@
-import { loadPlaylists, playlists } from '../stores/playlists.svelte.js';
-
-import { get } from 'svelte/store';
+import { playlistsState } from '../stores/playlists.svelte.js';
 
 export function songFromSearchResult(result) {
   return {
@@ -28,7 +26,7 @@ export function songFromCurrentlyPlaying(track) {
 export function addToPlaylistItems(song) {
   return [
     { type: 'header', label: 'Add to playlist' },
-    ...get(playlists).map((p) => ({
+    ...playlistsState.list.map((p) => ({
       type: 'item',
       label: p.name,
       image_url: p.image_url,

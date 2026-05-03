@@ -1,10 +1,10 @@
 <script>
   import Playlist from '../components/home/Playlist.svelte';
-  import { playlists } from '../stores/playlists.svelte.js';
+  import { playlistsState } from '../stores/playlists.svelte.js';
 </script>
 
 <main>
-  {#each $playlists as playlist}
+  {#each playlistsState.list as playlist}
     <Playlist {playlist} />
   {/each}
 </main>

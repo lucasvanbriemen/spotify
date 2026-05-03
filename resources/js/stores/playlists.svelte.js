@@ -1,8 +1,6 @@
-import { writable } from 'svelte/store';
-
-export const playlists = writable([]);
+export const playlistsState = $state({ list: [] });
 
 export async function loadPlaylists() {
   const data = await window.api.get(route('playlists'));
-  playlists.set(Array.isArray(data) ? data : []);
+  playlistsState.list = Array.isArray(data) ? data : [];
 }
