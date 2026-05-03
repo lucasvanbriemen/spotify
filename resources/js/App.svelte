@@ -7,12 +7,12 @@
     import { loadPlaylists } from './stores/playlists.svelte.js';
     import api from './lib/api.js';
 
-    window.api = api;
-
     onMount(() => {
         initRouter();
         loadPlaylists();
     });
+
+    window.api = api;
 </script>
 
 <Header />
