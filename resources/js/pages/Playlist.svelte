@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
 
   let playlist = $state({});
+
   let { id } = $props();
 
   onMount(async () => {
