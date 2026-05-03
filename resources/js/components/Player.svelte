@@ -53,13 +53,7 @@
 </script>
 
 <footer>
-  <div
-    class="currently-playing"
-    oncontextmenu={(e) => {
-      if ($currentlyPlaying) openContextMenu(e, addToPlaylistItems($currentlyPlaying));
-    }}
-    role="presentation"
-  >
+  <div class="currently-playing" oncontextmenu={(e) => { if ($currentlyPlaying) openContextMenu(e, addToPlaylistItems($currentlyPlaying)); }} role="presentation">
     {#if $currentlyPlaying.thumbnail}
       <img class="thumbnail" src={$currentlyPlaying.thumbnail} alt={$currentlyPlaying.title} />
     {/if}
