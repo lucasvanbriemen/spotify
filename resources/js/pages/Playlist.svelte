@@ -22,4 +22,16 @@
       <span class="details">{playlist.songs.length} songs, {Math.floor(playlist.duration / 60000)} min</span>
     </div>
   </div>
+
+  <div class="songs">
+    {#each playlist.songs as song}
+      <div class="song">
+        <img src={song.image_url} alt={song.name} />
+        <div class="info">
+          <span class="title">{song.name}</span>
+          <span class="artist">{song.artist}</span>
+        </div>
+      </div>
+    {/each}
+  </div>
 {/if}
