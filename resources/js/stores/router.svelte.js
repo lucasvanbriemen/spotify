@@ -33,7 +33,7 @@ function match(pathname) {
     return null;
 }
 
-export function navigate(pathname, push = true) {
+function navigate(pathname, push = true) {
     const hit = match(pathname);
     if (!hit) {
         window.location.href = pathname;
