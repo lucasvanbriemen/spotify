@@ -25,8 +25,7 @@
   }
 
   function togglePlay() {
-    if (audioEl.paused) audioEl.play().catch(() => {});
-    else audioEl.pause();
+    audioEl.paused ? audioEl.play() : audioEl.pause();
   }
 
   function onSeekInput() {
