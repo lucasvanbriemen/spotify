@@ -16,22 +16,8 @@
 </script>
 
 <main class="playlist-page">
-  <header
-    class="playlist-header"
-    oncontextmenu={(e) =>
-      playlist.id &&
-      openContextMenu(
-        e,
-        playlistItems(playlist, {
-          onChanged: () => loadPlaylist(),
-          onDeleted: () => navigate('/'),
-        })
-      )}
-    role="presentation"
-  >
-    <img src={playlist.image_url} alt={playlist.name} />
-    <h1>{playlist.name}</h1>
-  </header>
+  <img src={playlist.image_url} alt={playlist.name} />
+  <h1>{playlist.name}</h1>
 
   <ul class="songs">
     {#each playlist.songs ?? [] as song}

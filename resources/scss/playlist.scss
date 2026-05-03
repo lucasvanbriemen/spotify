@@ -1,28 +1,3 @@
-.playlist-page {
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.playlist-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-
-  img {
-    width: 8rem;
-    height: 8rem;
-    border-radius: 0.75rem;
-    object-fit: cover;
-  }
-
-  h1 {
-    margin: 0;
-    color: var(--text-color);
-  }
-}
-
 .songs {
   list-style: none;
   padding: 0;
