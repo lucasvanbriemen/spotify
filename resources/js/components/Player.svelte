@@ -82,17 +82,7 @@
 
     <div class="progress">
       <span class="time">{formatTime(seekValue)}</span>
-      <input
-        type="range"
-        class="slider slider--progress"
-        style="--fill:{progressPct}%"
-        min="0"
-        max={sliderMax}
-        step="0.1"
-        bind:value={seekValue}
-        oninput={onSeekInput}
-        onchange={onSeekCommit}
-      />
+      <input type="range" class="progress-slider" style="--fill:{progressPct}%" min="0" max={sliderMax} step="0.1" bind:value={seekValue} oninput={onSeekInput} onchange={onSeekCommit}/>
       <span class="time">{formatTime(duration)}</span>
     </div>
   </div>
