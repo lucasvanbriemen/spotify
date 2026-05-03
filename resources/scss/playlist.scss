@@ -1,0 +1,60 @@
+.playlist-page {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.playlist-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  img {
+    width: 8rem;
+    height: 8rem;
+    border-radius: 0.75rem;
+    object-fit: cover;
+  }
+
+  h1 {
+    margin: 0;
+    color: var(--text-color);
+  }
+}
+
+.songs {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  .song {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+
+    img {
+      width: 3rem;
+      height: 3rem;
+      border-radius: 0.5rem;
+    }
+
+    .info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+
+      .title { color: var(--text-color); font-weight: 500; }
+      .artist { color: var(--text-color-secondary); font-size: 0.9rem; }
+    }
+
+    &:hover {
+      background-color: var(--background-color-one);
+    }
+  }
+}

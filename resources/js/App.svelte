@@ -3,13 +3,16 @@
     import { router, initRouter } from './stores/router.svelte.js';
     import Header from './components/Header.svelte';
     import Player from './components/Player.svelte';
+    import ContextMenu from './components/ContextMenu.svelte';
+    import { loadPlaylists } from './stores/playlists.svelte.js';
     import api from './lib/api.js';
+
+    window.api = api;
 
     onMount(() => {
         initRouter();
+        loadPlaylists();
     });
-
-    window.api = api;
 </script>
 
 <Header />
@@ -19,6 +22,8 @@
 {/if}
 
 <Player />
+
+<ContextMenu />
 
 <style>
     :global(body) {

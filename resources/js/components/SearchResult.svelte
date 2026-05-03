@@ -1,5 +1,7 @@
 <script>
   import { currentlyPlaying } from '../stores/currently_playing.svelte.js';
+  import { openContextMenu } from '../stores/context_menu.svelte.js';
+  import { songItems, songFromSearchResult } from '../lib/menus.js';
   import '../../scss/search_result.scss';
 
   let { result } = $props();
@@ -14,7 +16,11 @@
   }
 </script>
 
-<button class="result" onclick={() => playVideo(result)}>
+<button
+  class="result"
+  onclick={() => playVideo(result)}
+  oncontextmenu={(e) => openContextMenu(e, songItems(songFromSearchResult(result)))}
+>
   <img src={result.thumbnail} alt={result.title} />
   <div class="info">
     <span class="title">{result.title}</span>
