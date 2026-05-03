@@ -13,7 +13,7 @@
   let progressPct = $derived((seekValue / sliderMax) * 100);
 
   $effect(() => {
-    if (audioEl && $currentlyPlaying.stream_url) {
+    if ($currentlyPlaying.stream_url) {
       audioEl.src = $currentlyPlaying.stream_url;
       audioEl.load();
       audioEl.play().catch(() => {});
@@ -21,7 +21,7 @@
   });
 
   function onTimeUpdate() {
-    if (isSeeking || pendingSeek || !audioEl || audioEl.seeking) return;
+    if (isSeeking || pendingSeek || audioEl.seeking) return;
     seekValue = audioEl.currentTime || 0;
   }
 
@@ -41,7 +41,7 @@
   function onSeekCommit(e) {
     const target = Number(e.target.value);
     pendingSeek = true;
-    if (audioEl && Number.isFinite(audioEl.duration) && audioEl.duration > 0) {
+    if (Number.isFinite(audioEl.duration) && audioEl.duration > 0) {
       audioEl.currentTime = target;
     } else {
       pendingSeek = false;
@@ -89,13 +89,5 @@
 
   <div></div>
 
-  <audio
-    bind:this={audioEl}
-    bind:duration
-    ontimeupdate={onTimeUpdate}
-    onseeked={onSeeked}
-    onplay={() => (isPlaying = true)}
-    onpause={() => (isPlaying = false)}
-    onended={() => (isPlaying = false)}
-  ></audio>
+  <audio bind:this={audioEl} bind:duration ontimeupdate={onTimeUpdate} onseeked={onSeeked} onplay={() => (isPlaying = true)} onpause={() => (isPlaying = false)} onended={() => (isPlaying = false)}></audio>
 </footer>
