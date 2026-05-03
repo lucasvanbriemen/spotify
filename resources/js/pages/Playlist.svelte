@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import '../../scss/playlist.scss';
 
   let playlist = $state({});
 
@@ -7,11 +8,14 @@
 
   onMount(async () => {
     playlist = await api.get(route('playlist.show', { playlist: id }));
-    console.log(playlist);
   });
 </script>
 
-<main>
+<div class="header">
   <img src={playlist.image_url} alt={playlist.name} />
-  {playlist.name}
-</main>
+  <div class="overlay"></div>
+  
+  <div class="info">
+    <span class="title">{playlist.name}</span>
+  </div>
+</div>
