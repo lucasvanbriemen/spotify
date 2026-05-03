@@ -59,11 +59,12 @@
 
 </script>
 
-<footer class="player">
+<footer>
   <div class="currently-playing">
     {#if $currentlyPlaying.thumbnail}
       <img class="thumbnail" src={$currentlyPlaying.thumbnail} alt={$currentlyPlaying.title} />
     {/if}
+
     <div class="info">
       <span class="title">{$currentlyPlaying.title}</span>
       <span class="artist">{$currentlyPlaying.artist}</span>
@@ -71,7 +72,7 @@
   </div>
 
   <div class="controls">
-    <button class="ctrl ctrl--play" onclick={togglePlay} aria-label={isPlaying ? 'Pause' : 'Play'}>
+    <button class="pause-play" onclick={togglePlay} aria-label={isPlaying ? 'Pause' : 'Play'}>
       {#if isPlaying}
         <svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
       {:else}
