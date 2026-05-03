@@ -23,7 +23,7 @@
 
 <header>
   <div>
-    <a class="logo" href="#/">
+    <a class="logo" href="/">
       <Icon name="logo" size="2rem" />
       <span class="title">Music</span>
     </a>
