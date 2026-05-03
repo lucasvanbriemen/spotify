@@ -1,5 +1,6 @@
+import { loadPlaylists, playlists } from '../stores/playlists.svelte.js';
+
 import { get } from 'svelte/store';
-import { playlists, loadPlaylists } from '../stores/playlists.svelte.js';
 
 export function songFromSearchResult(result) {
   return {
@@ -63,32 +64,5 @@ export function playlistSongItems(playlist, song, { onChanged } = {}) {
       image_url: song.image_url,
       duration_ms: song.duration_ms,
     }),
-  ];
-}
-
-export function playlistItems(playlist, { onChanged, onDeleted } = {}) {
-  return [
-    {
-      type: 'item',
-      label: 'Rename',
-      onSelect: async () => {
-        const name = window.prompt('New playlist name', playlist.name);
-        if (!name || name === playlist.name) return;
-        await window.api.patch(route('playlist.update', { playlist: playlist.id }), { name });
-        await loadPlaylists();
-        onChanged?.();
-      },
-    },
-    {
-      type: 'item',
-      label: 'Delete playlist',
-      danger: true,
-      onSelect: async () => {
-        if (!window.confirm(`Delete "${playlist.name}"? This cannot be undone.`)) return;
-        await window.api.delete(route('playlist.destroy', { playlist: playlist.id }));
-        await loadPlaylists();
-        (onDeleted ?? onChanged)?.();
-      },
-    },
   ];
 }

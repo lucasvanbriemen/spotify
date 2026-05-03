@@ -1,8 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { openContextMenu } from '../stores/context_menu.svelte.js';
-  import { playlistItems, playlistSongItems } from '../lib/menus.js';
-  import { navigate } from '../stores/router.svelte.js';
+  import { playlistSongItems } from '../lib/menus.js';
   import '../../scss/playlist.scss';
 
   let playlist = $state({ songs: [] });

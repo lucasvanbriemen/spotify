@@ -42,23 +42,6 @@ class PlaylistController extends Controller
         return response()->json($song);
     }
 
-    public function update(Request $request, Playlist $playlist)
-    {
-        $data = $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'image_url' => 'sometimes|nullable|string',
-        ]);
-
-        $playlist->update($data);
-
-        return response()->json($playlist);
-    }
-
-    public function destroy(Playlist $playlist)
-    {
-        $playlist->delete();
-        return response()->json(['ok' => true]);
-    }
 
     public function removeSong(Playlist $playlist, PlaylistSong $song)
     {
