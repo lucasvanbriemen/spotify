@@ -21,14 +21,7 @@ class PlaylistController extends Controller
 
     public function addSong(Request $request, Playlist $playlist)
     {
-        $data = $request->validate([
-            'spotify_id' => 'required|string',
-            'name' => 'required|string',
-            'artist' => 'required|string',
-            'album' => 'required|string',
-            'image_url' => 'required|string',
-            'duration_ms' => 'required|integer',
-        ]);
+        $data = $request->all();
 
         $song = $playlist->songs()->create([
             'name' => $data['name'],
