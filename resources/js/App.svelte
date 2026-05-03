@@ -3,10 +3,12 @@
     import { router, initRouter } from './stores/router.svelte.js';
     import Header from './components/Header.svelte';
     import Player from './components/Player.svelte';
+    import { loadPlaylists } from './stores/playlists.svelte.js';
     import api from './lib/api.js';
 
     onMount(() => {
         initRouter();
+        loadPlaylists();
     });
 
     window.api = api;
