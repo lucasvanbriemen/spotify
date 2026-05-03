@@ -29,7 +29,14 @@
         <img src={song.image_url} alt={song.name} />
         <div class="info">
           <span class="title">{song.name}</span>
-          <span class="artist">{song.artist}</span>
+
+          <div class="secondary">
+            <span class="artist">{song.artist}</span>
+            <span class="separator"></span>
+            <span class="artist">{song.album}</span>
+            <span class="separator"></span>
+            <span class="duration">{Math.floor(song.duration_ms / 60000)}:{Math.floor((song.duration_ms % 60000) / 1000).toString().padStart(2, '0')}</span>
+          </div>
         </div>
       </div>
     {/each}
