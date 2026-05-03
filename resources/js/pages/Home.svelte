@@ -11,9 +11,9 @@
 
 <main>
   {#each playlists as playlist}
-    <div>
+    <a href="/playlist/{playlist.id}">
       <img src={playlist.image_url} alt={playlist.name} />
       {playlist.name}
-    </div>
+    </a>
   {/each}
 </main>
