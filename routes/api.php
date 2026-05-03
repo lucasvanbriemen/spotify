@@ -11,4 +11,6 @@ Route::middleware(IsLoggedIn::class)->group(function () {
     Route::get('/audio/{id}', [SpotifyController::class, 'streamMp3'])->name('stream-mp3');
 
     Route::get('/playlists', [PlaylistController::class, 'index'])->name('playlists');
+
+    Route::get('/playlist/{playlist}', [PlaylistController::class, 'show'])->name('playlist.show');
 });
