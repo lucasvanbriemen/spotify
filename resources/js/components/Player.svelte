@@ -64,7 +64,7 @@
   </div>
 
   <div class="controls">
-    <button class="pause-play" onclick={togglePlay} aria-label={isPlaying ? 'Pause' : 'Play'}>
+    <button class="pause-play" onclick={togglePlay}>
       {#if isPlaying}
         <svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
       {:else}
