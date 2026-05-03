@@ -5,7 +5,7 @@
   let { result } = $props();
 
   async function playVideo(video) {
-    const data = await api.get(`${route('get-mp3')}?id=${encodeURIComponent(video.id)}`);
+    const data = await api.get(`${route('get-mp3-url')}?id=${encodeURIComponent(video.id)}`);
     if (!data?.stream_url) {
       return;
     }
