@@ -32,7 +32,8 @@ class IsLoggedIn
         if (app()->environment('local')) {
             $authToken = config('app.user_token');
         } else {
-            $authToken = $_COOKIE['auth_token'] ?? null;
+            $authToken = $_COOKIE['auth_token']
+                ?? $request->query('auth_token');
         }
 
         $ch = curl_init('https://login.lucasvanbriemen.nl/api/user/token/' . $authToken);
@@ -45,6 +46,18 @@ class IsLoggedIn
             $current_user = json_decode($responseBody); // Convert JSON to object
             $current_user = $current_user->user;
             app()->instance('current_user', $current_user);
+
+            if ($request->query('auth_token') && !app()->environment('local')) {
+                setcookie('auth_token', $authToken, time() + 10 * 24 * 60 * 60, '/', '.ltvb.nl', true, true);
+
+                $cleanUrl = $request->url();
+                $params = $request->query();
+                unset($params['auth_token']);
+                if (!empty($params)) {
+                    $cleanUrl .= '?' . http_build_query($params);
+                }
+                return redirect($cleanUrl);
+            }
 
             return $next($request);
         } else {
