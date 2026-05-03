@@ -5,7 +5,7 @@
   let { id } = $props();
 
   onMount(async () => {
-    playlist = await window.api.get(route('playlist.show', { playlist: id }));
+    playlist = await api.get(route('playlist.show', { playlist: id }));
     console.log(playlist);
   });
 </script>
