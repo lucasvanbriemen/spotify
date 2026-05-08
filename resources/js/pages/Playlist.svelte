@@ -29,9 +29,11 @@
     <img src={playlist.image_url} alt={playlist.name} />
     <div class="overlay"></div>
 
-    <div class="info">
-      <span class="title">{playlist.name}</span>
-      <span class="details">{playlist.songs.length} songs, {getPlaylistDuration()}</span>
+    <div class="actions-and-info">
+      <div class="info">
+        <span class="title">{playlist.name}</span>
+        <span class="details">{playlist.songs.length} songs, {getPlaylistDuration()}</span>
+      </div>
     </div>
   </div>
 
