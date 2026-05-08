@@ -24,7 +24,7 @@
     return `${minutes} min`;
   }
 
-  async function playPlaylist(atIndex = 1) {
+  async function playPlaylist(atIndex = 0) {
     const firstSong = playlist.songs[atIndex];
 
     currentlyPlaying.set({
@@ -37,7 +37,15 @@
       stream_url: "http://127.0.0.1:8000/api/audio/" + firstSong.mp3_url,
     });
     
-    queue.set(playlist.songs.slice(atIndex + 1));
+    let songs = playlist.songs
+    queue.set(songs.slice(atIndex + 1).map(song => ({
+      id: song.id,
+      artist: song.artist,
+      title: song.name,
+      thumbnail: song.image_url,
+      duration: song.duration_ms,
+      stream_url: "http://127.0.0.1:8000/api/audio/" + song.mp3_url,
+    })));
   }
 </script>
 
@@ -47,7 +55,7 @@
     <div class="overlay"></div>
 
     <div class="actions-and-info">
-      <button class="play-button" onclick={playPlaylist}>
+      <button class="play-button" onclick={() => playPlaylist(0)}>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
           <path d="M8 5v14l11-7z"></path>
         </svg>
