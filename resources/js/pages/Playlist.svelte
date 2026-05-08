@@ -62,7 +62,7 @@
 
     <div class="info">
       <span class="title">{playlist.name}</span>
-      <span class="details">{playlist.songs.length} songs, {getPlaylistDuration()}</span>
+      <span class="details">{playlist.songs?.length} songs, {getPlaylistDuration()}</span>
     </div>
   </div>
 </div>
