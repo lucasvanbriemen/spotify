@@ -39,7 +39,7 @@
 
     <div class="search-results" class:visible={resultsVisible}>
       {#each results as result}
-        <SearchResult {result} on:click={() => playVideo(result)} />
+        <SearchResult {result} />
       {/each}
     </div>
   </div>

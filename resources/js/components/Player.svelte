@@ -1,5 +1,6 @@
 <script>
   import { currentlyPlaying } from '../stores/currently_playing.svelte.js';
+  import { playNext } from '../stores/queue.svelte.js';
   import { openContextMenu } from '../stores/context_menu.svelte.js';
   import { addToPlaylistItems } from '../lib/menus.js';
   import '../../scss/player.scss';
@@ -82,5 +83,5 @@
 
   <div></div>
 
-  <audio bind:this={audioEl} bind:duration ontimeupdate={onTimeUpdate} onplay={() => (isPlaying = true)} onpause={() => (isPlaying = false)} onended={() => (isPlaying = false)}></audio>
+  <audio bind:this={audioEl} bind:duration ontimeupdate={onTimeUpdate} onplay={() => (isPlaying = true)} onpause={() => (isPlaying = false)} onended={() => { isPlaying = false; playNext(); }}></audio>
 </footer>

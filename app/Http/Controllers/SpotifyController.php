@@ -55,6 +55,76 @@ class SpotifyController extends Controller
         return response()->json(['stream_url' => $produced]);
     }
 
+    public function recommendations(Request $request): JsonResponse
+    {
+        $seed = trim((string) $request->query('seed', ''));
+        if ($seed === '') {
+            return response()->json([]);
+        }
+
+        $items = Cache::remember("recommendations.{$seed}", 3600, function () use ($seed) {
+            return $this->buildRecommendations($seed);
+        });
+
+        return response()->json($items);
+    }
+
+    private function buildRecommendations(string $seed): array
+    {
+        $token = $this->accessToken();
+        if ($token === null) {
+            return [];
+        }
+
+        $track = Http::withToken($token)->get("https://api.spotify.com/v1/tracks/{$seed}");
+        $trackName = $track->json('name');
+        $artistName = $track->json('artists.0.name');
+        if (! $trackName || ! $artistName) {
+            return [];
+        }
+
+        $deezerSearch = Http::get('https://api.deezer.com/search/track', [
+            'q' => "{$trackName} {$artistName}",
+            'limit' => 1,
+        ]);
+        $deezerArtistId = $deezerSearch->json('data.0.artist.id');
+        if (! $deezerArtistId) {
+            return [];
+        }
+
+        $related = Http::get("https://api.deezer.com/artist/{$deezerArtistId}/related", ['limit' => 10]);
+        $names = collect($related->json('data', []))->pluck('name')->filter()->take(10)->values();
+        if ($names->isEmpty()) {
+            return [];
+        }
+
+        $responses = Http::pool(fn ($pool) => $names->map(fn ($name) =>
+            $pool->withToken($token)->get('https://api.spotify.com/v1/search', [
+                'q' => 'artist:"' . $name . '"',
+                'type' => 'track',
+                'limit' => 1,
+            ])
+        )->all());
+
+        return collect($responses)
+            ->flatMap(fn ($r) => $r->json('tracks.items', []) ?? [])
+            ->filter(fn ($t) => ($t['id'] ?? null) !== null && $t['id'] !== $seed)
+            ->unique('id')
+            ->map(fn ($track) => [
+                'id' => $track['id'],
+                'title' => $track['name'] ?? '',
+                'artist' => collect($track['artists'] ?? [])->pluck('name')->implode(', '),
+                'album' => $track['album']['name'] ?? '',
+                'thumbnail' => $track['album']['images'][1]['url']
+                    ?? $track['album']['images'][0]['url']
+                    ?? null,
+                'duration' => isset($track['duration_ms']) ? (int) round($track['duration_ms'] / 1000) : null,
+            ])
+            ->shuffle()
+            ->values()
+            ->all();
+    }
+
     public function search(Request $request): JsonResponse
     {
         $query = trim((string) $request->query('q', ''));

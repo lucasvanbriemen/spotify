@@ -1,0 +1,26 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "Music" [ref=e5] [cursor=pointer]:
+          - /url: /
+          - img [ref=e7]
+          - generic: Music
+        - generic [ref=e10]: "playlist #1"
+      - generic [ref=e11]:
+        - textbox "search" [ref=e12]
+        - generic:
+          - img
+    - main
+    - contentinfo [ref=e13]:
+      - generic [ref=e14]:
+        - generic [ref=e15]: No track playing
+        - generic [ref=e16]: Nothing to see here
+      - generic [ref=e17]:
+        - button [ref=e18] [cursor=pointer]:
+          - img [ref=e19]
+        - generic [ref=e21]:
+          - generic [ref=e22]: 0:00
+          - slider [ref=e23] [cursor=pointer]: "0"
+          - generic [ref=e24]: 0:00
+  - iframe
