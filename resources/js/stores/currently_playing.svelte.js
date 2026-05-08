@@ -11,3 +11,5 @@ export const currentlyPlaying = writable({
   isPaused: false,
   stream_url: '',
 });
+
+export let queue = writable([]);

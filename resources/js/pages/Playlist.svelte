@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import { currentlyPlaying, queue } from '../stores/currently_playing.svelte';
   import '../../scss/playlist.scss';
 
   let playlist = $state({});
@@ -22,6 +23,22 @@
 
     return `${minutes} min`;
   }
+
+  async function playPlaylist(atIndex = 1) {
+    const firstSong = playlist.songs[atIndex];
+
+    currentlyPlaying.set({
+      id: firstSong.id,
+      artist: firstSong.artist,
+      title: firstSong.name,
+      thumbnail: firstSong.image_url,
+      duration: firstSong.duration_ms,
+      isPaused: false,
+      stream_url: "http://127.0.0.1:8000/api/audio/" + firstSong.mp3_url,
+    });
+    
+    queue.set(playlist.songs.slice(atIndex + 1));
+  }
 </script>
 
 {#if playlist.songs}
@@ -30,7 +47,7 @@
     <div class="overlay"></div>
 
     <div class="actions-and-info">
-      <button class="play-button">
+      <button class="play-button" onclick={playPlaylist}>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
           <path d="M8 5v14l11-7z"></path>
         </svg>
@@ -44,8 +61,8 @@
   </div>
 
   <div class="songs">
-    {#each playlist.songs as song}
-      <div class="song">
+    {#each playlist.songs as song, index}
+      <div class="song" onclick={() => playPlaylist(index)}>
         <img src={song.image_url} alt={song.name} />
         <div class="info">
           <span class="title">{song.name}</span>
