@@ -40,6 +40,31 @@
     color: white;
     height: 50%;
 
+    display: flex;
+    align-items: center;
+
+    .play-button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 2rem;
+      font-size: 1.25rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-left: 2rem;
+      height: min-content;
+      width: min-content;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &:hover {
+        background: var(--primary-container);
+        color: var(--on-primary-container);
+      }
+    }
+
     .info {
       display: flex;
       flex-direction: column;

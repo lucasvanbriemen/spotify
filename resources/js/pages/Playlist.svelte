@@ -30,6 +30,12 @@
     <div class="overlay"></div>
 
     <div class="actions-and-info">
+      <button class="play-button">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+          <path d="M8 5v14l11-7z"></path>
+        </svg>
+      </button>
+
       <div class="info">
         <span class="title">{playlist.name}</span>
         <span class="details">{playlist.songs.length} songs, {getPlaylistDuration()}</span>
