@@ -1,5 +1,5 @@
 <script>
-  import { currentlyPlaying, queue } from '../stores/currently_playing.svelte.js';
+  import { currentlyPlaying, queue, randomState } from '../stores/currently_playing.svelte.js';
   import { openContextMenu } from '../stores/context_menu.svelte.js';
   import { addToPlaylistItems } from '../lib/menus.js';
   import '../../scss/player.scss';
@@ -56,7 +56,22 @@
       isPlaying = false;
     };
 
-    currentlyPlaying.set(nextSong);
+    if (!$randomState.isRandom) {
+      currentlyPlaying.set(nextSong);
+    } else {
+      // Pick a random song from the queue
+      const randomIndex = Math.floor(Math.random() * $queue.length);
+      const randomSong = $queue[randomIndex];
+      currentlyPlaying.set(randomSong);
+
+      // Remove the random song from the queue
+      queue.update(q => {
+        const newQueue = [...q];
+        newQueue.splice(randomIndex, 1);
+        return newQueue;
+      });
+    }
+
     console.log(nextSong);
     queue.update(q => q.slice(1));
   }
