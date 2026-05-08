@@ -49,41 +49,39 @@
   }
 </script>
 
-{#if playlist.songs}
-  <div class="header">
-    <img src={playlist.image_url} alt={playlist.name} />
-    <div class="overlay"></div>
+<div class="header">
+  <img src={playlist.image_url} alt={playlist.name} />
+  <div class="overlay"></div>
 
-    <div class="actions-and-info">
-      <button class="play-button" onclick={() => playPlaylist(0)}>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-          <path d="M8 5v14l11-7z"></path>
-        </svg>
-      </button>
+  <div class="actions-and-info">
+    <button class="play-button" onclick={() => playPlaylist(0)}>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+        <path d="M8 5v14l11-7z"></path>
+      </svg>
+    </button>
 
-      <div class="info">
-        <span class="title">{playlist.name}</span>
-        <span class="details">{playlist.songs.length} songs, {getPlaylistDuration()}</span>
-      </div>
+    <div class="info">
+      <span class="title">{playlist.name}</span>
+      <span class="details">{playlist.songs.length} songs, {getPlaylistDuration()}</span>
     </div>
   </div>
+</div>
 
-  <div class="songs">
-    {#each playlist.songs as song, index}
-      <div class="song" onclick={() => playPlaylist(index)}>
-        <img src={song.image_url} alt={song.name} />
-        <div class="info">
-          <span class="title">{song.name}</span>
+<div class="songs">
+  {#each playlist.songs as song, index}
+    <div class="song" onclick={() => playPlaylist(index)}>
+      <img src={song.image_url} alt={song.name} />
+      <div class="info">
+        <span class="title">{song.name}</span>
 
-          <div class="secondary">
-            <span class="artist">{song.artist}</span>
-            <span class="separator"></span>
-            <span class="artist">{song.album}</span>
-            <span class="separator"></span>
-            <span class="duration">{Math.floor(song.duration_ms / 60000)}:{Math.floor((song.duration_ms % 60000) / 1000).toString().padStart(2, '0')}</span>
-          </div>
+        <div class="secondary">
+          <span class="artist">{song.artist}</span>
+          <span class="separator"></span>
+          <span class="artist">{song.album}</span>
+          <span class="separator"></span>
+          <span class="duration">{Math.floor(song.duration_ms / 60000)}:{Math.floor((song.duration_ms % 60000) / 1000).toString().padStart(2, '0')}</span>
         </div>
       </div>
-    {/each}
-  </div>
-{/if}
+    </div>
+  {/each}
+</div>
