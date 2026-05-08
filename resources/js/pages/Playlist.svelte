@@ -34,7 +34,7 @@
       thumbnail: firstSong.image_url,
       duration: firstSong.duration_ms,
       isPaused: false,
-      stream_url: "http://127.0.0.1:8000/api/audio/" + firstSong.mp3_url,
+      stream_url: window.location.host + "/api/audio/" + firstSong.mp3_url,
     });
     
     let songs = playlist.songs
@@ -44,7 +44,7 @@
       title: song.name,
       thumbnail: song.image_url,
       duration: song.duration_ms,
-      stream_url: "http://127.0.0.1:8000/api/audio/" + song.mp3_url,
+      stream_url: window.location.host +  "/api/audio/" + song.mp3_url,
     })));
   }
 </script>
