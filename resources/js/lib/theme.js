@@ -1,40 +1,34 @@
 import api from "./api.js";
 
 export default {
-  themeUrl: "https://components.lucasvanbriemen.nl/api/colors?theme=THEME_NAME",
-  selectedTheme: "auto",
+  themeUrl: "https://components.lucasvanbriemen.nl/api/colors",
 
-  custom_colors: [
-    // Add custom color definitions here
-    // { name: "primary", light: "#0066cc", dark: "#3399ff" }
-  ],
+  custom_colors: {
+  },
 
   getTheme() {
-    if (this.selectedTheme === "auto") {
-      const darkModeMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-      return darkModeMediaQuery.matches ? "dark" : "light";
-    }
-
-    return this.selectedTheme;
+    const darkModeMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    return darkModeMediaQuery.matches ? "dark" : "light";
   },
 
   async applyTheme() {
     document.documentElement.setAttribute("data-theme", this.getTheme());
-    const url = this.themeUrl.replace("THEME_NAME", this.getTheme());
-    const colors = await api.get(url);
+    const colors = await api.get(this.themeUrl);
 
-    colors.forEach(color => {
-      document.documentElement.style.setProperty(`--${color.name}`, color.value);
-    });
+    const mergedColors = { ...this.custom_colors, ...colors };
 
-    this.custom_colors.forEach(color => {
-      const name = `--${color.name}`;
-      const value = this.getTheme() === "dark" ? color.dark : color.light;
+    Object.keys(mergedColors).forEach(key => {
+      const name = `--${key}`;
+      const value = this.getTheme() === "dark" ? mergedColors[key].dark : mergedColors[key].light;
       document.documentElement.style.setProperty(name, value);
     });
   },
 
   init() {
     this.applyTheme();
+
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+      this.applyTheme();
+    });
   },
 };
