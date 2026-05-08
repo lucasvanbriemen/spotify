@@ -30,8 +30,8 @@
         margin: 0;
         padding: 0;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-        background-color: var(--background-color);
-        color: var(--text-color-secondary);
+        background-color: var(--surface);
+        color: var(--on-surface);
         transition: all 0.3s ease-in-out;
 
         min-height: 100vh;

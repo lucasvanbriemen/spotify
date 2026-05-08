@@ -1,5 +1,5 @@
 footer {
-  background-color: var(--background-color-one);
+  background-color: var(--surface-at-1);
   padding: 0.75rem 1.25rem;
 
   display: flex;
@@ -43,7 +43,7 @@ footer {
       }
 
       .artist {
-        color: var(--text-color-secondary);
+        color: var(--secondary);
         font-size: 0.8rem;
         white-space: nowrap;
         overflow: hidden;
@@ -68,7 +68,7 @@ footer {
 
       .time {
         font-size: 0.75rem;
-        color: var(--text-color-secondary);
+        color: var(--secondary);
         font-variant-numeric: tabular-nums;
         min-width: 2.5rem;
         text-align: center;
@@ -88,8 +88,8 @@ footer {
     justify-content: center;
     border-radius: 50%;
 
-    background-color: var(--background-color-two);
-    color: var(--text-color-secondary);
+    background-color: var(--surface-at-5);
+    color: var(--secondary);
     width: 2.25rem;
     height: 2.25rem;
     padding: 0;
@@ -102,8 +102,8 @@ footer {
     }
 
     &:hover {
-      color: var(--background-color-one);
-      background-color: var(--text-color);
+      color: var(--on-surface);
+      background-color: var(--surface-at-4);
     }
   }
 
@@ -114,20 +114,20 @@ footer {
     margin: 0;
     width: 100%;
     --fill: 0%;
-    --track-color: var(--text-color);
+    --track-color: var(--on-surface-variant);
     background-image: linear-gradient(
       to right,
       var(--track-color) 0%,
       var(--track-color) var(--fill),
-      var(--border-color) var(--fill),
-      var(--border-color) 100%
+      var(--primary-container) var(--fill),
+      var(--primary-container) 100%
     );
     background-size: 100% 4px;
     background-position: center;
     background-repeat: no-repeat;
 
     &:hover, &:active, &:focus-visible {
-      --track-color: var(--primary-color);
+      --track-color: var(--primary);
       background-size: 100% 6px;
     }
 
@@ -141,7 +141,7 @@ footer {
       height: 12px;
       margin-top: 1px;
       border-radius: 50%;
-      background: var(--text-color);
+      background: var(--outline-variant);
     }
   }
 }
