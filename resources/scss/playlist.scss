@@ -80,11 +80,11 @@
     border-radius: 0.5rem;
 
     &:nth-child(even) {
-      background-color: var(--background-color-one);
+      background-color: var(--surface-at-2);
     }
 
     &:hover {
-      background-color: var(--background-color-one);
+      background-color: var(--surface-at-3);
     }
 
     img {
