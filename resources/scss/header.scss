@@ -25,6 +25,7 @@ header {
     :global(svg) {
       width: 2rem;
       height: 2rem;
+      stroke: none !important;
     }
 
     .title {
@@ -36,7 +37,7 @@ header {
   .separator {
     width: 3px;
     height: 2rem;
-    background-color: var(--border-color);
+    background-color: var(--outline-variant);
     border-radius: 1rem;
     transform: rotate(25deg);
   }
@@ -53,7 +54,7 @@ header {
 
     .title {
       line-height: 0;
-      color: var(--text-color);
+      color: var(--on-surface);
     }
   }
 
@@ -63,7 +64,7 @@ header {
   }
 
   .search-container {
-    background-color: var(--background-color-two);
+    background-color: var(--surface-at-1);
     padding: 0.75rem 1rem;
     border-radius: 1.5rem;
     outline: none;
@@ -77,11 +78,11 @@ header {
       font-size: 1rem;
       border: none;
       background-color: transparent;
-      color: var(--text-color);
+      color: var(--on-surface-variant);
       border-radius: 1.5rem;
 
       &:focus {
-        outline: 2px solid var(--primary-color);
+        outline: 2px solid var(--primary);
       }
     }
 
@@ -102,7 +103,7 @@ header {
       top: 100%;
       left: 0;
       right: 0;
-      background-color: var(--background-color-two);
+      background-color: var(--surface-at-3);
       border-radius: 0.5rem;
       margin-top: 0.5rem;
       padding: 0.5rem 0;
@@ -118,7 +119,7 @@ header {
         cursor: pointer;
 
         &:hover {
-          background-color: var(--background-color-one);
+          background-color: var(--surface-at-4);
         }
       }
     }
