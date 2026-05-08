@@ -10,6 +10,18 @@
     playlist = await api.get(route('playlist.show', { playlist: id }));
     playlist.duration = playlist.songs.reduce((total, song) => total + song.duration_ms, 0);
   });
+
+  function getPlaylistDuration() {
+    const minutes = Math.floor(playlist.duration / 60000);
+    
+    if (minutes >= 60) {
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = minutes % 60;
+      return `${hours} hr ${remainingMinutes} min`;
+    }
+
+    return `${minutes} min`;
+  }
 </script>
 
 {#if playlist.songs}
@@ -19,7 +31,7 @@
 
     <div class="info">
       <span class="title">{playlist.name}</span>
-      <span class="details">{playlist.songs.length} songs, {Math.floor(playlist.duration / 60000)} min</span>
+      <span class="details">{playlist.songs.length} songs, {getPlaylistDuration()}</span>
     </div>
   </div>
 
