@@ -34,7 +34,7 @@
       thumbnail: firstSong.image_url,
       duration: firstSong.duration_ms,
       isPaused: false,
-      stream_url: window.location.protocol + "//" + window.location.host + "/api/audio/" + firstSong.mp3_url,
+      stream_url: route("stream-mp3", { id: firstSong.mp3_url }),
     });
     
     let songs = playlist.songs
@@ -44,7 +44,7 @@
       title: song.name,
       thumbnail: song.image_url,
       duration: song.duration_ms,
-      stream_url: window.location.protocol + "//" + window.location.host + "/api/audio/" + song.mp3_url,
+      stream_url: route("stream-mp3", { id: song.mp3_url }),
     })));
   }
 </script>
