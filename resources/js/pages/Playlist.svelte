@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import { playFromQueue } from '../stores/queue.svelte.js';
   import '../../scss/playlist.scss';
 
   let playlist = $state({});
@@ -24,8 +25,8 @@
   </div>
 
   <div class="songs">
-    {#each playlist.songs as song}
-      <div class="song">
+    {#each playlist.songs as song, i}
+      <div class="song" onclick={() => playFromQueue(playlist.songs, i)} role="button" tabindex="0" onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') playFromQueue(playlist.songs, i); }}>
         <img src={song.image_url} alt={song.name} />
         <div class="info">
           <span class="title">{song.name}</span>
