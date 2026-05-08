@@ -1,5 +1,5 @@
 <script>
-  import { currentlyPlaying } from '../stores/currently_playing.svelte.js';
+  import { currentlyPlaying, queue } from '../stores/currently_playing.svelte.js';
   import { openContextMenu } from '../stores/context_menu.svelte.js';
   import { addToPlaylistItems } from '../lib/menus.js';
   import '../../scss/player.scss';
@@ -50,6 +50,16 @@
     return `${m}:${s}`;
   }
 
+  function playNextSong() {
+    const nextSong = $queue[0];
+    if (!nextSong) {
+      isPlaying = false;
+    };
+
+    currentlyPlaying.set(nextSong);
+    console.log(nextSong);
+    queue.update(q => q.slice(1));
+  }
 </script>
 
 <footer>
@@ -82,5 +92,5 @@
 
   <div></div>
 
-  <audio bind:this={audioEl} bind:duration ontimeupdate={onTimeUpdate} onplay={() => (isPlaying = true)} onpause={() => (isPlaying = false)} onended={() => (isPlaying = false)}></audio>
+  <audio bind:this={audioEl} bind:duration ontimeupdate={onTimeUpdate} onplay={() => (isPlaying = true)} onpause={() => (isPlaying = false)} onended={playNextSong}></audio>
 </footer>
