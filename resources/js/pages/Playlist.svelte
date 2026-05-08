@@ -3,7 +3,10 @@
   import { currentlyPlaying, queue } from '../stores/currently_playing.svelte';
   import '../../scss/playlist.scss';
 
-  let playlist = $state({});
+  let playlist = $state({
+    name: "",
+    songs: []
+  });
 
   let { id } = $props();
 
