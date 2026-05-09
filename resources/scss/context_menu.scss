@@ -5,24 +5,23 @@
   max-height: 24rem;
   overflow-y: auto;
   padding: 0.35rem;
-  background-color: var(--background-color-two);
-  border: 1px solid var(--border-color);
+  background-color: var(--surface-at-5);
+  border: 1px solid var(--outline);
   border-radius: 1rem;
   box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.5);
-  color: var(--text-color);
 
   .header {
-    padding: 0.4rem 0.6rem;
+    height: fit-content;
+    padding: 0.5rem !important;
+    margin: 0;
+    font-weight: 700;
     font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-color-secondary);
   }
 
   .divider {
     height: 1px;
     margin: 0.25rem 0.4rem;
-    background-color: var(--border-color);
+    background-color: var(--outline-variant);
   }
 
   .item {
@@ -42,12 +41,12 @@
     img {
       width: 1.5rem;
       height: 1.5rem;
-      border-radius: 0.25rem;
+      border-radius: 0.5rem;
       object-fit: cover;
     }
 
     &:hover {
-      background-color: var(--background-color-one);
+      background-color: var(--surface-at-4);
     }
   }
 }
