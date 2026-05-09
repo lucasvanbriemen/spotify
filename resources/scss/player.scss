@@ -59,6 +59,18 @@ footer {
     gap: 0.5rem;
     width: 100%;
 
+    .button-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+
+      .next {
+        background: transparent;
+        border: none;
+        color: var(--on-surface);
+      }
+    }
+
     .progress {
       display: flex;
       align-items: center;
