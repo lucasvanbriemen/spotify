@@ -13,7 +13,5 @@ export const currentlyPlaying = writable({
 });
 
 export let queue = writable([]);
-export let randomState = writable({
-  isRandom: true,
-  previousSongs: [],
-});
+export let randomState = writable(true);
+export let pastTracks = writable([]);

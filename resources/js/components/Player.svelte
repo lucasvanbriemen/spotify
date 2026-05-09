@@ -1,5 +1,5 @@
 <script>
-  import { currentlyPlaying, queue, randomState } from '../stores/currently_playing.svelte.js';
+  import { currentlyPlaying, queue, randomState, pastTracks } from '../stores/currently_playing.svelte.js';
   import { openContextMenu } from '../stores/context_menu.svelte.js';
   import { addToPlaylistItems } from '../lib/menus.js';
   import '../../scss/player.scss';
@@ -51,12 +51,15 @@
   }
 
   function playNextSong() {
+    let currentSong = $currentlyPlaying;
+    pastTracks.update(tracks => [...tracks, currentSong]);
+
     const nextSong = $queue[0];
     if (!nextSong) {
       isPlaying = false;
     };
 
-    if (!$randomState.isRandom) {
+    if (!$randomState) {
       currentlyPlaying.set(nextSong);
     } else {
       // Pick a random song from the queue
@@ -75,6 +78,16 @@
     console.log(nextSong);
     queue.update(q => q.slice(1));
   }
+
+  function playPreviousSong() {
+    const previousSongs = $pastTracks;
+    if (previousSongs.length === 0) return;
+
+    const lastSong = previousSongs[previousSongs.length - 1];
+    currentlyPlaying.set(lastSong);
+    pastTracks.update(tracks => tracks.slice(0, -1));
+    queue.update(q => [lastSong, ...q]);
+  }
 </script>
 
 <footer>
@@ -91,6 +104,11 @@
 
   <div class="controls">
     <div class="button-wrapper">
+
+      <button class="previous" onclick={playPreviousSong}>
+        prev
+      </button>
+
       <button class="pause-play" onclick={togglePlay}>
         {#if isPlaying}
           <svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>

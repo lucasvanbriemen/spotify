@@ -64,7 +64,7 @@ footer {
       align-items: center;
       gap: 1.5rem;
 
-      .next {
+      .next, .previous {
         background: transparent;
         border: none;
         color: var(--on-surface);
