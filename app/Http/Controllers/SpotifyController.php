@@ -11,15 +11,14 @@ use Symfony\Component\Process\Process;
 
 class SpotifyController extends Controller
 {
-    public function getMp3Url(Request $request): JsonResponse
+    public function getMp3(Request $request, string $song_id)
     {
-        $id = $request->query('id');
+        $id = $song_id;
 
         $publicRoot = storage_path('app/public/audio');
 
-        $existing = $this->findMp3($id);
-        if ($existing !== null) {
-            return response()->json(['stream_url' => $existing]);
+        if ($this->findMp3($id)) {
+            return $this->returnMp3($request, $id);
         }
 
         $token = $this->accessToken();
@@ -44,15 +43,14 @@ class SpotifyController extends Controller
         $process->setTimeout(180);
         $process->run();
 
-        $produced = $this->findMp3($id);
-        if ($produced === null) {
+        if (! $this->findMp3($id)) {
             return response()->json([
                 'error' => 'yt-dlp failed',
                 'detail' => trim($process->getErrorOutput() ?: $process->getOutput()),
             ], 500);
         }
 
-        return response()->json(['stream_url' => $produced]);
+        return $this->returnMp3($request, $id);
     }
 
     public function search(Request $request): JsonResponse
@@ -112,7 +110,7 @@ class SpotifyController extends Controller
         });
     }
 
-    public function streamMp3(Request $request, string $id): BinaryFileResponse
+    public function returnMp3 ($response, $id): BinaryFileResponse
     {
         $path = storage_path("app/public/audio/{$id}.mp3");
         abort_unless(@is_file($path), 404);
@@ -122,18 +120,14 @@ class SpotifyController extends Controller
         $response->headers->set('Accept-Ranges', 'bytes');
         $response->setAutoEtag();
         $response->setAutoLastModified();
-        $response->prepare($request);
+        $response->prepare(request());
 
         return $response;
     }
 
-    private function findMp3($id)
+    private function findMp3($id): bool
     {
-        if (@is_file(storage_path("app/public/audio/{$id}.mp3"))) {
-            return route('stream-mp3', ['id' => $id]);
-        }
-
-        return null;
+        return @is_file(storage_path("app/public/audio/{$id}.mp3"));
     }
 
     private function setupEnv() {
