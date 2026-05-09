@@ -27,10 +27,6 @@
       <Icon name="logo" size="2rem" />
       <span class="title">Music</span>
     </a>
-
-    <div class="separator"></div>
-
-    <span>playlist #1</span>
   </div>
 
   <div class="search-container">

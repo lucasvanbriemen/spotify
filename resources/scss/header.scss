@@ -34,14 +34,6 @@ header {
     }
   }
 
-  .separator {
-    width: 3px;
-    height: 2rem;
-    background-color: var(--outline-variant);
-    border-radius: 1rem;
-    transform: rotate(25deg);
-  }
-
   .logo  {
     text-decoration: none;
     display: flex;
