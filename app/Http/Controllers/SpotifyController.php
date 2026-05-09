@@ -138,7 +138,7 @@ class SpotifyController extends Controller
 
     private function bin($name)
     {
-        return base_path('bin/' . $name . (PHP_OS_FAMILY === 'Windows' ? '.exe' : ''));
+        return base_path('bin/' . $name);
     }
 
     private function setupEnv() {
@@ -152,11 +152,6 @@ class SpotifyController extends Controller
             'TEMP' => $tmpDir,
             'TMPDIR' => $tmpDir,
         ];
-        if (PHP_OS_FAMILY === 'Windows') {
-            $env['SystemRoot'] = getenv('SystemRoot') ?: 'C:\\Windows';
-            $env['PATH'] = getenv('PATH') ?: 'C:\\Windows\\System32;C:\\Windows';
-            $env['USERPROFILE'] = getenv('USERPROFILE') ?: '';
-        }
 
         return $env;
     }
