@@ -37,7 +37,7 @@
       thumbnail: firstSong.image_url,
       duration: firstSong.duration_ms,
       isPaused: false,
-      stream_url: route("stream-mp3", { id: firstSong.mp3_url }),
+      stream_url: route("get-mp3-url", { song_id: firstSong.mp3_url }),
     });
     
     let songs = playlist.songs
@@ -47,7 +47,7 @@
       title: song.name,
       thumbnail: song.image_url,
       duration: song.duration_ms,
-      stream_url: route("stream-mp3", { id: song.mp3_url }),
+      stream_url: route("get-mp3-url", { song_id: song.mp3_url }),
     })));
   }
 </script>
