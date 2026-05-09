@@ -28,7 +28,7 @@ class SpotifyController extends Controller
         $artist = $metaData->json('artists.0.name', '');
 
         $process = new Process([
-            $this->bin('yt-dlp'),
+            base_path('bin/yt-dlp'),
             '--no-playlist',
             '--extract-audio',
             '--audio-format', 'mp3',
@@ -134,11 +134,6 @@ class SpotifyController extends Controller
         }
 
         return null;
-    }
-
-    private function bin($name)
-    {
-        return base_path('bin/' . $name);
     }
 
     private function setupEnv() {
