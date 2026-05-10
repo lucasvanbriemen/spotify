@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  music
-//
-//  Created by Lucas on 10/05/2026.
-//
-
 import SwiftUI
 
 struct ContentView: View {
