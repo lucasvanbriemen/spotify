@@ -7,6 +7,13 @@ struct ContentView: View {
         VStack {
             ForEach(playlists) { group in
                 Text(group.name)
+
+                if group.image == nil {
+                    EmptyView()
+                } else {
+                    AsyncImage(url: URL(string: group.image!))
+                    .frame(width: 100, height: 100)
+                }
             }
         }
         
