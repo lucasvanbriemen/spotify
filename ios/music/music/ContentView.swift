@@ -15,7 +15,7 @@ struct ContentView: View {
                         .foregroundStyle(Color(.label))
 
                     ForEach(playlists) { playlist in
-                        NavigationLink(destination: PlaylistView()) {
+                        NavigationLink(destination: PlaylistView(playlistID: playlist.id)) {
                             ZStack(alignment: .bottomLeading) {
                                 ZStack {
                                     AsyncImage(url: URL(string: playlist.image!)) { image in
