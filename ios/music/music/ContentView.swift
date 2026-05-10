@@ -14,9 +14,7 @@ struct ContentView: View {
                     ForEach(playlists) { group in
                         NavigationLink(destination: PlaylistView()) {
                             ZStack {
-                                if group.image == nil {
-                                    EmptyView()
-                                } else {
+                                
                                     ZStack {
                                         
                                         
@@ -35,7 +33,7 @@ struct ContentView: View {
                                             .clipShape(RoundedRectangle(cornerRadius: 32))
                                         
                                     }
-                                }
+                                
                                 Text(group.name)
                                     .foregroundStyle(Color.white)
                                     .font(Font.largeTitle.bold())
