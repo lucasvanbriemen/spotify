@@ -31,7 +31,7 @@ struct ContentView: View {
                                     .frame(width: 400, height: 200)
                                     .clipShape(RoundedRectangle(cornerRadius: 32))
 
-                                Text(playlist.name)
+                                Text(playlist.name + String(playlist.id))
                                     .foregroundStyle(Color.white)
                                     .font(Font.largeTitle.bold())
                                     .padding(16)

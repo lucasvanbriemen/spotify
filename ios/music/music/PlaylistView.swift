@@ -2,16 +2,23 @@ import SwiftUI
 import Foundation
 
 struct PlaylistView: View {
-    @State var playlistID: Int = 1
+    @State var playlistID: Int
     @State var playlist: Playlist?
+    @State var isLoading: Bool = true
     
     init(playlistID: Int) {
         self.playlistID = playlistID
     }
     
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
         
+        if !isLoading, let playlist {
+            VStack {
+                Text(playlist.name)
+            }
+        }
+        
+        EmptyView()
             .task {
                 await getPlaylist()
             }
@@ -20,8 +27,8 @@ struct PlaylistView: View {
     
     func getPlaylist() async {
         do {
-            playlist = try await SeverApi.get(endpoint: "playlist/\(playlistID)")
-            print("get playlist")
+            playlist = try await SeverApi.get(endpoint: "playlist/\(String(playlistID))")
+            isLoading = false
         } catch {
             print(error)
         }
