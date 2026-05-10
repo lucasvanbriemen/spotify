@@ -14,11 +14,11 @@ struct ContentView: View {
                         .padding(.top, 16)
                         .foregroundStyle(Color(.label))
 
-                    ForEach(playlists) { group in
+                    ForEach(playlists) { playlist in
                         NavigationLink(destination: PlaylistView()) {
                             ZStack(alignment: .bottomLeading) {
                                 ZStack {
-                                    AsyncImage(url: URL(string: group.image!)) { image in
+                                    AsyncImage(url: URL(string: playlist.image!)) { image in
                                         image.resizable()
                                             .blur(radius: 1)
                                     } placeholder: {
@@ -31,7 +31,7 @@ struct ContentView: View {
                                     .frame(width: 400, height: 200)
                                     .clipShape(RoundedRectangle(cornerRadius: 32))
 
-                                Text(group.name)
+                                Text(playlist.name)
                                     .foregroundStyle(Color.white)
                                     .font(Font.largeTitle.bold())
                                     .padding(16)
