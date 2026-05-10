@@ -14,26 +14,20 @@ struct ContentView: View {
                     ForEach(playlists) { group in
                         NavigationLink(destination: PlaylistView()) {
                             ZStack {
-                                
-                                    ZStack {
-                                        
-                                        
-                                        AsyncImage(url: URL(string: group.image!)) { image in
-                                            image.resizable()
-                                                .blur(radius: 1)
-                                        } placeholder: {
-                                            ProgressView()
-                                        }
-                                        .frame(width: 400, height: 250)
-                                        .clipShape(RoundedRectangle(cornerRadius: 32))
-                                        
-                                        
-                                        LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom)
-                                            .frame(width: 400, height: 250)
-                                            .clipShape(RoundedRectangle(cornerRadius: 32))
-                                        
+                                ZStack {
+                                    AsyncImage(url: URL(string: group.image!)) { image in
+                                        image.resizable()
+                                            .blur(radius: 1)
+                                    } placeholder: {
+                                        ProgressView()
                                     }
-                                
+
+                                    LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom)
+                                        
+                                }
+                                    .frame(width: 400, height: 200)
+                                    .clipShape(RoundedRectangle(cornerRadius: 32))
+
                                 Text(group.name)
                                     .foregroundStyle(Color.white)
                                     .font(Font.largeTitle.bold())
