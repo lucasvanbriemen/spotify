@@ -4,16 +4,19 @@ struct ContentView: View {
     @State var playlists: [Playlist] = []
     
     var body: some View {
-        
-            
-  
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading) {
-                    
+
+                    Text("Playlists")
+                        .fontWeight(.bold)
+                        .padding(.leading, 16)
+                        .padding(.top, 16)
+                        .foregroundStyle(Color(.label))
+
                     ForEach(playlists) { group in
                         NavigationLink(destination: PlaylistView()) {
-                            ZStack {
+                            ZStack(alignment: .bottomLeading) {
                                 ZStack {
                                     AsyncImage(url: URL(string: group.image!)) { image in
                                         image.resizable()
@@ -31,6 +34,7 @@ struct ContentView: View {
                                 Text(group.name)
                                     .foregroundStyle(Color.white)
                                     .font(Font.largeTitle.bold())
+                                    .padding(16)
                             }
                         }
                     }
