@@ -4,15 +4,22 @@ struct ContentView: View {
     @State var playlists: [Playlist] = []
     
     var body: some View {
-        VStack {
+        NavigationStack {
             ForEach(playlists) { group in
-                Text(group.name)
-
-                if group.image == nil {
-                    EmptyView()
-                } else {
-                    AsyncImage(url: URL(string: group.image!))
-                    .frame(width: 100, height: 100)
+                NavigationLink(destination: PlaylistView()) {
+                    Text(group.name)
+                    
+                    if group.image == nil {
+                        EmptyView()
+                    } else {
+                        AsyncImage(url: URL(string: group.image!)) { image in
+                            image.resizable()
+                        } placeholder: {
+                            ProgressView()
+                        }
+                        .frame(width: 100, height: 100)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
                 }
             }
         }
