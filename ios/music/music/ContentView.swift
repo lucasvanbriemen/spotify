@@ -19,18 +19,19 @@ struct ContentView: View {
                                 } placeholder: {
                                     ProgressView()
                                 }
-                                .frame(width: 100, height: 100)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .frame(width: 400, height: 250)
+                                .clipShape(RoundedRectangle(cornerRadius: 32))
                                 .blur(radius: 1)
                                 
                                 LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom)
-                                    .frame(width: 100, height: 100)
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .frame(width: 400, height: 250)
+                                    .clipShape(RoundedRectangle(cornerRadius: 32))
                                 
                             }
                         }
                         Text(group.name)
                             .foregroundStyle(Color.white)
+                            .font(Font.largeTitle.bold())
                     }
                 }
             }
