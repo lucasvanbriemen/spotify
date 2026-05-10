@@ -11,17 +11,16 @@ struct PlaylistView: View {
     }
     
     var body: some View {
-        
-        if !isLoading, let playlist {
-            VStack {
-                Text(playlist.name)
+        VStack {
+            if !isLoading, let playlist {
+                VStack {
+                    Text(playlist.name)
+                }
             }
         }
-        
-        EmptyView()
-            .task {
-                await getPlaylist()
-            }
+        .task {
+            await getPlaylist()
+        }
     }
     
     
