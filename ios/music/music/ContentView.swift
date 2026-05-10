@@ -24,7 +24,7 @@ struct ContentView: View {
                                     } placeholder: {
                                         ProgressView()
                                     }
-
+                                    
                                     LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom)
                                         
                                 }
