@@ -29,16 +29,13 @@ struct PlaylistView: View {
                             .frame(width: 400, height: 200)
                             .clipShape(RoundedRectangle(cornerRadius: 32))
 
-                        VStack {
+                        VStack(alignment: .leading) {
                             Text(playlist.name)
-                                .foregroundStyle(Color.white)
                                 .font(Font.largeTitle.bold())
-                                .padding(16)
-                            
                             Text(String(playlist.songs?.count ?? 0) + " songs, \(playlistDuration())")
-                                .foregroundStyle(Color.white)
-                                .padding(16)
                         }
+                        .foregroundStyle(Color.white)
+                        .padding(16)
                     }
                     
                     ForEach(playlist.songs ?? []) { song in
