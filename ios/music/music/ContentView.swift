@@ -16,12 +16,13 @@ struct ContentView: View {
                                 
                                 AsyncImage(url: URL(string: group.image!)) { image in
                                     image.resizable()
+                                        .blur(radius: 1)
                                 } placeholder: {
                                     ProgressView()
                                 }
                                 .frame(width: 400, height: 250)
                                 .clipShape(RoundedRectangle(cornerRadius: 32))
-                                .blur(radius: 1)
+                                
                                 
                                 LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom)
                                     .frame(width: 400, height: 250)
