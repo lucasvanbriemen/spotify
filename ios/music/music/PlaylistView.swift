@@ -11,10 +11,12 @@ struct PlaylistView: View {
     }
     
     var body: some View {
-        VStack {
+        LazyVStack {
             if !isLoading, let playlist {
-                VStack {
-                    Text(playlist.name)
+                Text(playlist.name)
+
+                ForEach(playlist.songs ?? []) { song in
+                    Text(song.name)
                 }
             }
         }
@@ -28,6 +30,7 @@ struct PlaylistView: View {
         do {
             playlist = try await SeverApi.get(endpoint: "playlist/\(String(playlistID))")
             isLoading = false
+            print(playlist?.songs?.count ?? 0)
         } catch {
             print(error)
         }
