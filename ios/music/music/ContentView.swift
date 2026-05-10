@@ -7,18 +7,30 @@ struct ContentView: View {
         NavigationStack {
             ForEach(playlists) { group in
                 NavigationLink(destination: PlaylistView()) {
-                    Text(group.name)
-                    
-                    if group.image == nil {
-                        EmptyView()
-                    } else {
-                        AsyncImage(url: URL(string: group.image!)) { image in
-                            image.resizable()
-                        } placeholder: {
-                            ProgressView()
+                    ZStack {
+                        if group.image == nil {
+                            EmptyView()
+                        } else {
+                            ZStack {
+                                
+                                
+                                AsyncImage(url: URL(string: group.image!)) { image in
+                                    image.resizable()
+                                } placeholder: {
+                                    ProgressView()
+                                }
+                                .frame(width: 100, height: 100)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .blur(radius: 1)
+                                
+                                LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom)
+                                    .frame(width: 100, height: 100)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                
+                            }
                         }
-                        .frame(width: 100, height: 100)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        Text(group.name)
+                            .foregroundStyle(Color.white)
                     }
                 }
             }
