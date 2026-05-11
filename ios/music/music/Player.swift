@@ -36,6 +36,10 @@ struct PlayerView: View {
         .onChange(of: playerData.currentlyPlaying?.id) {
             play()
         }
+        .padding([.leading, .trailing], 8)
+        .frame(width: 390, height: 64)
+        .background(Color(red: 0.11, green: 0.73, blue: 0.33))
+        .clipShape(Capsule())
     }
 
     private func play() {

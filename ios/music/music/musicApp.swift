@@ -5,7 +5,10 @@ struct musicApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-            PlayerView()
+                .safeAreaInset(edge: .bottom) {
+                    PlayerView()
+                        .padding(.bottom, -16)
+                }
         }
     }
 }
