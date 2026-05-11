@@ -20,7 +20,7 @@ struct PlaylistView: View {
                         
                         HStack() {
                             Button(action: { print("play playlist") }) {
-                                Image(systemName: (PlayerManager.shared.isPlaying && PlayerManager.shared.playingPlaylistId == playlistID) ? "pause" : "play")
+                                Image(systemName: PlayerManager.shared.isCurrentlyPlayingPlaylist(playlistId: playlistID) ? "pause" : "play")
                                     .font(Font.system(size: 32))
                             }
                             .frame(width: 56, height: 56)

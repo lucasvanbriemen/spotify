@@ -8,4 +8,8 @@ class PlayerManager {
     var currentlyPlaying: Song?
     var isPlaying: Bool = false
     var playingPlaylistId: Int? = nil
+    
+    public func isCurrentlyPlayingPlaylist(playlistId: Int?) -> Bool {
+        return self.isPlaying && self.playingPlaylistId == playlistId
+    }
 }
