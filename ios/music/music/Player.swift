@@ -46,7 +46,6 @@ struct PlayerView: View {
             setupRemoteCommands()
         }
         .onChange(of: manager.currentlyPlaying?.id) {
-            play()
             updateNowPlayingInfo()
         }
         .padding([.leading, .trailing], 8)
@@ -55,21 +54,7 @@ struct PlayerView: View {
         .clipShape(Capsule())
     }
 
-    private func play() {
-        manager.player?.pause()
-        manager.isPlaying = false
-
-        guard let song = manager.currentlyPlaying,
-              let url = URL(string: "\(Secrets.base_url)get-mp3/" + song.mp3Url!) else { return }
-
-        print(url)
-
-        let playerItem = AVPlayerItem(url: url)
-        manager.player = AVPlayer(playerItem: playerItem)
-        manager.player?.play()
-        manager.isPlaying = true
-        print("play")
-    }
+  
 
     private func configureAudioSession() {
         let audioSession = AVAudioSession.sharedInstance()

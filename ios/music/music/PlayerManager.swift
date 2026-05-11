@@ -29,4 +29,12 @@ class PlayerManager {
             player?.pause()
         }
     }
+    
+    func playSong(song: Song) {
+        let url = URL(string: "\(Secrets.base_url)get-mp3/" + song.mp3Url!)
+
+        let playerItem = AVPlayerItem(url: url!)
+        player = AVPlayer(playerItem: playerItem)
+        togglePlayPause(forceState: true)
+    }
 }

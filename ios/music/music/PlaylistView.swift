@@ -44,7 +44,7 @@ struct PlaylistView: View {
                     
                     ForEach(Array((playlist.songs ?? []).enumerated()), id: \.element.id) { index, song in
                         Button {
-                            manager.currentlyPlaying = song
+                            manager.playSong(song: song)
                             manager.playingPlaylistId = playlistID
                         } label: {
                             HStack(alignment: .center) {
