@@ -6,7 +6,7 @@ class PlayerManager {
     static var isPlaying: Bool = false
     static var playingPlaylistId: Int? = nil
     
-    static public  func isCurrentlyPlayingPlaylist(playlistId: Int?) -> Bool {
+    static public func isCurrentlyPlayingPlaylist(playlistId: Int?) -> Bool {
         return self.isPlaying && self.playingPlaylistId == playlistId
     }
 }
