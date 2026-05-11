@@ -39,11 +39,22 @@ struct PlaylistView: View {
                     }
                     
                     ForEach(playlist.songs ?? []) { song in
-                        Button {
+                        Button() {
                             PlayerData.shared.currentlyPlaying = song
                         } label: {
-                            Text(song.name)
-                                .foregroundStyle(Color(.label))
+                            HStack(alignment: .top) {
+                                AsyncImage(url: URL(string: song.imageUrl!)) { image in
+                                    image.resizable()
+                                } placeholder: {
+                                    ProgressView()
+                                }
+                                .frame(width: 32, height: 32)
+
+                                VStack(alignment: .leading) {
+                                    Text(song.name)
+                                    Text(song.artist!)
+                                }
+                            }
                         }
                     }
                 }
