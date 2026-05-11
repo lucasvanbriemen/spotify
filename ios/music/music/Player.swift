@@ -3,8 +3,6 @@ import AVFoundation
 import MediaPlayer
 
 struct PlayerView: View {
-    @State private var player: AVPlayer?
-
     var body: some View {
         HStack(alignment: .center) {
             if let song = PlayerManager.currentlyPlaying {
@@ -56,7 +54,7 @@ struct PlayerView: View {
     }
 
     private func play() {
-        self.player?.pause()
+        PlayerManager.player?.pause()
         PlayerManager.isPlaying = false
         
         guard let song = PlayerManager.currentlyPlaying,
@@ -65,8 +63,8 @@ struct PlayerView: View {
         print(url)
         
         let playerItem = AVPlayerItem(url: url)
-        self.player = AVPlayer(playerItem: playerItem)
-        self.player?.play()
+        PlayerManager.player = AVPlayer(playerItem: playerItem)
+        PlayerManager.player?.play()
         PlayerManager.isPlaying = true
     }
     
@@ -78,9 +76,9 @@ struct PlayerView: View {
         }
 
         if PlayerManager.isPlaying {
-            self.player?.play()
+            PlayerManager.player?.play()
         } else {
-            self.player?.pause()
+            PlayerManager.player?.pause()
         }
         updateNowPlayingInfo()
     }
