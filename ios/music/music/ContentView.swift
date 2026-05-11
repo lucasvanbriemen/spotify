@@ -7,11 +7,9 @@ struct ContentView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading) {
-
                     Text("Playlists")
                         .fontWeight(.bold)
-                        .padding(.leading, 16)
-                        .padding(.top, 16)
+                        .padding([.top, .leading], 16)
                         .foregroundStyle(Color(.label))
 
                     ForEach(playlists) { playlist in
