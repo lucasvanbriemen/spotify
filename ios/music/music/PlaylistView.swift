@@ -59,11 +59,11 @@ struct PlaylistView: View {
                                 VStack(alignment: .leading) {
                                     Text(song.name)
                                         .fontWeight(Font.Weight.bold)
-                                        .frame(width: .infinity, height: 18)
+                                        .frame(height: 18)
                                         .truncationMode(.tail)
                                     Text(song.artist!)
                                         .font(Font.system(size: 14, weight: .light, design: .default))
-                                        .frame(width: .infinity, height: 18)
+                                        .frame(height: 18)
                                         .truncationMode(.tail)
                                 }
                             }
@@ -73,7 +73,6 @@ struct PlaylistView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                         .foregroundStyle(Color.primary)
-                        .frame(width: .infinity)
                     }
                 }
             }

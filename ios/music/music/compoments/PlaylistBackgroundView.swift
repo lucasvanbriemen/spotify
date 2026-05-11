@@ -14,7 +14,7 @@ struct PlaylistBackgroundView: View {
             LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom)
 
         }
-        .frame(width: .infinity, height: 200)
+        .frame(height: 200)
         .clipShape(RoundedRectangle(cornerRadius: 32))
     }
 }

@@ -19,11 +19,11 @@ struct PlayerView: View {
                 VStack(alignment: .leading) {
                     Text(song.name)
                         .font(Font.system(size: 16, weight: .medium, design: .default))
-                        .frame(width: .infinity, height: 16)
+                        .frame(height: 16)
                         .truncationMode(.tail)
                     Text(song.artist!)
                         .font(Font.system(size: 14, weight: .light, design: .default))
-                        .frame(width: .infinity, height: 14)
+                        .frame(height: 14)
                         .truncationMode(.tail)
                         .foregroundStyle(Color.secondary)
                 }
