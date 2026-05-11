@@ -5,6 +5,7 @@ struct PlaylistView: View {
     @State var playlistID: Int
     @State var playlist: Playlist?
     @State var isLoading: Bool = true
+    @State var isLoopingUneven: Bool = false
     
     init(playlistID: Int) {
         self.playlistID = playlistID
@@ -38,8 +39,8 @@ struct PlaylistView: View {
                         .padding(16)
                     }
                     
-                    ForEach(playlist.songs ?? []) { song in
-                        Button() {
+                    ForEach(Array((playlist.songs ?? []).enumerated()), id: \.element.id) { index, song in
+                        Button {
                             PlayerData.shared.currentlyPlaying = song
                         } label: {
                             HStack(alignment: .top) {
@@ -56,10 +57,17 @@ struct PlaylistView: View {
                                     Text(song.artist!)
                                 }
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(8)
+                            .background(index.isMultiple(of: 2) ? Color(.secondarySystemBackground) : Color.clear)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
+                        .foregroundStyle(Color.primary)
+                        .frame(width: 400)
                     }
                 }
             }
+            .padding([.leading, .trailing], 10)
         }
         .task {
             await getPlaylist()
