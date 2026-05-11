@@ -23,6 +23,8 @@ struct PlayerView: View {
                         .truncationMode(.tail)
                     Text(song.artist!)
                         .font(Font.system(size: 14, weight: .light, design: .default))
+                        .frame(width: .infinity, height: 18)
+                        .truncationMode(.tail)
                 }
                 
                 Spacer()

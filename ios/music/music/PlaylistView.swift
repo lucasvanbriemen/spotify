@@ -55,8 +55,12 @@ struct PlaylistView: View {
                                 VStack(alignment: .leading) {
                                     Text(song.name)
                                         .fontWeight(Font.Weight.bold)
+                                        .frame(width: .infinity, height: 18)
+                                        .truncationMode(.tail)
                                     Text(song.artist!)
                                         .font(Font.system(size: 14, weight: .light, design: .default))
+                                        .frame(width: .infinity, height: 18)
+                                        .truncationMode(.tail)
                                 }
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
