@@ -2,19 +2,36 @@ import SwiftUI
 import AVFoundation
 
 struct PlayerView: View {
-    
-    @State var player: AVPlayer?
-    
+    @State private var player: AVPlayer?
+    private let playerData = PlayerData.shared
+
     var body: some View {
-        Button("play") {
-            guard let url = URL(string: Secrets.test_song) else { return }
-            let playerItem = AVPlayerItem(url: url)
-            self.player = AVPlayer(playerItem: playerItem)
-            self.player?.play()
+        HStack {
+            if let song = playerData.currentlyPlaying {
+                Text(song.name)
+            } else {
+                Text("Nothing playing")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .onChange(of: playerData.currentlyPlaying?.id) {
+            play()
         }
     }
-    
-    
+
+    private func play() {
+        
+        self.player?.pause()
+        
+        guard let song = playerData.currentlyPlaying,
+              let url = URL(string: "\(Secrets.base_url)get-mp3/" + song.mp3Url!) else { return }
+        
+        print(url)
+        
+        let playerItem = AVPlayerItem(url: url)
+        self.player = AVPlayer(playerItem: playerItem)
+        self.player?.play()
+    }
 }
 
 #Preview {

@@ -39,7 +39,12 @@ struct PlaylistView: View {
                     }
                     
                     ForEach(playlist.songs ?? []) { song in
-                        Text(song.name)
+                        Button {
+                            PlayerData.shared.currentlyPlaying = song
+                        } label: {
+                            Text(song.name)
+                                .foregroundStyle(Color(.label))
+                        }
                     }
                 }
             }
