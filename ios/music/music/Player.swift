@@ -4,20 +4,34 @@ import AVFoundation
 struct PlayerView: View {
     @State private var player: AVPlayer?
     private let playerData = PlayerData.shared
-    @State private var timer = 0.0
 
     var body: some View {
-        HStack {
+        HStack(alignment: .center) {
             if let song = playerData.currentlyPlaying {
-                Text(song.name)
+                AsyncImage(url: URL(string: song.imageUrl!)) { image in
+                    image.resizable()
+                } placeholder: {
+                    ProgressView()
+                }
+                .frame(width: 32, height: 32)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                VStack(alignment: .leading) {
+                    Text(song.name)
+                        .fontWeight(Font.Weight.bold)
+                    Text(song.artist!)
+                        .font(Font.system(size: 14, weight: .light, design: .default))
+                }
+                
+                Spacer()
+                
+                Button(action: play) {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 24, weight: .bold, design: .default))
+                }
             } else {
-                Text("Nothing playing")
-                    .foregroundStyle(.secondary)
+                EmptyView()
             }
-            
-            Slider(value: $timer, in: 0...100, onEditingChanged: {editing in
-                print(String(timer))
-            })
         }
         .onChange(of: playerData.currentlyPlaying?.id) {
             play()
