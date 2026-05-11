@@ -43,7 +43,7 @@ struct PlaylistView: View {
                         Button {
                             PlayerData.shared.currentlyPlaying = song
                         } label: {
-                            HStack(alignment: .top) {
+                            HStack(alignment: .center) {
                                 AsyncImage(url: URL(string: song.imageUrl!)) { image in
                                     image.resizable()
                                 } placeholder: {
@@ -54,7 +54,9 @@ struct PlaylistView: View {
 
                                 VStack(alignment: .leading) {
                                     Text(song.name)
+                                        .fontWeight(Font.Weight.bold)
                                     Text(song.artist!)
+                                        .font(Font.system(size: 14, weight: .light, design: .default))
                                 }
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
