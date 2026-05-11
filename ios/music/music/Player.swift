@@ -32,7 +32,7 @@ struct PlayerView: View {
                 
                 Spacer()
                 
-                Button(action: togglePlay) {
+                Button(action: { togglePlay() }) {
                     Image(systemName: playerData.isPlaying ? "pause" : "play")
                         .font(.system(size: 24, weight: .bold, design: .default))
                         .foregroundStyle(Color.white)
@@ -71,8 +71,12 @@ struct PlayerView: View {
         playerData.isPlaying = true
     }
     
-    private func togglePlay() {
-        playerData.isPlaying.toggle()
+    private func togglePlay(shouldPlay: Bool? = nil) {
+        if shouldPlay == nil {
+            playerData.isPlaying.toggle()
+        } else {
+            playerData.isPlaying = shouldPlay!
+        }
 
         if playerData.isPlaying {
             self.player?.play()
@@ -96,16 +100,12 @@ struct PlayerView: View {
         let commandCenter = MPRemoteCommandCenter.shared()
 
         commandCenter.playCommand.addTarget { _ in
-            self.player?.play()
-            playerData.isPlaying = true
-            updateNowPlayingInfo()
+            togglePlay(shouldPlay: true)
             return .success
         }
 
         commandCenter.pauseCommand.addTarget { _ in
-            self.player?.pause()
-            playerData.isPlaying = false
-            updateNowPlayingInfo()
+            togglePlay(shouldPlay: false)
             return .success
         }
     }
