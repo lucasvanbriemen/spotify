@@ -4,7 +4,7 @@ import MediaPlayer
 
 struct PlayerView: View {
     @State private var player: AVPlayer?
-    private let playerData = PlayerData.shared
+    private let playerData = PlayerManager.shared
 
     var body: some View {
         HStack(alignment: .center) {
