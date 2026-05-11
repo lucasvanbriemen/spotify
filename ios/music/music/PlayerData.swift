@@ -6,4 +6,5 @@ class PlayerData {
     private init() {}
     
     var currentlyPlaying: Song?
+    var isPlaying: Bool = false
 }

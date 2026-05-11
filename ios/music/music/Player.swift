@@ -25,8 +25,8 @@ struct PlayerView: View {
                 
                 Spacer()
                 
-                Button(action: play) {
-                    Image(systemName: "play.fill")
+                Button(action: togglePlay) {
+                    Image(systemName: playerData.isPlaying ? "pause.circle" : "play.circle")
                         .font(.system(size: 24, weight: .bold, design: .default))
                 }
             } else {
@@ -39,8 +39,8 @@ struct PlayerView: View {
     }
 
     private func play() {
-        
         self.player?.pause()
+        playerData.isPlaying = false
         
         guard let song = playerData.currentlyPlaying,
               let url = URL(string: "\(Secrets.base_url)get-mp3/" + song.mp3Url!) else { return }
@@ -50,6 +50,17 @@ struct PlayerView: View {
         let playerItem = AVPlayerItem(url: url)
         self.player = AVPlayer(playerItem: playerItem)
         self.player?.play()
+        playerData.isPlaying = true
+    }
+    
+    private func togglePlay() {
+        playerData.isPlaying.toggle()
+        
+        if playerData.isPlaying {
+            self.player?.play()
+        } else {
+            self.player?.pause()
+        }
     }
 }
 
