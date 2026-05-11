@@ -12,7 +12,7 @@ struct PlaylistView: View {
     
     var body: some View {
         ScrollView {
-            LazyVStack {
+            LazyVStack(alignment: .leading) {
                 if !isLoading, let playlist {
                     ZStack(alignment: .bottomLeading) {
                         ZStack {
@@ -48,7 +48,8 @@ struct PlaylistView: View {
                                 } placeholder: {
                                     ProgressView()
                                 }
-                                .frame(width: 32, height: 32)
+                                .frame(width: 48, height: 48)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
 
                                 VStack(alignment: .leading) {
                                     Text(song.name)
