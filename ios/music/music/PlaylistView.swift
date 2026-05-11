@@ -59,7 +59,7 @@ struct PlaylistView: View {
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(8)
-                            .background(index.isMultiple(of: 2) ? Color(.secondarySystemBackground) : Color.clear)
+                            .background(index.isMultiple(of: 2) ? Color(.clear) : Color(.secondarySystemBackground))
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                         .foregroundStyle(Color.primary)
