@@ -72,7 +72,7 @@ struct PlaylistView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                         .foregroundStyle(Color.primary)
-                        .frame(width: 400)
+                        .frame(width: .infinity)
                     }
                 }
             }
