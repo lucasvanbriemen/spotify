@@ -13,12 +13,14 @@ struct PlayerView: View {
                 } placeholder: {
                     ProgressView()
                 }
-                .frame(width: 32, height: 32)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .frame(width: 48, height: 48)
+                .clipShape(RoundedRectangle(cornerRadius: 32))
 
                 VStack(alignment: .leading) {
                     Text(song.name)
-                        .fontWeight(Font.Weight.bold)
+                        .font(Font.system(size: 16, weight: .medium, design: .default))
+                        .frame(width: .infinity, height: 18)
+                        .truncationMode(.tail)
                     Text(song.artist!)
                         .font(Font.system(size: 14, weight: .light, design: .default))
                 }
