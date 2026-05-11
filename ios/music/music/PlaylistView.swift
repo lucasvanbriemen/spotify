@@ -6,6 +6,7 @@ struct PlaylistView: View {
     @State var playlist: Playlist?
     @State var isLoading: Bool = true
     @State var isLoopingUneven: Bool = false
+    @State private var manager = PlayerManager.shared
     
     init(playlistID: Int) {
         self.playlistID = playlistID
@@ -20,7 +21,7 @@ struct PlaylistView: View {
                         
                         HStack() {
                             Button(action: { print("play playlist") }) {
-                                Image(systemName: PlayerManager.isCurrentlyPlayingPlaylist(playlistId: playlistID) ? "pause" : "play")
+                                Image(systemName: manager.isCurrentlyPlayingPlaylist(playlistId: playlistID) ? "pause" : "play")
                                     .font(Font.system(size: 32))
                             }
                             .frame(width: 56, height: 56)
@@ -43,8 +44,8 @@ struct PlaylistView: View {
                     
                     ForEach(Array((playlist.songs ?? []).enumerated()), id: \.element.id) { index, song in
                         Button {
-                            PlayerManager.currentlyPlaying = song
-                            PlayerManager.playingPlaylistId = playlistID
+                            manager.currentlyPlaying = song
+                            manager.playingPlaylistId = playlistID
                         } label: {
                             HStack(alignment: .center) {
                                 AsyncImage(url: URL(string: song.imageUrl!)) { image in
