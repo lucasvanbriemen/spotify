@@ -31,7 +31,7 @@ struct PlayerView: View {
 
                 Spacer()
 
-                Button(action: { togglePlay() }) {
+                Button(action: { manager.togglePlayPause() }) {
                     Image(systemName: manager.isPlaying ? "pause" : "play")
                         .font(.system(size: 24, weight: .bold, design: .default))
                         .foregroundStyle(Color.white)
@@ -71,21 +71,6 @@ struct PlayerView: View {
         print("play")
     }
 
-    private func togglePlay(shouldPlay: Bool? = nil) {
-        if shouldPlay == nil {
-            manager.isPlaying.toggle()
-        } else {
-            manager.isPlaying = shouldPlay!
-        }
-
-        if manager.isPlaying {
-            manager.player?.play()
-        } else {
-            manager.player?.pause()
-        }
-        updateNowPlayingInfo()
-    }
-
     private func configureAudioSession() {
         let audioSession = AVAudioSession.sharedInstance()
         do {
@@ -100,12 +85,12 @@ struct PlayerView: View {
         let commandCenter = MPRemoteCommandCenter.shared()
 
         commandCenter.playCommand.addTarget { _ in
-            togglePlay(shouldPlay: true)
+            manager.togglePlayPause(forceState: true)
             return .success
         }
 
         commandCenter.pauseCommand.addTarget { _ in
-            togglePlay(shouldPlay: false)
+            manager.togglePlayPause(forceState: false)
             return .success
         }
     }
