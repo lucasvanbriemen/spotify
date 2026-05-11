@@ -4,11 +4,10 @@ import MediaPlayer
 
 struct PlayerView: View {
     @State private var player: AVPlayer?
-    private let playerData = PlayerManager.shared
 
     var body: some View {
         HStack(alignment: .center) {
-            if let song = playerData.currentlyPlaying {
+            if let song = PlayerManager.currentlyPlaying {
                 AsyncImage(url: URL(string: song.imageUrl!)) { image in
                     image.resizable()
                 } placeholder: {
@@ -33,7 +32,7 @@ struct PlayerView: View {
                 Spacer()
                 
                 Button(action: { togglePlay() }) {
-                    Image(systemName: playerData.isPlaying ? "pause" : "play")
+                    Image(systemName: PlayerManager.isPlaying ? "pause" : "play")
                         .font(.system(size: 24, weight: .bold, design: .default))
                         .foregroundStyle(Color.white)
                         .padding(16)
@@ -46,7 +45,7 @@ struct PlayerView: View {
             configureAudioSession()
             setupRemoteCommands()
         }
-        .onChange(of: playerData.currentlyPlaying?.id) {
+        .onChange(of: PlayerManager.currentlyPlaying?.id) {
             play()
             updateNowPlayingInfo()
         }
@@ -58,9 +57,9 @@ struct PlayerView: View {
 
     private func play() {
         self.player?.pause()
-        playerData.isPlaying = false
+        PlayerManager.isPlaying = false
         
-        guard let song = playerData.currentlyPlaying,
+        guard let song = PlayerManager.currentlyPlaying,
               let url = URL(string: "\(Secrets.base_url)get-mp3/" + song.mp3Url!) else { return }
         
         print(url)
@@ -68,17 +67,17 @@ struct PlayerView: View {
         let playerItem = AVPlayerItem(url: url)
         self.player = AVPlayer(playerItem: playerItem)
         self.player?.play()
-        playerData.isPlaying = true
+        PlayerManager.isPlaying = true
     }
     
     private func togglePlay(shouldPlay: Bool? = nil) {
         if shouldPlay == nil {
-            playerData.isPlaying.toggle()
+            PlayerManager.isPlaying.toggle()
         } else {
-            playerData.isPlaying = shouldPlay!
+            PlayerManager.isPlaying = shouldPlay!
         }
 
-        if playerData.isPlaying {
+        if PlayerManager.isPlaying {
             self.player?.play()
         } else {
             self.player?.pause()
@@ -111,7 +110,7 @@ struct PlayerView: View {
     }
 
     private func updateNowPlayingInfo() {
-        guard let song = playerData.currentlyPlaying else {
+        guard let song = PlayerManager.currentlyPlaying else {
             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
             return
         }
@@ -119,7 +118,7 @@ struct PlayerView: View {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = [
             MPMediaItemPropertyTitle: song.name,
             MPMediaItemPropertyArtist: song.artist ?? "Unknown Artist",
-            MPNowPlayingInfoPropertyPlaybackRate: playerData.isPlaying ? 1.0 : 0.0
+            MPNowPlayingInfoPropertyPlaybackRate: PlayerManager.isPlaying ? 1.0 : 0.0
         ]
     }
 }
