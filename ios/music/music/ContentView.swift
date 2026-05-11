@@ -17,19 +17,7 @@ struct ContentView: View {
                     ForEach(playlists) { playlist in
                         NavigationLink(destination: PlaylistView(playlistID: playlist.id)) {
                             ZStack(alignment: .bottomLeading) {
-                                ZStack {
-                                    AsyncImage(url: URL(string: playlist.image!)) { image in
-                                        image.resizable()
-                                            .blur(radius: 1)
-                                    } placeholder: {
-                                        ProgressView()
-                                    }
-                                    
-                                    LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom)
-                                        
-                                }
-                                    .frame(width: 400, height: 200)
-                                    .clipShape(RoundedRectangle(cornerRadius: 32))
+                                PlaylistBackgroundView(playlist: playlist)
 
                                 Text(playlist.name)
                                     .foregroundStyle(Color.white)
@@ -41,6 +29,7 @@ struct ContentView: View {
                 }
             }
         }
+        .padding(8)
         
         .task {
             await getPlaylists()
