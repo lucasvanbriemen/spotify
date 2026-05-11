@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import MediaPlayer
 
 struct PlayerView: View {
     @State private var player: AVPlayer?
@@ -41,8 +42,13 @@ struct PlayerView: View {
                 EmptyView()
             }
         }
+        .onAppear {
+            configureAudioSession()
+            setupRemoteCommands()
+        }
         .onChange(of: playerData.currentlyPlaying?.id) {
             play()
+            updateNowPlayingInfo()
         }
         .padding([.leading, .trailing], 8)
         .frame(width: 390, height: 64)
@@ -67,12 +73,54 @@ struct PlayerView: View {
     
     private func togglePlay() {
         playerData.isPlaying.toggle()
-        
+
         if playerData.isPlaying {
             self.player?.play()
         } else {
             self.player?.pause()
         }
+        updateNowPlayingInfo()
+    }
+    
+    private func configureAudioSession() {
+        let audioSession = AVAudioSession.sharedInstance()
+        do {
+            try audioSession.setCategory(.playback, mode: .moviePlayback)
+            try audioSession.setActive(true)
+        } catch {
+            print("Failed to set the audio session configuration")
+        }
+    }
+
+    private func setupRemoteCommands() {
+        let commandCenter = MPRemoteCommandCenter.shared()
+
+        commandCenter.playCommand.addTarget { _ in
+            self.player?.play()
+            playerData.isPlaying = true
+            updateNowPlayingInfo()
+            return .success
+        }
+
+        commandCenter.pauseCommand.addTarget { _ in
+            self.player?.pause()
+            playerData.isPlaying = false
+            updateNowPlayingInfo()
+            return .success
+        }
+    }
+
+    private func updateNowPlayingInfo() {
+        guard let song = playerData.currentlyPlaying else {
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+            return
+        }
+
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = [
+            MPMediaItemPropertyTitle: song.name,
+            MPMediaItemPropertyArtist: song.artist ?? "Unknown Artist",
+            MPNowPlayingInfoPropertyPlaybackRate: playerData.isPlaying ? 1.0 : 0.0
+        ]
     }
 }
 
