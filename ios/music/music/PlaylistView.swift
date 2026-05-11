@@ -23,19 +23,32 @@ struct PlaylistView: View {
                             } placeholder: {
                                 ProgressView()
                             }
-
+                            
                             LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom)
-                                
+                            
                         }
-                            .frame(width: 400, height: 200)
-                            .clipShape(RoundedRectangle(cornerRadius: 32))
-
-                        VStack(alignment: .leading) {
-                            Text(playlist.name)
-                                .font(Font.largeTitle.bold())
-                            Text(String(playlist.songs?.count ?? 0) + " songs, \(playlistDuration())")
+                        .frame(width: 400, height: 200)
+                        .clipShape(RoundedRectangle(cornerRadius: 32))
+                        
+                        HStack() {
+                            Button(action: { print("play playlist") }) {
+                                Image(systemName: "play")
+                            }
+                            .frame(width: 56, height: 56)
+                            .clipShape(Circle())
+                            .background(Color.accentColor)
+                            .foregroundStyle(Color.white)
+                            .clipShape(Circle())
+                            
+                            VStack(alignment: .leading) {
+                                Text(playlist.name)
+                                    .font(Font.largeTitle.bold())
+                                Text(String(playlist.songs?.count ?? 0) + " songs, \(playlistDuration())")
+                            }
+                            .foregroundStyle(Color.white)
+                            .padding(.leading, 8)
+                            
                         }
-                        .foregroundStyle(Color.white)
                         .padding(16)
                     }
                     
