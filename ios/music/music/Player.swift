@@ -32,8 +32,10 @@ struct PlayerView: View {
                 Spacer()
                 
                 Button(action: togglePlay) {
-                    Image(systemName: playerData.isPlaying ? "pause.circle" : "play.circle")
+                    Image(systemName: playerData.isPlaying ? "pause" : "play")
                         .font(.system(size: 24, weight: .bold, design: .default))
+                        .foregroundStyle(Color.white)
+                        .padding(16)
                 }
             } else {
                 EmptyView()
