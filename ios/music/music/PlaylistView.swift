@@ -16,19 +16,7 @@ struct PlaylistView: View {
             LazyVStack(alignment: .leading) {
                 if !isLoading, let playlist {
                     ZStack(alignment: .bottomLeading) {
-                        ZStack {
-                            AsyncImage(url: URL(string: playlist.image!)) { image in
-                                image.resizable()
-                                    .blur(radius: 1)
-                            } placeholder: {
-                                ProgressView()
-                            }
-                            
-                            LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom)
-                            
-                        }
-                        .frame(width: 400, height: 200)
-                        .clipShape(RoundedRectangle(cornerRadius: 32))
+                        PlaylistBackgroundView(playlist: playlist)
                         
                         HStack() {
                             Button(action: { print("play playlist") }) {
