@@ -1,8 +1,8 @@
 import Foundation
 
 @Observable
-class PlayerData {
-    static let shared = PlayerData()
+class PlayerManager {
+    static let shared = PlayerManager()
     private init() {}
     
     var currentlyPlaying: Song?
