@@ -7,4 +7,5 @@ class PlayerData {
     
     var currentlyPlaying: Song?
     var isPlaying: Bool = false
+    var playingPlaylistId: Int? = nil
 }

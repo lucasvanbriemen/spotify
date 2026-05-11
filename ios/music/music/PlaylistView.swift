@@ -32,7 +32,8 @@ struct PlaylistView: View {
                         
                         HStack() {
                             Button(action: { print("play playlist") }) {
-                                Image(systemName: "play")
+                                Image(systemName: (PlayerData.shared.isPlaying && PlayerData.shared.playingPlaylistId == playlistID) ? "pause" : "play")
+                                    .font(Font.system(size: 32))
                             }
                             .frame(width: 56, height: 56)
                             .clipShape(Circle())
@@ -55,6 +56,7 @@ struct PlaylistView: View {
                     ForEach(Array((playlist.songs ?? []).enumerated()), id: \.element.id) { index, song in
                         Button {
                             PlayerData.shared.currentlyPlaying = song
+                            PlayerData.shared.playingPlaylistId = playlistID
                         } label: {
                             HStack(alignment: .center) {
                                 AsyncImage(url: URL(string: song.imageUrl!)) { image in
