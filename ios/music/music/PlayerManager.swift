@@ -4,7 +4,9 @@ import AVFoundation
 @Observable
 class PlayerManager {
     static let shared = PlayerManager()
-    private init() {}
+    private init() {
+        setUpBackgroundPlayback()
+    }
 
     var player: AVPlayer?
 
@@ -36,5 +38,15 @@ class PlayerManager {
         let playerItem = AVPlayerItem(url: url!)
         player = AVPlayer(playerItem: playerItem)
         togglePlayPause(forceState: true)
+    }
+    
+    func setUpBackgroundPlayback() {
+        let audioSession = AVAudioSession.sharedInstance()
+        do {
+            try audioSession.setCategory(.playback, mode: .moviePlayback)
+            try audioSession.setActive(true)
+        } catch {
+            print("Failed to set the audio session configuration")
+        }
     }
 }

@@ -42,7 +42,6 @@ struct PlayerView: View {
             }
         }
         .onAppear {
-            configureAudioSession()
             setupRemoteCommands()
         }
         .onChange(of: manager.currentlyPlaying?.id) {
@@ -52,18 +51,6 @@ struct PlayerView: View {
         .frame(width: 390, height: 64)
         .background(Color(red: 0.11, green: 0.73, blue: 0.33))
         .clipShape(Capsule())
-    }
-
-  
-
-    private func configureAudioSession() {
-        let audioSession = AVAudioSession.sharedInstance()
-        do {
-            try audioSession.setCategory(.playback, mode: .moviePlayback)
-            try audioSession.setActive(true)
-        } catch {
-            print("Failed to set the audio session configuration")
-        }
     }
 
     private func setupRemoteCommands() {
