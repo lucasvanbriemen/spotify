@@ -37,8 +37,6 @@ struct PlayerView: View {
                         .foregroundStyle(Color.white)
                         .padding(16)
                 }
-            } else {
-                EmptyView()
             }
         }
         .padding([.leading, .trailing], 8)

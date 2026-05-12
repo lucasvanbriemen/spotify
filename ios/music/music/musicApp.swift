@@ -6,8 +6,10 @@ struct musicApp: App {
         WindowGroup {
             ContentView()
                 .safeAreaInset(edge: .bottom) {
-                    PlayerView()
-                        .padding(.bottom, -16)
+                    if PlayerManager.shared.currentlyPlaying != nil {
+                        PlayerView()
+                            .padding(.bottom, -16)
+                    }
                 }
         }
     }
