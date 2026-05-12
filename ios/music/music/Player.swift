@@ -41,9 +41,6 @@ struct PlayerView: View {
                 EmptyView()
             }
         }
-        .onAppear {
-            setupRemoteCommands()
-        }
         .onChange(of: manager.currentlyPlaying?.id) {
             updateNowPlayingInfo()
         }
@@ -51,20 +48,6 @@ struct PlayerView: View {
         .frame(width: 390, height: 64)
         .background(Color(red: 0.11, green: 0.73, blue: 0.33))
         .clipShape(Capsule())
-    }
-
-    private func setupRemoteCommands() {
-        let commandCenter = MPRemoteCommandCenter.shared()
-
-        commandCenter.playCommand.addTarget { _ in
-            manager.togglePlayPause(forceState: true)
-            return .success
-        }
-
-        commandCenter.pauseCommand.addTarget { _ in
-            manager.togglePlayPause(forceState: false)
-            return .success
-        }
     }
 
     private func updateNowPlayingInfo() {

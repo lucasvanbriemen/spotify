@@ -1,11 +1,13 @@
 import Foundation
 import AVFoundation
+import MediaPlayer
 
 @Observable
 class PlayerManager {
     static let shared = PlayerManager()
     private init() {
         setUpBackgroundPlayback()
+        setUpExternalCommands()
     }
 
     var player: AVPlayer?
@@ -47,6 +49,20 @@ class PlayerManager {
             try audioSession.setActive(true)
         } catch {
             print("Failed to set the audio session configuration")
+        }
+    }
+    
+    func setUpExternalCommands() {
+        let commandCenter = MPRemoteCommandCenter.shared()
+
+        commandCenter.playCommand.addTarget { _ in
+            self.togglePlayPause(forceState: true)
+            return .success
+        }
+
+        commandCenter.pauseCommand.addTarget { _ in
+            self.togglePlayPause(forceState: false)
+            return .success
         }
     }
 }
