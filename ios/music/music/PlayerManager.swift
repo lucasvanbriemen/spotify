@@ -21,6 +21,7 @@ class PlayerManager {
     var playingPlaylistId: Int? = nil
     private var timeIntoSong: Double = 0
     private var timeObserverToken: Any? = nil
+    var queue: [Song] = []
 
     func isCurrentlyPlayingPlaylist(playlistId: Int?) -> Bool {
         return self.isPlaying && self.playingPlaylistId == playlistId
@@ -38,6 +39,23 @@ class PlayerManager {
         } else {
             player?.pause()
         }
+    }
+
+    func playPlaylist(playlist: Playlist) {
+        playingPlaylistId = playlist.id
+        
+        if let firstSong = playlist.songs?.first {
+            playSong(song: firstSong)
+        }
+        
+        queue = playlist.songs ?? []
+        
+        print(queue.count)
+
+        // Remove the first item, as thats currently playing
+        queue.remove(at: 0)
+        
+        print(queue.count)
     }
     
     func playSong(song: Song) {

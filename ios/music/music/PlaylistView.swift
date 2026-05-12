@@ -20,7 +20,7 @@ struct PlaylistView: View {
                         PlaylistBackgroundView(playlist: playlist)
                         
                         HStack() {
-                            Button(action: { print("play playlist") }) {
+                            Button(action: { manager.playPlaylist(playlist: playlist) }) {
                                 Image(systemName: manager.isCurrentlyPlayingPlaylist(playlistId: playlistID) ? "pause" : "play")
                                     .font(Font.system(size: 32))
                             }
