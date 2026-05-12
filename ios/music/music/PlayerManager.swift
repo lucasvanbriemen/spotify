@@ -23,6 +23,7 @@ class PlayerManager {
     private var timeObserverToken: Any? = nil
     private var endObserver: NSObjectProtocol?
     var queue: [Song] = []
+    var pastQueue: [Song] = []
 
     func isCurrentlyPlayingPlaylist(playlistId: Int?) -> Bool {
         return self.isPlaying && self.playingPlaylistId == playlistId
@@ -115,6 +116,17 @@ class PlayerManager {
             self.playNextSong()
             return .success
         }
+        
+        commandCenter.previousTrackCommand.addTarget { _ in
+            if self.timeIntoSong < 5 && self.pastQueue.count > 0 {
+                self.playPreviousSong()
+                return .success
+            }
+            
+            self.player?.seek(to: .zero)
+            return .success
+        }
+
     }
     
     func sncyNowPlayingInfo() {
@@ -133,6 +145,18 @@ class PlayerManager {
     }
     
     func playNextSong() {
+        if let current = currentlyPlaying {
+            pastQueue.append(current)
+        }
         playSong(song: queue.removeFirst())
+    }
+    
+    func playPreviousSong() {
+        if let current = currentlyPlaying {
+            queue.insert(current, at: 0)
+        }
+        if let previous = pastQueue.popLast() {
+            playSong(song: previous)
+        }
     }
 }
