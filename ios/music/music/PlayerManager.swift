@@ -19,6 +19,8 @@ class PlayerManager {
     }
     var isPlaying: Bool = false
     var playingPlaylistId: Int? = nil
+    private var timeIntoSong: Double = 0
+    private var timeObserverToken: Any? = nil
 
     func isCurrentlyPlayingPlaylist(playlistId: Int?) -> Bool {
         return self.isPlaying && self.playingPlaylistId == playlistId
@@ -41,10 +43,19 @@ class PlayerManager {
     func playSong(song: Song) {
         let url = URL(string: "\(Secrets.base_url)get-mp3/" + song.mp3Url!)
 
+        if timeObserverToken != nil {
+            player?.removeTimeObserver(timeObserverToken!)
+        }
+        
         let playerItem = AVPlayerItem(url: url!)
         player = AVPlayer(playerItem: playerItem)
         currentlyPlaying = song
         togglePlayPause(forceState: true)
+
+        timeObserverToken = player?.addPeriodicTimeObserver(forInterval: CMTimeMake(value: 1, timescale: 1), queue: .main, using: { [weak self] time in
+            self?.timeIntoSong = CMTimeGetSeconds(time)
+            self?.sncyNowPlayingInfo()
+        })
     }
     
     func setUpBackgroundPlayback() {
@@ -80,7 +91,9 @@ class PlayerManager {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = [
             MPMediaItemPropertyTitle: song.name,
             MPMediaItemPropertyArtist: song.artist ?? "Unknown Artist",
-            MPNowPlayingInfoPropertyPlaybackRate: self.isPlaying ? 1.0 : 0.0
+            MPNowPlayingInfoPropertyPlaybackRate: self.isPlaying ? 1.0 : 0.0,
+            MPNowPlayingInfoPropertyElapsedPlaybackTime: self.timeIntoSong,
+            MPMediaItemPropertyPlaybackDuration: CMTimeGetSeconds(player?.currentItem?.duration ?? .indefinite)
         ]
     }
 }
