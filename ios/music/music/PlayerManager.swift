@@ -43,6 +43,7 @@ class PlayerManager {
 
         let playerItem = AVPlayerItem(url: url!)
         player = AVPlayer(playerItem: playerItem)
+        currentlyPlaying = song
         togglePlayPause(forceState: true)
     }
     
