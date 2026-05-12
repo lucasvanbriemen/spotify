@@ -35,12 +35,7 @@ struct ContentView: View {
     }
     
     func getPlaylists() async {
-        do {
-            playlists = try await SeverApi.get(endpoint: "playlists")
-            print(playlists)
-        } catch {
-            print("Cant get playlist: \(error)")
-        }
+        playlists = await SeverApi.get(endpoint: "playlists") ?? []
     }
 }
 

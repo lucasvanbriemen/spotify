@@ -85,13 +85,9 @@ struct PlaylistView: View {
     
     
     func getPlaylist() async {
-        do {
-            playlist = try await SeverApi.get(endpoint: "playlist/\(String(playlistID))")
-            isLoading = false
-            print(playlist?.songs?.count ?? 0)
-        } catch {
-            print(error)
-        }
+        playlist = await SeverApi.get(endpoint: "playlist/\(String(playlistID))")
+        isLoading = false
+        print(playlist?.songs?.count ?? 0)
     }
     
     func playlistDuration() -> String {
