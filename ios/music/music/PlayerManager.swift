@@ -21,6 +21,7 @@ class PlayerManager {
     var playingPlaylistId: Int? = nil
     private var timeIntoSong: Double = 0
     private var timeObserverToken: Any? = nil
+    private var endObserver: NSObjectProtocol?
     var queue: [Song] = []
 
     func isCurrentlyPlayingPlaylist(playlistId: Int?) -> Bool {
@@ -50,12 +51,8 @@ class PlayerManager {
         
         queue = playlist.songs ?? []
         
-        print(queue.count)
-
         // Remove the first item, as thats currently playing
         queue.remove(at: 0)
-        
-        print(queue.count)
     }
     
     func playSong(song: Song) {
@@ -63,6 +60,9 @@ class PlayerManager {
 
         if timeObserverToken != nil {
             player?.removeTimeObserver(timeObserverToken!)
+        }
+        if let observer = endObserver {
+            NotificationCenter.default.removeObserver(observer)
         }
         
         let playerItem = AVPlayerItem(url: url!)
@@ -74,6 +74,9 @@ class PlayerManager {
             self?.timeIntoSong = CMTimeGetSeconds(time)
             self?.sncyNowPlayingInfo()
         })
+        endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: playerItem, queue: .main) { [weak self] _ in
+            self?.playNextSong()
+        }
     }
     
     func setUpBackgroundPlayback() {
@@ -107,6 +110,11 @@ class PlayerManager {
             self?.player?.seek(to: time)
             return .success
         }
+        
+        commandCenter.nextTrackCommand.addTarget { _ in
+            self.playNextSong()
+            return .success
+        }
     }
     
     func sncyNowPlayingInfo() {
@@ -122,5 +130,9 @@ class PlayerManager {
             MPNowPlayingInfoPropertyElapsedPlaybackTime: self.timeIntoSong,
             MPMediaItemPropertyPlaybackDuration: CMTimeGetSeconds(player?.currentItem?.duration ?? .indefinite)
         ]
+    }
+    
+    func playNextSong() {
+        playSong(song: queue.removeFirst())
     }
 }
