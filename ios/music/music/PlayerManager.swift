@@ -12,7 +12,11 @@ class PlayerManager {
 
     var player: AVPlayer?
 
-    var currentlyPlaying: Song?
+    var currentlyPlaying: Song? {
+        didSet {
+            sncyNowPlayingInfo()
+        }
+    }
     var isPlaying: Bool = false
     var playingPlaylistId: Int? = nil
 
@@ -64,5 +68,18 @@ class PlayerManager {
             self.togglePlayPause(forceState: false)
             return .success
         }
+    }
+    
+    func sncyNowPlayingInfo() {
+        guard let song = self.currentlyPlaying else {
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+            return
+        }
+
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = [
+            MPMediaItemPropertyTitle: song.name,
+            MPMediaItemPropertyArtist: song.artist ?? "Unknown Artist",
+            MPNowPlayingInfoPropertyPlaybackRate: self.isPlaying ? 1.0 : 0.0
+        ]
     }
 }

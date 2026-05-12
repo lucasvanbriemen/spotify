@@ -41,26 +41,10 @@ struct PlayerView: View {
                 EmptyView()
             }
         }
-        .onChange(of: manager.currentlyPlaying?.id) {
-            updateNowPlayingInfo()
-        }
         .padding([.leading, .trailing], 8)
         .frame(width: 390, height: 64)
         .background(Color(red: 0.11, green: 0.73, blue: 0.33))
         .clipShape(Capsule())
-    }
-
-    private func updateNowPlayingInfo() {
-        guard let song = manager.currentlyPlaying else {
-            MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
-            return
-        }
-
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = [
-            MPMediaItemPropertyTitle: song.name,
-            MPMediaItemPropertyArtist: song.artist ?? "Unknown Artist",
-            MPNowPlayingInfoPropertyPlaybackRate: manager.isPlaying ? 1.0 : 0.0
-        ]
     }
 }
 
