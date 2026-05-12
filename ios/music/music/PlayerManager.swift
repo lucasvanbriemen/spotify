@@ -80,6 +80,15 @@ class PlayerManager {
             self.togglePlayPause(forceState: false)
             return .success
         }
+        
+        commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
+            guard let event = event as? MPChangePlaybackPositionCommandEvent else {
+                return .commandFailed
+            }
+            let time = CMTime(seconds: event.positionTime, preferredTimescale: 600)
+            self?.player?.seek(to: time)
+            return .success
+        }
     }
     
     func sncyNowPlayingInfo() {
