@@ -2,13 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Jobs\GenerateMp3;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Process\Process;
 
 class SpotifyController extends Controller
@@ -16,6 +14,8 @@ class SpotifyController extends Controller
     public function getMp3(Request $request, string $song_id)
     {
         $id = $song_id;
+
+        $publicRoot = storage_path('app/public/audio');
 
         if ($this->findMp3($id)) {
             return $this->returnMp3($request, $id);
@@ -26,90 +26,31 @@ class SpotifyController extends Controller
         $name = $metaData->json('name', '');
         $artist = $metaData->json('artists.0.name', '');
 
-        if ($name === '' || $artist === '') {
-            return response()->json(['error' => 'Unknown Spotify track'], 422);
+        $process = new Process([
+            base_path('bin/yt-dlp'),
+            '--no-playlist',
+            '--extract-audio',
+            '--audio-format', 'mp3',
+            '--audio-quality', '0',
+            '--restrict-filenames',
+            '--no-progress',
+            '--match-filter', 'age_limit<18',
+            '--max-downloads', '1',
+            '--ffmpeg-location', base_path('bin'),
+            '--output', "{$publicRoot}/{$id}",
+            "ytsearch5: {$artist} {$name} audio",
+        ], null, $this->setupEnv());
+        $process->setTimeout(180);
+        $process->run();
+
+        if (! $this->findMp3($id)) {
+            return response()->json([
+                'error' => 'yt-dlp failed',
+                'detail' => trim($process->getErrorOutput() ?: $process->getOutput()),
+            ], 500);
         }
 
-        GenerateMp3::dispatch($id, $artist, $name);
-
-        $cached = Cache::get("spotify.signed_audio:{$id}");
-        if (is_array($cached) && isset($cached['url'], $cached['ext'])) {
-            $signedUrl = $cached['url'];
-            $ext = $cached['ext'];
-        } else {
-            $process = new Process([
-                base_path('bin/yt-dlp'),
-                '--no-playlist',
-                '--restrict-filenames',
-                '--no-progress',
-                '--match-filter', 'age_limit<18',
-                '--format', 'bestaudio[ext=m4a]/bestaudio',
-                '--print', '%(url)s',
-                '--print', '%(ext)s',
-                "ytsearch1: {$artist} {$name} audio",
-            ], null, $this->setupEnv());
-            $process->setTimeout(60);
-            $process->run();
-
-            $lines = array_values(array_filter(array_map('trim', explode("\n", $process->getOutput()))));
-            $signedUrl = $lines[0] ?? '';
-            $ext = strtolower($lines[1] ?? '');
-            if ($signedUrl === '' || ! filter_var($signedUrl, FILTER_VALIDATE_URL)) {
-                return response()->json([
-                    'error' => 'yt-dlp failed',
-                    'detail' => trim($process->getErrorOutput() ?: $process->getOutput()),
-                ], 500);
-            }
-
-            Cache::put("spotify.signed_audio:{$id}", ['url' => $signedUrl, 'ext' => $ext], now()->addMinutes(60));
-        }
-
-        $contentType = match ($ext) {
-            'm4a', 'mp4', 'aac' => 'audio/mp4',
-            'webm', 'opus' => 'audio/webm',
-            'mp3' => 'audio/mpeg',
-            default => 'audio/mpeg',
-        };
-
-        $clientRange = $request->headers->get('Range');
-
-        return new StreamedResponse(function () use ($signedUrl, $clientRange) {
-            while (ob_get_level() > 0) {
-                ob_end_clean();
-            }
-
-            $ch = curl_init($signedUrl);
-            $opts = [
-                CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_HEADERFUNCTION => function ($_ch, $headerLine) {
-                    $line = rtrim($headerLine);
-                    if (preg_match('#^HTTP/\S+\s+(\d+)\s*(.*)$#', $line, $m)) {
-                        $status = (int) $m[1];
-                        $reason = $m[2] !== '' ? $m[2] : ($status === 206 ? 'Partial Content' : 'OK');
-                        header("HTTP/1.1 {$status} {$reason}", true, $status);
-                    } elseif (preg_match('/^(Content-Length|Content-Range|Accept-Ranges|Content-Type):/i', $line)) {
-                        header($line, true);
-                    }
-
-                    return \strlen($headerLine);
-                },
-                CURLOPT_WRITEFUNCTION => function ($_ch, $chunk) {
-                    echo $chunk;
-                    flush();
-                    return \strlen($chunk);
-                },
-                CURLOPT_FAILONERROR => true,
-            ];
-            if ($clientRange !== null && $clientRange !== '') {
-                $opts[CURLOPT_HTTPHEADER] = ['Range: ' . $clientRange];
-            }
-            curl_setopt_array($ch, $opts);
-            curl_exec($ch);
-        }, 200, [
-            'Content-Type' => $contentType,
-            'Accept-Ranges' => 'bytes',
-            'Cache-Control' => 'no-store',
-        ]);
+        return $this->returnMp3($request, $id);
     }
 
     public function search(Request $request): JsonResponse
