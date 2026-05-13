@@ -7,5 +7,6 @@ struct NavigationView: View {
             Tab("Search", systemImage: "magnifyingglass", content: { PlaylistOverviewView() })
         }
         .tabViewBottomAccessory(isEnabled: PlayerManager.shared.currentlyPlaying != nil, content: { PlayerView() })
+        .tabBarMinimizeBehavior(TabBarMinimizeBehavior.onScrollDown)
     }
 }
