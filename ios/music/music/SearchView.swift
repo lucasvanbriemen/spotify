@@ -6,11 +6,11 @@ struct SearchView: View {
     
     var body: some View {
         NavigationStack {
-            VStack {
-                Text("Search")
-                
-                ForEach(songs) { song in
-                    SongListingView(song: song, bgColor: Color.clear, playlistID: 1)
+            ScrollView {
+                VStack {
+                    ForEach(songs) { song in
+                        SongListingView(song: song, bgColor: Color.clear, playlistID: 1)
+                    }
                 }
             }
         }
