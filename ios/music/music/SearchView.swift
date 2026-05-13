@@ -14,10 +14,15 @@ struct SearchView: View {
                 }
             }
         }
-        .searchable(text: $searchText)
+        .searchable(text: $searchText, prompt: "Search songs")
+        .onChange(of: searchText) { oldValue, newValue in
+            Task {
+                await getSongs()
+            }
+        }
     }
     
     func getSongs() async {
-        songs = await SeverApi.get(endpoint: "songs?q=\(searchText)") ?? []
+        songs = await SeverApi.get(endpoint: "search?q=\(searchText)") ?? []
     }
 }

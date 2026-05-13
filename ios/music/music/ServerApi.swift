@@ -12,6 +12,7 @@ class SeverApi {
         do {
             var request = URLRequest(url: URL(string: "\(baseUrl)\(endpoint)")!)
             request.httpMethod = method
+
             request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
             
             let (data, _) = try await URLSession.shared.data(for: request)
