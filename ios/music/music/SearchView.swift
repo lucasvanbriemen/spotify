@@ -25,6 +25,10 @@ struct SearchView: View {
     }
     
     func getSongs() async {
+        if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return
+        }
+        
         songs = await SeverApi.get(endpoint: "search?q=\(searchText)") ?? []
     }
 }
