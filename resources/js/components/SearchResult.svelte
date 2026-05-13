@@ -6,13 +6,11 @@
 
   let { result } = $props();
 
-  async function playVideo(video) {
-    const data = await api.get(route('get-mp3-url', {song_id: video.id}));
-    if (!data?.stream_url) {
-      return;
-    }
-
-    currentlyPlaying.set({ ...video, stream_url: data.stream_url });
+  function playVideo(video) {
+    currentlyPlaying.set({
+      ...video,
+      stream_url: route('get-mp3-url', { song_id: video.file_id }),
+    });
   }
 </script>
 

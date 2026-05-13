@@ -26,6 +26,10 @@ class SpotifyController extends Controller
         $name = $metaData->json('name', '');
         $artist = $metaData->json('artists.0.name', '');
 
+        if ($name === '' || $artist === '') {
+            return response()->json(['error' => 'Unknown Spotify track'], 422);
+        }
+
         GenerateMp3::dispatch($id, $artist, $name);
 
         $process = new Process([
@@ -34,20 +38,30 @@ class SpotifyController extends Controller
             '--restrict-filenames',
             '--no-progress',
             '--match-filter', 'age_limit<18',
-            '--format', 'bestaudio',
-            '--get-url',
+            '--format', 'bestaudio[ext=m4a]/bestaudio',
+            '--print', '%(url)s',
+            '--print', '%(ext)s',
             "ytsearch1: {$artist} {$name} audio",
         ], null, $this->setupEnv());
         $process->setTimeout(60);
         $process->run();
 
-        $signedUrl = trim($process->getOutput());
+        $lines = array_values(array_filter(array_map('trim', explode("\n", $process->getOutput()))));
+        $signedUrl = $lines[0] ?? '';
+        $ext = strtolower($lines[1] ?? '');
         if ($signedUrl === '' || ! filter_var($signedUrl, FILTER_VALIDATE_URL)) {
             return response()->json([
                 'error' => 'yt-dlp failed',
                 'detail' => trim($process->getErrorOutput() ?: $process->getOutput()),
             ], 500);
         }
+
+        $contentType = match ($ext) {
+            'm4a', 'mp4', 'aac' => 'audio/mp4',
+            'webm', 'opus' => 'audio/webm',
+            'mp3' => 'audio/mpeg',
+            default => 'audio/mpeg',
+        };
 
         return new StreamedResponse(function () use ($signedUrl) {
             $ch = curl_init($signedUrl);
@@ -63,7 +77,7 @@ class SpotifyController extends Controller
             ]);
             curl_exec($ch);
         }, 200, [
-            'Content-Type' => 'audio/webm',
+            'Content-Type' => $contentType,
             'Accept-Ranges' => 'none',
             'Cache-Control' => 'no-store',
         ]);
