@@ -53,7 +53,3 @@ struct PlayerView: View {
         }
     }
 }
-
-#Preview {
-    ContentView()
-}
