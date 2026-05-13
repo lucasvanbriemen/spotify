@@ -6,5 +6,6 @@ struct NavigationView: View {
             Tab("Playlists", systemImage: "play.square.stack", content: { PlaylistOverviewView() })
             Tab("Search", systemImage: "magnifyingglass", content: { PlaylistOverviewView() })
         }
+        .tabViewBottomAccessory(isEnabled: PlayerManager.shared.currentlyPlaying != nil, content: { PlayerView() })
     }
 }
