@@ -4,7 +4,7 @@ struct SongListingView: View {
     let manager = PlayerManager.shared
     let song: Song
     let bgColor: Color
-    let playlistID: Int?
+    let playlistID: Int? = nil
     
     var body: some View {
         Button {

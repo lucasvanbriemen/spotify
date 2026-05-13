@@ -67,13 +67,11 @@ struct PlaylistView: View {
             return "0 min"
         }
         
-        var totalMS: Int = 0
-        
+        var totalSeconds: Int = 0
         for song in playlist!.songs! {
-            totalMS += song.durationMS
+            totalSeconds += song.durationMS
         }
         
-        let totalSeconds = totalMS / 1000
         let hours = totalSeconds / 3600
         let minutes = (totalSeconds % 3600) / 60
 
