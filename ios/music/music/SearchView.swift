@@ -13,6 +13,7 @@ struct SearchView: View {
                         SongListingView(song: song, bgColor: bg)
                     }
                 }
+                .padding([.trailing, .leading], 8)
             }
         }
         .searchable(text: $searchText, prompt: "Search songs")
