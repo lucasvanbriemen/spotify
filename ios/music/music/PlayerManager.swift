@@ -65,7 +65,7 @@ class PlayerManager {
         if let observer = endObserver {
             NotificationCenter.default.removeObserver(observer)
         }
-        
+
         let playerItem = AVPlayerItem(url: url!)
         player = AVPlayer(playerItem: playerItem)
         currentlyPlaying = song
