@@ -17,36 +17,33 @@ struct PlayerView: View {
                     } placeholder: {
                         ProgressView()
                     }
-                    .frame(width: 48, height: 48)
+                    .frame(width: 32, height: 32)
                     .clipShape(RoundedRectangle(cornerRadius: 32))
                     
                     VStack(alignment: .leading) {
                         Text(song.name)
-                            .font(Font.system(size: 16, weight: .medium, design: .default))
-                            .frame(height: 16)
+                            .font(Font.system(size: 14, weight: .medium, design: .default))
+                            .frame(height: 5)
                             .truncationMode(.tail)
                         Text(song.artist!)
-                            .font(Font.system(size: 14, weight: .light, design: .default))
-                            .frame(height: 14)
+                            .font(Font.system(size: 10, weight: .medium, design: .default))
+                            .frame(height: 7)
                             .truncationMode(.tail)
                             .foregroundStyle(Color.secondary)
                     }
-                    .foregroundStyle(Color.white)
+                    .foregroundStyle(Color.primary)
                     
                     Spacer()
                     
                     Button(action: { manager.togglePlayPause() }) {
                         Image(systemName: manager.isPlaying ? "pause" : "play")
                             .font(.system(size: 24, weight: .bold, design: .default))
-                            .foregroundStyle(Color.white)
+                            .foregroundStyle(Color.secondary)
                             .padding(16)
                     }
                 }
             }
-            .padding([.leading, .trailing], 8)
-            .frame(width: 390, height: 64)
-            .background(Color(red: 0.11, green: 0.73, blue: 0.33))
-            .clipShape(Capsule())
+            .padding(8)
         }
         .sheet(isPresented: $showingSheet) {
             Text(manager.currentlyPlaying?.name ?? "No song selected")
