@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ContentView: View {
+struct PlaylistOverviewView: View {
     @State var playlists: [Playlist] = []
     
     var body: some View {
@@ -40,5 +40,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    PlaylistOverviewView()
 }

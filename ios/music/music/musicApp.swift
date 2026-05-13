@@ -4,7 +4,7 @@ import SwiftUI
 struct musicApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            PlaylistOverviewView()
                 .safeAreaInset(edge: .bottom) {
                     if PlayerManager.shared.currentlyPlaying != nil {
                         PlayerView()
