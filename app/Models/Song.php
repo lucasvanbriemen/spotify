@@ -25,19 +25,4 @@ class Song extends Model
     {
         return $this->belongsToMany(Playlist::class, 'playlist_songs')->withTimestamps();
     }
-
-    public function getNameAttribute(): ?string
-    {
-        return $this->title;
-    }
-
-    public function getMp3UrlAttribute(): ?string
-    {
-        return $this->file_id;
-    }
-
-    public function getDurationMsAttribute(): ?int
-    {
-        return $this->duration;
-    }
 }
