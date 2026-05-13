@@ -26,8 +26,8 @@ struct PlaylistOverviewView: View {
                     }
                 }
             }
+            .padding([.leading, .trailing], 8)
         }
-        .padding(8)
         
         .task {
             await getPlaylists()
