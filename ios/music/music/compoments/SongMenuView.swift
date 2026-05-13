@@ -10,6 +10,7 @@ struct SongMenuView: View {
         } label: {
             Image(systemName: "ellipsis")
                 .rotationEffect(Angle(degrees: 90))
+                .padding(10)
         }
     }
 }
