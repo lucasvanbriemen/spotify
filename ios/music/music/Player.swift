@@ -21,7 +21,7 @@ struct PlayerView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 32))
                     
                     VStack(alignment: .leading) {
-                        Text(song.name)
+                        Text(song.title)
                             .font(Font.system(size: 14, weight: .medium, design: .default))
                             .frame(height: 5)
                             .truncationMode(.tail)
@@ -46,7 +46,7 @@ struct PlayerView: View {
             .padding(8)
         }
         .sheet(isPresented: $showingSheet) {
-            Text(manager.currentlyPlaying?.name ?? "No song selected")
+            Text(manager.currentlyPlaying?.title ?? "No song selected")
         }
     }
 }

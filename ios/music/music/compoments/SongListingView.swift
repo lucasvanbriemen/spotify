@@ -24,7 +24,7 @@ struct SongListingView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8))
 
                 VStack(alignment: .leading) {
-                    Text(song.name)
+                    Text(song.title)
                         .fontWeight(Font.Weight.bold)
                         .frame(height: 18)
                         .truncationMode(.tail)

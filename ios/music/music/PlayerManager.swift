@@ -57,7 +57,7 @@ class PlayerManager {
     }
     
     func playSong(song: Song) {
-        let url = URL(string: "\(Secrets.base_url)get-mp3/" + song.mp3Url!)
+        let url = URL(string: "\(Secrets.base_url)get-mp3/" + song.fileId!)
 
         if timeObserverToken != nil {
             player?.removeTimeObserver(timeObserverToken!)
@@ -136,7 +136,7 @@ class PlayerManager {
         }
 
         MPNowPlayingInfoCenter.default().nowPlayingInfo = [
-            MPMediaItemPropertyTitle: song.name,
+            MPMediaItemPropertyTitle: song.title,
             MPMediaItemPropertyArtist: song.artist ?? "Unknown Artist",
             MPNowPlayingInfoPropertyPlaybackRate: self.isPlaying ? 1.0 : 0.0,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: self.timeIntoSong,
