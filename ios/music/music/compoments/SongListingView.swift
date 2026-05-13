@@ -8,7 +8,7 @@ struct SongListingView: View {
     
     var body: some View {
         Menu() {
-            Button("Duplicate", action: { print("Duplicate") })
+            SongMenuView()
         } label: {
             HStack(alignment: .center) {
                 AsyncImage(url: URL(string: song.imageUrl!)) { image in
