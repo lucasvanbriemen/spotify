@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Playlist;
+use App\Models\Song;
 use Illuminate\Http\Request;
 
 class PlaylistController extends Controller
@@ -22,14 +23,18 @@ class PlaylistController extends Controller
     {
         $data = $request->all();
 
-        $song = $playlist->songs()->create([
-            'name' => $data['name'],
-            'artist' => $data['artist'],
-            'album' => $data['album'],
-            'image_url' => $data['image_url'],
-            'duration_ms' => $data['duration_ms'],
-            'mp3_url' => $data['spotify_id'],
-        ]);
+        $song = Song::firstOrCreate(
+            ['file_id' => $data['spotify_id']],
+            [
+                'title' => $data['name'],
+                'artist' => $data['artist'],
+                'album' => $data['album'],
+                'image_url' => $data['image_url'],
+                'duration' => $data['duration_ms'],
+            ]
+        );
+
+        $playlist->songs()->attach($song->id);
 
         return response()->json($song);
     }

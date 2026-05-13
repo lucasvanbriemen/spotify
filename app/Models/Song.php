@@ -15,8 +15,29 @@ class Song extends Model
         'file_id',
     ];
 
-    public function playlist()
+    protected $appends = [
+        'name',
+        'mp3_url',
+        'duration_ms',
+    ];
+
+    public function playlists()
     {
-        return $this->belongsTo(Playlist::class);
+        return $this->belongsToMany(Playlist::class, 'playlist_songs')->withTimestamps();
+    }
+
+    public function getNameAttribute(): ?string
+    {
+        return $this->title;
+    }
+
+    public function getMp3UrlAttribute(): ?string
+    {
+        return $this->file_id;
+    }
+
+    public function getDurationMsAttribute(): ?int
+    {
+        return $this->duration;
     }
 }
