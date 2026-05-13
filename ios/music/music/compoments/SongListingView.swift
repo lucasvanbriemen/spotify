@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct SongListingView {
+struct SongListingView: View {
     let manager = PlayerManager.shared
     let song: Song
     let bgColor: Color

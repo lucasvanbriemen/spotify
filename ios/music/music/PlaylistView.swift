@@ -43,36 +43,8 @@ struct PlaylistView: View {
                     }
                     
                     ForEach(Array((playlist.songs ?? []).enumerated()), id: \.element.id) { index, song in
-                        Button {
-                            manager.playSong(song: song)
-                            manager.playingPlaylistId = playlistID
-                        } label: {
-                            HStack(alignment: .center) {
-                                AsyncImage(url: URL(string: song.imageUrl!)) { image in
-                                    image.resizable()
-                                } placeholder: {
-                                    ProgressView()
-                                }
-                                .frame(width: 48, height: 48)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                                VStack(alignment: .leading) {
-                                    Text(song.name)
-                                        .fontWeight(Font.Weight.bold)
-                                        .frame(height: 18)
-                                        .truncationMode(.tail)
-                                    Text(song.artist!)
-                                        .font(Font.system(size: 14, weight: .light, design: .default))
-                                        .frame(height: 18)
-                                        .truncationMode(.tail)
-                                }
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(8)
-                            .background(index.isMultiple(of: 2) ? Color(.clear) : Color(.secondarySystemBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                        }
-                        .foregroundStyle(Color.primary)
+                        let bg: Color = index.isMultiple(of: 2) ? .clear : Color(.secondarySystemBackground)
+                        SongListingView(song: song, bgColor: bg, playlistID: playlistID)
                     }
                 }
             }
