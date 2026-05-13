@@ -69,7 +69,7 @@ struct PlaylistView: View {
         
         var totalSeconds: Int = 0
         for song in playlist!.songs! {
-            totalSeconds += song.durationMS
+            totalSeconds += song.duration
         }
         
         let hours = totalSeconds / 3600
