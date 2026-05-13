@@ -7,12 +7,8 @@ struct SongListingView: View {
     var playlistID: Int? = nil
     
     var body: some View {
-        Button {
-            manager.playSong(song: song)
-            
-            if playlistID != nil {
-                manager.playingPlaylistId = playlistID
-            }
+        Menu() {
+            Button("Duplicate", action: { print("Duplicate") })
         } label: {
             HStack(alignment: .center) {
                 AsyncImage(url: URL(string: song.imageUrl!)) { image in
@@ -38,7 +34,13 @@ struct SongListingView: View {
             .padding(8)
             .background(bgColor)
             .clipShape(RoundedRectangle(cornerRadius: 8))
+            .foregroundStyle(Color.primary)
+        } primaryAction: {
+            manager.playSong(song: song)
+            
+            if playlistID != nil {
+                manager.playingPlaylistId = playlistID
+            }
         }
-        .foregroundStyle(Color.primary)
     }
 }
