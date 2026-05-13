@@ -78,7 +78,7 @@ class SpotifyController extends Controller
         $items = collect($response->json('tracks.items', []))->map(fn ($track) => [
             'id' => random_int(1,99999),
             'remote_id' => $track['id'] ?? null,
-            'title' => $track['name'] ?? '',
+            'name' => $track['name'] ?? '',
             'artist' => collect($track['artists'] ?? [])->pluck('name')->implode(', '),
             'album' => $track['album']['name'] ?? '',
             'image_url' => $track['album']['images'][1]['url']
