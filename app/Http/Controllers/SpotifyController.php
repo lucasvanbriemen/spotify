@@ -32,28 +32,36 @@ class SpotifyController extends Controller
 
         GenerateMp3::dispatch($id, $artist, $name);
 
-        $process = new Process([
-            base_path('bin/yt-dlp'),
-            '--no-playlist',
-            '--restrict-filenames',
-            '--no-progress',
-            '--match-filter', 'age_limit<18',
-            '--format', 'bestaudio[ext=m4a]/bestaudio',
-            '--print', '%(url)s',
-            '--print', '%(ext)s',
-            "ytsearch1: {$artist} {$name} audio",
-        ], null, $this->setupEnv());
-        $process->setTimeout(60);
-        $process->run();
+        $cached = Cache::get("spotify.signed_audio:{$id}");
+        if (is_array($cached) && isset($cached['url'], $cached['ext'])) {
+            $signedUrl = $cached['url'];
+            $ext = $cached['ext'];
+        } else {
+            $process = new Process([
+                base_path('bin/yt-dlp'),
+                '--no-playlist',
+                '--restrict-filenames',
+                '--no-progress',
+                '--match-filter', 'age_limit<18',
+                '--format', 'bestaudio[ext=m4a]/bestaudio',
+                '--print', '%(url)s',
+                '--print', '%(ext)s',
+                "ytsearch1: {$artist} {$name} audio",
+            ], null, $this->setupEnv());
+            $process->setTimeout(60);
+            $process->run();
 
-        $lines = array_values(array_filter(array_map('trim', explode("\n", $process->getOutput()))));
-        $signedUrl = $lines[0] ?? '';
-        $ext = strtolower($lines[1] ?? '');
-        if ($signedUrl === '' || ! filter_var($signedUrl, FILTER_VALIDATE_URL)) {
-            return response()->json([
-                'error' => 'yt-dlp failed',
-                'detail' => trim($process->getErrorOutput() ?: $process->getOutput()),
-            ], 500);
+            $lines = array_values(array_filter(array_map('trim', explode("\n", $process->getOutput()))));
+            $signedUrl = $lines[0] ?? '';
+            $ext = strtolower($lines[1] ?? '');
+            if ($signedUrl === '' || ! filter_var($signedUrl, FILTER_VALIDATE_URL)) {
+                return response()->json([
+                    'error' => 'yt-dlp failed',
+                    'detail' => trim($process->getErrorOutput() ?: $process->getOutput()),
+                ], 500);
+            }
+
+            Cache::put("spotify.signed_audio:{$id}", ['url' => $signedUrl, 'ext' => $ext], now()->addMinutes(60));
         }
 
         $contentType = match ($ext) {
@@ -63,22 +71,43 @@ class SpotifyController extends Controller
             default => 'audio/mpeg',
         };
 
-        return new StreamedResponse(function () use ($signedUrl) {
+        $clientRange = $request->headers->get('Range');
+
+        return new StreamedResponse(function () use ($signedUrl, $clientRange) {
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+
             $ch = curl_init($signedUrl);
-            curl_setopt_array($ch, [
+            $opts = [
                 CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_HEADERFUNCTION => function ($_ch, $headerLine) {
+                    $line = rtrim($headerLine);
+                    if (preg_match('#^HTTP/\S+\s+(\d+)\s*(.*)$#', $line, $m)) {
+                        $status = (int) $m[1];
+                        $reason = $m[2] !== '' ? $m[2] : ($status === 206 ? 'Partial Content' : 'OK');
+                        header("HTTP/1.1 {$status} {$reason}", true, $status);
+                    } elseif (preg_match('/^(Content-Length|Content-Range|Accept-Ranges|Content-Type):/i', $line)) {
+                        header($line, true);
+                    }
+
+                    return \strlen($headerLine);
+                },
                 CURLOPT_WRITEFUNCTION => function ($_ch, $chunk) {
                     echo $chunk;
-                    @ob_flush();
                     flush();
                     return \strlen($chunk);
                 },
                 CURLOPT_FAILONERROR => true,
-            ]);
+            ];
+            if ($clientRange !== null && $clientRange !== '') {
+                $opts[CURLOPT_HTTPHEADER] = ['Range: ' . $clientRange];
+            }
+            curl_setopt_array($ch, $opts);
             curl_exec($ch);
         }, 200, [
             'Content-Type' => $contentType,
-            'Accept-Ranges' => 'none',
+            'Accept-Ranges' => 'bytes',
             'Cache-Control' => 'no-store',
         ]);
     }
