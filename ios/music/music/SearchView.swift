@@ -8,8 +8,9 @@ struct SearchView: View {
         NavigationStack {
             ScrollView {
                 VStack {
-                    ForEach(songs) { song in
-                        SongListingView(song: song, bgColor: Color.clear)
+                    ForEach(songs.enumerated(), id: \.element.id) { index, song in
+                        let bg: Color = index.isMultiple(of: 2) ? .clear : Color(.secondarySystemBackground)
+                        SongListingView(song: song, bgColor: bg)
                     }
                 }
             }
