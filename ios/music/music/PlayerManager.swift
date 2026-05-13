@@ -148,7 +148,12 @@ class PlayerManager {
         if let current = currentlyPlaying {
             pastQueue.append(current)
         }
-        playSong(song: queue.removeFirst())
+        
+        if (!queue.isEmpty) {
+            playSong(song: queue.removeFirst())
+        } else {
+            togglePlayPause(forceState: false)
+        }
     }
     
     func playPreviousSong() {
