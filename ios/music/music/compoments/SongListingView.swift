@@ -4,12 +4,15 @@ struct SongListingView: View {
     let manager = PlayerManager.shared
     let song: Song
     let bgColor: Color
-    let playlistID: Int
+    let playlistID: Int?
     
     var body: some View {
         Button {
             manager.playSong(song: song)
-            manager.playingPlaylistId = playlistID
+            
+            if playlistID != nil {
+                manager.playingPlaylistId = playlistID
+            }
         } label: {
             HStack(alignment: .center) {
                 AsyncImage(url: URL(string: song.imageUrl!)) { image in

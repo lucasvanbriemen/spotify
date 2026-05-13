@@ -9,7 +9,7 @@ struct SearchView: View {
             ScrollView {
                 VStack {
                     ForEach(songs) { song in
-                        SongListingView(song: song, bgColor: Color.clear, playlistID: 1)
+                        SongListingView(song: song, bgColor: Color.clear)
                     }
                 }
             }
