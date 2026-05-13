@@ -7,8 +7,12 @@ struct SongListingView: View {
     var playlistID: Int? = nil
     
     var body: some View {
-        Menu() {
-            SongMenuView()
+        Button() {
+            manager.playSong(song: song)
+            
+            if playlistID != nil {
+                manager.playingPlaylistId = playlistID
+            }
         } label: {
             HStack(alignment: .center) {
                 AsyncImage(url: URL(string: song.imageUrl!)) { image in
@@ -18,7 +22,7 @@ struct SongListingView: View {
                 }
                 .frame(width: 48, height: 48)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
-
+                
                 VStack(alignment: .leading) {
                     Text(song.title)
                         .fontWeight(Font.Weight.bold)
@@ -29,18 +33,16 @@ struct SongListingView: View {
                         .frame(height: 18)
                         .truncationMode(.tail)
                 }
+                
+                Spacer()
+                
+                SongMenuView(song: song)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(8)
             .background(bgColor)
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .foregroundStyle(Color.primary)
-        } primaryAction: {
-            manager.playSong(song: song)
-            
-            if playlistID != nil {
-                manager.playingPlaylistId = playlistID
-            }
         }
     }
 }
