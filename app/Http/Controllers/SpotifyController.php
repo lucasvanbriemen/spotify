@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\GenerateMp3;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Process\Process;
 
 class SpotifyController extends Controller
@@ -14,8 +16,6 @@ class SpotifyController extends Controller
     public function getMp3(Request $request, string $song_id)
     {
         $id = $song_id;
-
-        $publicRoot = storage_path('app/public/audio');
 
         if ($this->findMp3($id)) {
             return $this->returnMp3($request, $id);
@@ -26,31 +26,47 @@ class SpotifyController extends Controller
         $name = $metaData->json('name', '');
         $artist = $metaData->json('artists.0.name', '');
 
+        GenerateMp3::dispatch($id, $artist, $name);
+
         $process = new Process([
             base_path('bin/yt-dlp'),
             '--no-playlist',
-            '--extract-audio',
-            '--audio-format', 'mp3',
-            '--audio-quality', '0',
             '--restrict-filenames',
             '--no-progress',
             '--match-filter', 'age_limit<18',
-            '--max-downloads', '1',
-            '--ffmpeg-location', base_path('bin'),
-            '--output', "{$publicRoot}/{$id}",
-            "ytsearch5: {$artist} {$name} audio",
+            '--format', 'bestaudio',
+            '--get-url',
+            "ytsearch1: {$artist} {$name} audio",
         ], null, $this->setupEnv());
-        $process->setTimeout(180);
+        $process->setTimeout(60);
         $process->run();
 
-        if (! $this->findMp3($id)) {
+        $signedUrl = trim($process->getOutput());
+        if ($signedUrl === '' || ! filter_var($signedUrl, FILTER_VALIDATE_URL)) {
             return response()->json([
                 'error' => 'yt-dlp failed',
                 'detail' => trim($process->getErrorOutput() ?: $process->getOutput()),
             ], 500);
         }
 
-        return $this->returnMp3($request, $id);
+        return new StreamedResponse(function () use ($signedUrl) {
+            $ch = curl_init($signedUrl);
+            curl_setopt_array($ch, [
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_WRITEFUNCTION => function ($_ch, $chunk) {
+                    echo $chunk;
+                    @ob_flush();
+                    flush();
+                    return \strlen($chunk);
+                },
+                CURLOPT_FAILONERROR => true,
+            ]);
+            curl_exec($ch);
+        }, 200, [
+            'Content-Type' => 'audio/webm',
+            'Accept-Ranges' => 'none',
+            'Cache-Control' => 'no-store',
+        ]);
     }
 
     public function search(Request $request): JsonResponse
