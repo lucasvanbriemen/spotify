@@ -16,7 +16,19 @@ class PlaylistController extends Controller
 
     public function show(Playlist $playlist)
     {
-        return response()->json($playlist->load('songs'));
+        $playlist->load('songs');
+        $allPlaylists = Playlist::with('songs')->get();
+
+        $playlist->setRelation('songs', $playlist->songs->map(function ($song) use ($allPlaylists) {
+            $map = [];
+            foreach ($allPlaylists as $p) {
+                $map[$p->id] = $p->songs->contains($song);
+            }
+            $song->setAttribute('is_in_playlist_map', $map);
+            return $song;
+        }));
+
+        return response()->json($playlist);
     }
 
     public function addSong(Request $request, Playlist $playlist)

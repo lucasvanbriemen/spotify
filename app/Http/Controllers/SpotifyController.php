@@ -92,7 +92,7 @@ class SpotifyController extends Controller
         $allPlaylists = Playlist::with('songs')->get();
 
         $fileIds = $items->pluck('file_id')->filter()->all();
-        $songsByFileId = Song::whereIn('file_id', $fileIds)->get()->keyBy('file_id');
+        $songsByFileId = Song::whereIn('file_id', $fileIds, 'and', false)->get()->keyBy('file_id');
 
         $items = $items->map(function ($item) use ($allPlaylists, $songsByFileId) {
             $song = $songsByFileId->get($item['file_id']);
