@@ -20,7 +20,7 @@ class PlayerManager {
     var isPlaying: Bool = false
     var playingPlaylistId: Int? = nil
     var hasSheetOpen: Bool = false
-    private var timeIntoSong: Double = 0
+    var timeIntoSong: Double = 0
     private var timeObserverToken: Any? = nil
     private var endObserver: NSObjectProtocol?
     var queue: [Song] = []
