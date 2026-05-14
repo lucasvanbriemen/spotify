@@ -11,12 +11,11 @@ struct PlayerSheetView: View {
         HStack {
             Button(action: { manager.playPreviousSong() }) {
                 Image(systemName: "arrowtriangle.down.2.fill")
-                    .font(Font.system(size: 32))
+                    .font(Font.system(size: 24))
             }
-            .frame(width: 56, height: 56)
+            .frame(width: 32, height: 32)
             .clipShape(Circle())
-            .background(Color.accentColor)
-            .foregroundStyle(Color.white)
+            .foregroundStyle(Color.secondary)
             .clipShape(Circle())
             .rotationEffect(Angle(degrees: 90))
             
@@ -33,12 +32,11 @@ struct PlayerSheetView: View {
             
             Button(action: { manager.playNextSong() }) {
                 Image(systemName: "arrowtriangle.up.2.fill")
-                    .font(Font.system(size: 32))
+                    .font(Font.system(size: 24))
             }
-            .frame(width: 56, height: 56)
+            .frame(width: 32, height: 32)
             .clipShape(Circle())
-            .background(Color.accentColor)
-            .foregroundStyle(Color.white)
+            .foregroundStyle(Color.secondary)
             .clipShape(Circle())
             .rotationEffect(Angle(degrees: 90))
         }
