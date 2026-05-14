@@ -42,11 +42,11 @@ class PlaylistController extends Controller
         $song = Song::firstOrCreate(
             ['file_id' => $data['spotify_id']],
             [
-                'title' => $data['name'],
-                'artist' => $data['artist'],
-                'album' => $data['album'],
-                'image_url' => $data['image_url'],
-                'duration' => $data['duration_ms'],
+                'title' => $data['title'] ?? '',
+                'artist' => $data['artist'] ?? '',
+                'album' => $data['album'] ?? '',
+                'image_url' => $data['image_url'] ?? '',
+                'duration' => $data['duration'] ?? 0,
             ]
         );
 
