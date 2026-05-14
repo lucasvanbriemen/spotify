@@ -27,14 +27,14 @@ struct SongMenuView: View {
     private func addToPlaylist(id: String) async {
         let body: [String: Any] = [
             "spotify_id": song.fileId ?? "",
-            "name": song.title,
+            "title": song.title,
             "artist": song.artist ?? "",
             "album": song.album ?? "",
             "image_url": song.imageUrl ?? "",
-            "duration_ms": song.duration * 1000,
+            "duration": song.duration,
         ]
 
-        let result: Song? = await SeverApi.post(endpoint: "/playlist/\(id)/songs", body: body)
+        let result: Song? = await SeverApi.post(endpoint: "playlist/\(id)/songs", body: body)
         if result != nil, var entry = playlistMap[id] {
             entry.contains = true
             playlistMap[id] = entry

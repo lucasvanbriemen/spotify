@@ -15,12 +15,6 @@ class Song extends Model
         'file_id',
     ];
 
-    protected $appends = [
-        'name',
-        'mp3_url',
-        'duration_ms',
-    ];
-
     public function playlists()
     {
         return $this->belongsToMany(Playlist::class, 'playlist_songs')->withTimestamps();
