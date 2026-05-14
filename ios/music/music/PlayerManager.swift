@@ -21,6 +21,7 @@ class PlayerManager {
     var playingPlaylistId: Int? = nil
     var hasSheetOpen: Bool = false
     var timeIntoSong: Double = 0
+    var isSeeking: Bool = false
     private var timeObserverToken: Any? = nil
     private var endObserver: NSObjectProtocol?
     var queue: [Song] = []
@@ -73,6 +74,9 @@ class PlayerManager {
         togglePlayPause(forceState: true)
 
         timeObserverToken = player?.addPeriodicTimeObserver(forInterval: CMTimeMake(value: 1, timescale: 1), queue: .main, using: { [weak self] time in
+            if self?.isSeeking == true {
+                return
+            }
             self?.timeIntoSong = CMTimeGetSeconds(time)
             self?.sncyNowPlayingInfo()
         })

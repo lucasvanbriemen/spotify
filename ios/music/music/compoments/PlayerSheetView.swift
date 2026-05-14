@@ -8,12 +8,13 @@ struct PlayerSheetView: View {
         SongListingView(song: manager.currentlyPlaying!, bgColor: Color.clear, shouldPlaySong: false)
 
         Slider(value: $manager.timeIntoSong, in: 0...Double(manager.currentlyPlaying!.duration)) {
-            Text("Speed")
+            Text("Seek")
         } minimumValueLabel: {
             Text("0")
         } maximumValueLabel: {
             Text(String(manager.currentlyPlaying!.duration))
         } onEditingChanged: { editing in
+            manager.isSeeking = editing
             if editing { return }
             manager.player?.seek(to: CMTime(value: Int64(manager.timeIntoSong), timescale: 1))
         }
