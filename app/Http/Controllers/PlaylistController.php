@@ -22,7 +22,11 @@ class PlaylistController extends Controller
         $playlist->setRelation('songs', $playlist->songs->map(function ($song) use ($allPlaylists) {
             $map = [];
             foreach ($allPlaylists as $p) {
-                $map[$p->id] = $p->songs->contains($song);
+                $map[$p->id] = [
+                    'name' => $p->name,
+                    'image_url' => $p->image_url,
+                    'contains' => $p->songs->contains($song),
+                ];
             }
             $song->setAttribute('is_in_playlist_map', $map);
             return $song;
