@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\Process\Process;
+use App\Models\Song;
+use App\Models\Playlist;
 
 class SpotifyController extends Controller
 {
@@ -86,6 +88,22 @@ class SpotifyController extends Controller
                 ?? null,
             'duration' => round((int) $track['duration_ms'] / 1000, 0),
         ])->filter(fn ($i) => $i['id'] !== null)->values();
+
+        $allPlaylists = Playlist::with('songs')->get();
+
+        $fileIds = $items->pluck('file_id')->filter()->all();
+        $songsByFileId = Song::whereIn('file_id', $fileIds)->get()->keyBy('file_id');
+
+        $items = $items->map(function ($item) use ($allPlaylists, $songsByFileId) {
+            $song = $songsByFileId->get($item['file_id']);
+
+            $item['is_in_playlist_map'] = [];
+            foreach ($allPlaylists as $playlist) {
+                $item['is_in_playlist_map'][$playlist->id] = $song ? $playlist->songs->contains($song) : false;
+            }
+
+            return $item;
+        });
 
         return response()->json($items);
     }
