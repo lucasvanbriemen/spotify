@@ -45,8 +45,6 @@ struct PlayerView: View {
             }
             .padding(8)
         }
-        .sheet(isPresented: $showingSheet) {
-            Text(manager.currentlyPlaying?.title ?? "No song selected")
-        }
+        .sheet(isPresented: $showingSheet, content: {PlayerSheetView() })
     }
 }
