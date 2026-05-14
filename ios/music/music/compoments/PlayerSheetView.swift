@@ -4,6 +4,6 @@ struct PlayerSheetView: View {
     var manager = PlayerManager.shared
     
     var body: some View {
-        Text(manager.currentlyPlaying?.title ?? "No song is playing")
+        SongListingView(song: manager.currentlyPlaying!, bgColor: Color.clear)
     }
 }
