@@ -48,14 +48,22 @@ class PlayerManager {
     func playPlaylist(playlist: Playlist, atIndex: Int? = nil) {
         playingPlaylistId = playlist.id
         
-        if let firstSong = playlist.songs?.first {
-            playSong(song: firstSong)
+        var index = atIndex ?? 0
+        
+        if let firstOrIndexSong = playlist.songs?[index] {
+            playSong(song: firstOrIndexSong)
         }
         
-        queue = playlist.songs ?? []
-        
-        // Remove the first item, as thats currently playing
-        queue.remove(at: 0)
+        for (loopingSongIndex, song) in (playlist.songs ?? []).enumerated() {
+            if loopingSongIndex == index {
+                continue
+            }
+            if index < loopingSongIndex {
+                queue.append(song)
+            } else {
+                pastQueue.append(song)
+            }
+        }
     }
     
     func playSong(song: Song) {

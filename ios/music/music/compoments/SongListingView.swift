@@ -18,7 +18,6 @@ struct SongListingView: View {
                 manager.playSong(song: song)
             } else {
                 manager.playPlaylist(playlist: playlist!, atIndex: songIndex!)
-                manager.playingPlaylistId = playlist?.id
             }
         } label: {
             HStack(alignment: .center) {
