@@ -4,10 +4,15 @@ struct SongListingView: View {
     let manager = PlayerManager.shared
     let song: Song
     let bgColor: Color
+    var shouldPlaySong: Bool? = true
     var playlistID: Int? = nil
     
     var body: some View {
         Button() {
+            if shouldPlaySong == false {
+                return
+            }
+
             manager.playSong(song: song)
             
             if playlistID != nil {
