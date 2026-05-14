@@ -44,7 +44,7 @@ struct PlaylistView: View {
                     
                     ForEach(Array((playlist.songs ?? []).enumerated()), id: \.element.id) { index, song in
                         let bg: Color = index.isMultiple(of: 2) ? .clear : Color(.secondarySystemBackground)
-                        SongListingView(song: song, bgColor: bg, playlistID: playlistID)
+                        SongListingView(song: song, bgColor: bg, playlist: playlist, songIndex: index)
                     }
                 }
             }
