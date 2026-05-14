@@ -21,6 +21,7 @@ struct PlayerSheetView: View {
             } maximumValueLabel: {
                 Text(String(manager.currentlyPlaying!.duration))
             } onEditingChanged: { editing in
+                if editing { return }
                 manager.player?.seek(to: CMTime(value: Int64(manager.timeIntoSong), timescale: 1))
             }
             Text("\(manager.timeIntoSong)")
