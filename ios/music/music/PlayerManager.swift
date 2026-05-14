@@ -135,13 +135,24 @@ class PlayerManager {
             return
         }
 
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = [
+        var info: [String: Any] = [
             MPMediaItemPropertyTitle: song.title,
             MPMediaItemPropertyArtist: song.artist ?? "Unknown Artist",
             MPNowPlayingInfoPropertyPlaybackRate: self.isPlaying ? 1.0 : 0.0,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: self.timeIntoSong,
             MPMediaItemPropertyPlaybackDuration: CMTimeGetSeconds(player?.currentItem?.duration ?? .indefinite)
         ]
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+
+        guard let urlString = song.imageUrl, let url = URL(string: urlString) else { return }
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            guard let data = data, let image = UIImage(data: data) else { return }
+            DispatchQueue.main.async {
+                guard self.currentlyPlaying?.id == song.id else { return }
+                info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+                MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+            }
+        }.resume()
     }
     
     func playNextSong() {
