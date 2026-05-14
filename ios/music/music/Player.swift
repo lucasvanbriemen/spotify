@@ -4,11 +4,10 @@ import MediaPlayer
 
 struct PlayerView: View {
     @State private var manager = PlayerManager.shared
-    @State private var showingSheet: Bool = false
 
     var body: some View {
         Button(action: {
-            showingSheet.toggle()
+            manager.hasSheetOpen.toggle()
         }) {
             HStack(alignment: .center) {
                 if let song = manager.currentlyPlaying {
@@ -45,6 +44,6 @@ struct PlayerView: View {
             }
             .padding(8)
         }
-        .sheet(isPresented: $showingSheet, content: {PlayerSheetView() })
+        .sheet(isPresented: $manager.hasSheetOpen, content: {PlayerSheetView() })
     }
 }
