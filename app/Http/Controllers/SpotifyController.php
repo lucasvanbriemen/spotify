@@ -51,6 +51,14 @@ class SpotifyController extends Controller
             ], 500);
         }
 
+        Song::create([
+            'isrc' => $id,
+            'title' => $name,
+            'artist' => $artist,
+            'album' => '',
+            'duration' => 0,
+        ]);
+
         return $this->returnMp3($request, $id);
     }
 

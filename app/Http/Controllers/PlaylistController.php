@@ -39,8 +39,8 @@ class PlaylistController extends Controller
     {
         $data = $request->all();
 
-        $song = Song::firstOrCreate(
-            ['file_id' => $data['spotify_id']],
+        $song = Song::updateOrCreate(
+            ['isrc' => $data['spotify_id']],
             [
                 'title' => $data['title'] ?? '',
                 'artist' => $data['artist'] ?? '',
@@ -50,7 +50,7 @@ class PlaylistController extends Controller
             ]
         );
 
-        $playlist->songs()->attach($song->id);
+        $playlist->songs()->syncWithoutDetaching($song->isrc);
 
         return response()->json($song);
     }

@@ -6,6 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class Song extends Model
 {
+
+    protected $primaryKey = 'isrc';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
     protected $fillable = [
         'title',
         'artist',
