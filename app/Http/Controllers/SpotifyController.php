@@ -10,6 +10,7 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\Process\Process;
 use App\Models\Song;
 use App\Models\Playlist;
+use App\Helpers\DeezerHelper;
 
 class SpotifyController extends Controller
 {
@@ -60,8 +61,11 @@ class SpotifyController extends Controller
         return $this->returnMp3($request, $id);
     }
 
-    public function search(Request $request): JsonResponse
+    public function search(Request $request)
     {
+        $tracks = DeezerHelper::search($request->query('q', ''));
+        return response()->json($tracks);
+
         $query = trim((string) $request->query('q', ''));
         $types = array_filter(array_map('trim', explode(',', (string) $request->query('types', 'track'))));
         $includePlaylists = \in_array('playlist', $types, true);
