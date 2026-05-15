@@ -23,7 +23,7 @@ struct SearchView: View {
                             let bg: Color = index.isMultiple(of: 2) ? .clear : Color(.secondarySystemBackground)
 
                             NavigationLink(destination: PlaylistView(playlistID: playlist.id)) {
-                                PlaylistListingView(song: playlist, bgColor: bg)
+                                PlaylistListingView(playlist: playlist, bgColor: bg)
                             }
                         }
                     }

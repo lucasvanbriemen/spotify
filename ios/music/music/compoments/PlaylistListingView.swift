@@ -1,13 +1,13 @@
 import SwiftUI
 
 struct PlaylistListingView: View {
-    let song: Playlist
+    let playlist: Playlist
     let bgColor: Color
     
     var body: some View {
       
             HStack(alignment: .center) {
-                AsyncImage(url: URL(string: song.image!)) { image in
+                AsyncImage(url: URL(string: playlist.image!)) { image in
                     image.resizable()
                 } placeholder: {
                     ProgressView()
@@ -16,14 +16,24 @@ struct PlaylistListingView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 
                 VStack(alignment: .leading) {
-                    Text(song.name)
+                    Text(playlist.name)
                         .fontWeight(Font.Weight.bold)
                         .frame(height: 18)
                         .truncationMode(.tail)
-                    Text(song.name)
-                        .font(Font.system(size: 14, weight: .light, design: .default))
-                        .frame(height: 18)
-                        .truncationMode(.tail)
+                    
+                    HStack {
+                        Text(playlist.author!)
+                            .font(Font.system(size: 14, weight: .light, design: .default))
+                            .frame(height: 18)
+                            .truncationMode(.tail)
+                        
+                        Text("-")
+                        
+                        Text(String(playlist.trackCount!) + " songs")
+                            .font(Font.system(size: 14, weight: .light, design: .default))
+                            .frame(height: 18)
+                            .truncationMode(.tail)
+                    }
                 }
 
             }
