@@ -29,6 +29,10 @@ struct SearchView: View {
             return
         }
         
+        if searchText.count < 3 {
+            return
+        }
+        
         songs = await SeverApi.get(endpoint: "search?q=\(searchText)") ?? []
     }
 }
