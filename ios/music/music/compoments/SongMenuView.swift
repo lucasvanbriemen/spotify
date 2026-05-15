@@ -26,12 +26,7 @@ struct SongMenuView: View {
 
     private func addToPlaylist(id: String) async {
         let body: [String: Any] = [
-            "isrc": song.isrc,
-            "title": song.title,
-            "artist": song.artist ?? "",
-            "album": song.album ?? "",
-            "image_url": song.imageUrl ?? "",
-            "duration": song.duration,
+            "isrc": song.isrc
         ]
 
         let result: Song? = await SeverApi.post(endpoint: "playlist/\(id)/songs", body: body)
