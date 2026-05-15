@@ -72,28 +72,23 @@ class SpotifyController extends Controller
 
         $allPlaylists = Playlist::with('songs')->get();
 
-        $fileIds = $items->pluck('file_id')->filter()->all();
-        $songsByFileId = Song::whereIn('file_id', $fileIds, 'and', false)->get()->keyBy('file_id');
+        $isrcs = $tracks->pluck('isrc')->filter()->all();
+        $songsByIsrc = Song::whereIn('isrc', $isrcs)->get()->keyBy('isrc');
 
-        $items = $items->map(function ($item) use ($allPlaylists, $songsByFileId) {
-            $song = $songsByFileId->get($item['file_id']);
+        $tracks = $tracks->map(function ($track) use ($allPlaylists, $songsByIsrc) {
+            $song = $songsByIsrc->get($track['isrc']);
 
-            $item['is_in_playlist_map'] = [];
+            $track['is_in_playlist_map'] = [];
             foreach ($allPlaylists as $playlist) {
-                $item['is_in_playlist_map'][$playlist->id] = [
+                $track['is_in_playlist_map'][$playlist->id] = [
                     'name' => $playlist->name,
                     'image_url' => $playlist->image_url,
                     'contains' => $song ? $playlist->songs->contains($song) : false,
                 ];
             }
 
-            return $item;
+            return $track;
         });
-
-        if (! $includePlaylists) {
-            return response()->json($items);
-        }
-
 
         return response()->json($tracks);
     }
