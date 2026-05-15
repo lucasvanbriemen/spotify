@@ -20,15 +20,10 @@ struct SearchView: View {
                             .padding(.top, 16)
                         
                         ForEach(playlists.enumerated(), id: \.element.id) { index, playlist in
+                            let bg: Color = index.isMultiple(of: 2) ? .clear : Color(.secondarySystemBackground)
+
                             NavigationLink(destination: PlaylistView(playlistID: playlist.id)) {
-                                ZStack(alignment: .bottomLeading) {
-                                    PlaylistBackgroundView(playlist: playlist)
-                                    
-                                    Text(playlist.name)
-                                        .foregroundStyle(Color.white)
-                                        .font(Font.largeTitle.bold())
-                                        .padding(16)
-                                }
+                                PlaylistListingView(song: playlist, bgColor: bg)
                             }
                         }
                     }
