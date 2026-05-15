@@ -157,6 +157,12 @@ class PlayerManager {
             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
             return
         }
+        
+        var shouldUpdateImage: Bool = true
+
+        if MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyTitle] as? String == song.title && MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyArtist] as? String == song.artist {
+            shouldUpdateImage = false
+        }
 
         var info: [String: Any] = [
             MPMediaItemPropertyTitle: song.title,
@@ -166,6 +172,10 @@ class PlayerManager {
             MPMediaItemPropertyPlaybackDuration: CMTimeGetSeconds(player?.currentItem?.duration ?? .indefinite)
         ]
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+        
+        if !shouldUpdateImage {
+            return
+        }
 
         guard let urlString = song.imageUrl, let url = URL(string: urlString) else { return }
         URLSession.shared.dataTask(with: url) { data, _, _ in
