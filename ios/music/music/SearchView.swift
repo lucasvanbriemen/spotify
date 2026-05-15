@@ -14,16 +14,18 @@ struct SearchView: View {
                         SongListingView(song: song, bgColor: bg)
                     }
                     
-                    NavigationStack {
-                        Text("Playlists")
-                            .font(.headline)
-                            .padding(.top, 16)
-                        
-                        ForEach(playlists.enumerated(), id: \.element.id) { index, playlist in
-                            let bg: Color = index.isMultiple(of: 2) ? .clear : Color(.secondarySystemBackground)
-
-                            NavigationLink(destination: PlaylistView(playlistID: playlist.id)) {
-                                PlaylistListingView(playlist: playlist, bgColor: bg)
+                    if !playlists.isEmpty {
+                        NavigationStack {
+                            Text("Playlists")
+                                .font(.headline)
+                                .padding(.top, 16)
+                            
+                            ForEach(playlists.enumerated(), id: \.element.id) { index, playlist in
+                                let bg: Color = index.isMultiple(of: 2) ? .clear : Color(.secondarySystemBackground)
+                                
+                                NavigationLink(destination: PlaylistView(playlistID: playlist.id)) {
+                                    PlaylistListingView(playlist: playlist, bgColor: bg)
+                                }
                             }
                         }
                     }
