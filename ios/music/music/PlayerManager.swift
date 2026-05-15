@@ -23,6 +23,7 @@ class PlayerManager {
     var timeIntoSong: Double = 0
     var isSeeking: Bool = false
     var shouldShuffle: Bool = true
+    var shouldRepeat: Bool = false
     private var timeObserverToken: Any? = nil
     private var endObserver: NSObjectProtocol?
     var queue: [Song] = []

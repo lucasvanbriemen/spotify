@@ -56,8 +56,7 @@ struct PlayerSheetView: View {
                 .rotationEffect(Angle(degrees: 90))
                 
                 Button(action: {
-                    manager.shouldShuffle.toggle()
-                    manager.applySuffle()
+                    manager.shouldRepeat.toggle()
                 }) {
                     Image(systemName: "repeat")
                         .badge(1)
@@ -65,7 +64,7 @@ struct PlayerSheetView: View {
                 }
                 .frame(width: 32, height: 32)
                 .clipShape(Circle())
-                .foregroundStyle(manager.shouldShuffle ? Color.accentColor : Color.secondary)
+                .foregroundStyle(manager.shouldRepeat ? Color.accentColor : Color.secondary)
                 .clipShape(Circle())
             }
             
