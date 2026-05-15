@@ -100,7 +100,7 @@ class PlayerManager {
                 return
             }
             self?.timeIntoSong = CMTimeGetSeconds(time)
-            self?.sncyNowPlayingInfo()
+            self?.updateNowPlayingProgress()
         })
         endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: playerItem, queue: .main) { [weak self] _ in
             self?.playNextSong()
@@ -157,14 +157,8 @@ class PlayerManager {
             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
             return
         }
-        
-        var shouldUpdateImage: Bool = true
 
-        if MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyTitle] as? String == song.title && MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyArtist] as? String == song.artist {
-            shouldUpdateImage = false
-        }
-
-        var info: [String: Any] = [
+        let info: [String: Any] = [
             MPMediaItemPropertyTitle: song.title,
             MPMediaItemPropertyArtist: song.artist ?? "Unknown Artist",
             MPNowPlayingInfoPropertyPlaybackRate: self.isPlaying ? 1.0 : 0.0,
@@ -172,20 +166,24 @@ class PlayerManager {
             MPMediaItemPropertyPlaybackDuration: CMTimeGetSeconds(player?.currentItem?.duration ?? .indefinite)
         ]
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
-        
-        if !shouldUpdateImage {
-            return
-        }
 
         guard let urlString = song.imageUrl, let url = URL(string: urlString) else { return }
         URLSession.shared.dataTask(with: url) { data, _, _ in
             guard let data = data, let image = UIImage(data: data) else { return }
             DispatchQueue.main.async {
                 guard self.currentlyPlaying?.id == song.id else { return }
-                info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
-                MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+                var current = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+                current[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+                MPNowPlayingInfoCenter.default().nowPlayingInfo = current
             }
         }.resume()
+    }
+
+    func updateNowPlayingProgress() {
+        guard var info = MPNowPlayingInfoCenter.default().nowPlayingInfo else { return }
+        info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = self.timeIntoSong
+        info[MPNowPlayingInfoPropertyPlaybackRate] = self.isPlaying ? 1.0 : 0.0
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
     }
     
     func playNextSong() {
