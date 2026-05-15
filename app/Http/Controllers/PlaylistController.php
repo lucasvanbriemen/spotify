@@ -12,11 +12,22 @@ class PlaylistController extends Controller
     public function index()
     {
         $playlists = Playlist::all();
+
+        // Change the playlists id's to be strings and add a prefix to them so we can easily distinguish them from the deezer playlists on the frontend
+        $playlists = $playlists->map(function ($playlist) {
+            $playlist->id = "local_{$playlist->id}";
+            return $playlist;
+        });
+
         return response()->json($playlists);
     }
 
-    public function show(Playlist $playlist)
+    public function show(string $playlist)
     {
+        // is local? 
+        $id = str_replace("local_", "", $playlist);
+        $playlist = Playlist::where("id", $id)->firstOrFail();
+
         $playlist->load('songs');
         $allPlaylists = Playlist::with('songs')->get();
 
