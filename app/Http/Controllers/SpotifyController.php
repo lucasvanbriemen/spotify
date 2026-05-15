@@ -119,6 +119,12 @@ class SpotifyController extends Controller
 
         $response = Http::get($url);
 
+        $response = json_decode($response, true);
+
+        if (!isset($response["plainLyrics"]) && !isset($response["syncedLyrics"])) {
+            return response()->json(['error' => 'Lyrics not found'], 404);
+        }
+
         return $response;
     }
 
