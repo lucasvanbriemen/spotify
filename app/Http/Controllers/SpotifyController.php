@@ -112,6 +112,16 @@ class SpotifyController extends Controller
         return response()->json($items);
     }
 
+    public function getLyrics(Song $song)
+    {
+        //https://lrclib.net/docs
+        $url = "https://lrclib.net/api/get?artist_name=" . urlencode($song->artist) . "&track_name=" . urlencode($song->title) ."&album_name=" . urlencode($song->album) . "&durration=" . $song->duration;
+
+        $response = Http::get($url);
+
+        return $response;
+    }
+
     private function accessToken(): ?string
     {
         return Cache::remember('spotify.client_credentials_token', 3000, function () {

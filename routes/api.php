@@ -11,6 +11,8 @@ Route::middleware(IsLoggedIn::class)->group(function () {
 
     Route::get('/playlists', [PlaylistController::class, 'index'])->name('playlists');
 
+    Route::get('song/{song}/lyrics', [SpotifyController::class, 'getLyrics'])->name('song.lyrics');
+
     Route::get('/playlist/{playlist}', [PlaylistController::class, 'show'])->name('playlist.show');
     Route::post('/playlist/{playlist}/songs', [PlaylistController::class, 'addSong'])->name('playlist.songs.store');
 });
