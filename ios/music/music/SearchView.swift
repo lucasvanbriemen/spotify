@@ -29,8 +29,7 @@ struct SearchView: View {
                             }
                         }
                     }
-                    
-                }
+∂                }
                 .padding([.trailing, .leading], 8)
             }
         }
