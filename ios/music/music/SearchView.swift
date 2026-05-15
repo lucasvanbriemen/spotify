@@ -3,6 +3,7 @@ import SwiftUI
 struct SearchView: View {
     @State var searchText: String = ""
     @State var songs: [Song] = []
+    @State var playlists: [Playlist] = []
     
     var body: some View {
         NavigationStack {
@@ -12,6 +13,26 @@ struct SearchView: View {
                         let bg: Color = index.isMultiple(of: 2) ? .clear : Color(.secondarySystemBackground)
                         SongListingView(song: song, bgColor: bg)
                     }
+                    
+                    NavigationStack {
+                        Text("Playlists")
+                            .font(.headline)
+                            .padding(.top, 16)
+                        
+                        ForEach(playlists.enumerated(), id: \.element.id) { index, playlist in
+                            NavigationLink(destination: PlaylistView(playlistID: playlist.id)) {
+                                ZStack(alignment: .bottomLeading) {
+                                    PlaylistBackgroundView(playlist: playlist)
+                                    
+                                    Text(playlist.name)
+                                        .foregroundStyle(Color.white)
+                                        .font(Font.largeTitle.bold())
+                                        .padding(16)
+                                }
+                            }
+                        }
+                    }
+                    
                 }
                 .padding([.trailing, .leading], 8)
             }
@@ -19,12 +40,12 @@ struct SearchView: View {
         .searchable(text: $searchText, prompt: "Search songs")
         .onChange(of: searchText) { oldValue, newValue in
             Task {
-                await getSongs()
+                await getResults()
             }
         }
     }
     
-    func getSongs() async {
+    func getResults() async {
         if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return
         }
@@ -35,5 +56,6 @@ struct SearchView: View {
         
         let serverResults: SearchResults? = await SeverApi.get(endpoint: "search?q=\(searchText)")
         songs = serverResults?.songs ?? []
+        playlists = serverResults?.playlists ?? []
     }
 }

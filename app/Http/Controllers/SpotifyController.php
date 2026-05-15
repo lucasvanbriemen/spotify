@@ -98,6 +98,7 @@ class SpotifyController extends Controller
                 'image' => $playlist['picture_medium'] ?? "https://firstbenefits.org/wp-content/uploads/2017/10/placeholder-300x300.png",
                 'track_count' => $playlist['nb_tracks'],
                 'author' => $playlist['user']['name'] ?? 'Unknown',
+                'songs' => []
             ];
         });
 
