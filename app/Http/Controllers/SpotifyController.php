@@ -57,8 +57,8 @@ class SpotifyController extends Controller
     {
         $tracksAndPlaylists = DeezerHelper::search($request->query('q', ''));
 
-        $tracks = collect($tracksAndPlaylists['tracks']);
-        $tracks = $tracks->map(function ($track) {
+        $songs = collect($tracksAndPlaylists['tracks']);
+        $songs = $songs->map(function ($track) {
             $formattedTrack = [
                 "isrc" => $track['isrc'],
                 "title" => $track['title'],
@@ -66,7 +66,7 @@ class SpotifyController extends Controller
                 "album" => $track['album']['title'],
                 "image_url" => $track['album']['cover_medium'] ?? "https://firstbenefits.org/wp-content/uploads/2017/10/placeholder-300x300.png",
                 "duration" => $track['duration'],
-            ];    
+            ];
 
             return $formattedTrack;
         });
@@ -74,10 +74,10 @@ class SpotifyController extends Controller
 
         $allPlaylists = Playlist::with('songs')->get();
 
-        $isrcs = $tracks->pluck('isrc')->filter()->all();
+        $isrcs = $songs->pluck('isrc')->filter()->all();
         $songsByIsrc = Song::whereIn('isrc', $isrcs)->get()->keyBy('isrc');
 
-        $tracks = $tracks->map(function ($track) use ($allPlaylists, $songsByIsrc) {
+        $songs = $songs->map(function ($track) use ($allPlaylists, $songsByIsrc) {
             $song = $songsByIsrc->get($track['isrc']);
 
             $track['is_in_playlist_map'] = [];
@@ -103,7 +103,7 @@ class SpotifyController extends Controller
         });
 
         $tracksAndPlaylists = [
-            'tracks' => $tracks,
+            'songs' => $songs,
             'playlists' => $playlists,
         ];
 
