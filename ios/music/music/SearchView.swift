@@ -33,6 +33,7 @@ struct SearchView: View {
             return
         }
         
-        songs = await SeverApi.get(endpoint: "search?q=\(searchText)") ?? []
+        let serverResults: SearchResults? = await SeverApi.get(endpoint: "search?q=\(searchText)")
+        songs = serverResults?.songs ?? []
     }
 }

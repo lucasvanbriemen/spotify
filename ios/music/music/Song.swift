@@ -26,3 +26,8 @@ class Song: Codable, Identifiable {
         case isInPlaylistMap = "is_in_playlist_map"
     }
 }
+
+struct SearchResults: Codable {
+    var songs: [Song]
+    var playlists: [Playlist]
+}
