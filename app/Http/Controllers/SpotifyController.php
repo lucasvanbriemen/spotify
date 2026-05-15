@@ -70,41 +70,6 @@ class SpotifyController extends Controller
         });
 
 
-        $query = trim((string) $request->query('q', ''));
-        $types = array_filter(array_map('trim', explode(',', (string) $request->query('types', 'track'))));
-        $includePlaylists = \in_array('playlist', $types, true);
-
-        if ($query === '') {
-            return response()->json($includePlaylists ? ['tracks' => [], 'playlists' => []] : []);
-        }
-
-        $token = $this->accessToken();
-        if ($token === null) {
-            return response()->json(['error' => 'Failed to obtain Spotify access token'], 500);
-        }
-
-        $response = Http::withToken($token)->get('https://api.spotify.com/v1/search', [
-            'q' => $query,
-            'type' => 'track',
-            'limit' => 10,
-        ]);
-
-        if ($response->failed()) {
-            return response()->json(['error' => $response->body()], $response->status());
-        }
-
-        $items = collect($response->json('tracks.items', []))->map(fn ($track) => [
-            'id' => random_int(1,99999),
-            'file_id' => $track['id'] ?? null,
-            'title' => $track['name'] ?? '',
-            'artist' => collect($track['artists'] ?? [])->pluck('name')->implode(', '),
-            'album' => $track['album']['name'] ?? '',
-            'image_url' => $track['album']['images'][1]['url']
-                ?? $track['album']['images'][0]['url']
-                ?? null,
-            'duration' => round((int) $track['duration_ms'] / 1000, 0),
-        ])->filter(fn ($i) => $i['id'] !== null)->values();
-
         $allPlaylists = Playlist::with('songs')->get();
 
         $fileIds = $items->pluck('file_id')->filter()->all();
@@ -147,26 +112,6 @@ class SpotifyController extends Controller
         }
 
         return $response;
-    }
-
-    private function accessToken(): ?string
-    {
-        return Cache::remember('spotify.client_credentials_token', 3000, function () {
-            $response = Http::asForm()
-                ->withBasicAuth(
-                    config('services.spotify.client_id'),
-                    config('services.spotify.client_secret'),
-                )
-                ->post('https://accounts.spotify.com/api/token', [
-                    'grant_type' => 'client_credentials',
-                ]);
-
-            if ($response->failed()) {
-                return null;
-            }
-
-            return $response->json('access_token');
-        });
     }
 
     public function returnMp3 ($response, $isrc): BinaryFileResponse
