@@ -21,6 +21,12 @@ class DeezerHelper {
     return $track;
   }
 
+  public static function getPlaylistDetails($id) {
+    $playlist = self::makeRequest("/playlist/$id");
+
+    return $playlist;
+  }
+
   private static function makeRequest(string $endpoint, array $params = []): array {
     $url = self::BASE_URL . $endpoint;
 

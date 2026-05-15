@@ -54,7 +54,42 @@ class PlaylistController extends Controller
         return response()->json($playlist);
     }
 
-    
+    private function showDeezer(string $playlist) {
+        $id = str_replace("deezer_", "", $playlist);
+        $deezerPlaylist = DeezerHelper::getPlaylistDetails($id);
+
+        $allPlaylists = Playlist::with('songs')->get();
+
+        $songs = collect($deezerPlaylist['tracks']['data'])->map(function ($track) use ($allPlaylists) {
+            $isrc = $track['isrc'];
+
+            $map = [];
+            foreach ($allPlaylists as $p) {
+                $map[$p->id] = [
+                    'name' => $p->name,
+                    'image_url' => $p->image_url,
+                    'contains' => $p->songs->contains('isrc', $isrc),
+                ];
+            }
+
+            return [
+                'isrc' => $isrc,
+                'title' => $track['title'],
+                'artist' => $track['artist']['name'],
+                'album' => $track['album']['title'],
+                'image_url' => $track['album']['cover_medium'],
+                'duration' => $track['duration'],
+                'is_in_playlist_map' => $map,
+            ];
+        });
+
+        return response()->json([
+            'id' => "deezer_{$deezerPlaylist['id']}",
+            'name' => $deezerPlaylist['title'] ?? '',
+            'image_url' => $deezerPlaylist['picture_medium'] ?? '',
+            'songs' => $songs,
+        ]);
+    }
 
     public function addSong(Request $request, Playlist $playlist)
     {
