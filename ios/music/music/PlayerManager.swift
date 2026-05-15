@@ -48,7 +48,7 @@ class PlayerManager {
     func playPlaylist(playlist: Playlist, atIndex: Int? = nil) {
         playingPlaylistId = playlist.id
         
-        var index = atIndex ?? 0
+        let index = atIndex ?? 0
         
         if let firstOrIndexSong = playlist.songs?[index] {
             playSong(song: firstOrIndexSong)
