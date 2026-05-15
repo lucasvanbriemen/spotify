@@ -56,8 +56,8 @@ class SpotifyController extends Controller
 
     public function search(Request $request)
     {
-        $tracks = DeezerHelper::search($request->query('q', ''));
-        return response()->json($tracks);
+        $apiResult = DeezerHelper::search($request->query('q', ''));
+        return response()->json($apiResult);
 
         $query = trim((string) $request->query('q', ''));
         $types = array_filter(array_map('trim', explode(',', (string) $request->query('types', 'track'))));
