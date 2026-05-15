@@ -23,10 +23,15 @@ class SpotifyController extends Controller
             return $this->returnMp3($request, $id);
         }
 
-        $token = $this->accessToken();
-        $metaData = Http::withToken($token)->get("https://api.spotify.com/v1/tracks/{$id}");
-        $name = $metaData->json('name', '');
-        $artist = $metaData->json('artists.0.name', '');
+        $name = trim((string) $request->query('title', ''));
+        $artist = trim((string) $request->query('artist', ''));
+
+        if ($name === '' || $artist === '') {
+            $token = $this->accessToken();
+            $metaData = Http::withToken($token)->get("https://api.spotify.com/v1/tracks/{$id}");
+            $name = $metaData->json('name', '');
+            $artist = $metaData->json('artists.0.name', '');
+        }
 
         $process = new Process([
             base_path('bin/yt-dlp'),
@@ -70,10 +75,9 @@ class SpotifyController extends Controller
             return response()->json(['error' => 'Failed to obtain Spotify access token'], 500);
         }
 
-        $spotifyType = $includePlaylists ? 'track,playlist' : 'track';
         $response = Http::withToken($token)->get('https://api.spotify.com/v1/search', [
             'q' => $query,
-            'type' => $spotifyType,
+            'type' => 'track',
             'limit' => 10,
         ]);
 
@@ -117,15 +121,19 @@ class SpotifyController extends Controller
             return response()->json($items);
         }
 
-        $playlists = collect($response->json('playlists.items', []))
-            ->filter()
+        $deezerResponse = Http::get('https://api.deezer.com/search/playlist', [
+            'q' => $query,
+            'limit' => 10,
+        ]);
+
+        $playlists = collect($deezerResponse->json('data', []))
             ->map(fn ($playlist) => [
-                'id' => $playlist['id'] ?? null,
-                'name' => $playlist['name'] ?? '',
-                'description' => $playlist['description'] ?? '',
-                'image_url' => $playlist['images'][0]['url'] ?? null,
-                'owner' => $playlist['owner']['display_name'] ?? '',
-                'track_count' => $playlist['tracks']['total'] ?? 0,
+                'id' => isset($playlist['id']) ? (string) $playlist['id'] : null,
+                'name' => $playlist['title'] ?? '',
+                'description' => '',
+                'image_url' => $playlist['picture_medium'] ?? $playlist['picture'] ?? null,
+                'owner' => $playlist['user']['name'] ?? '',
+                'track_count' => $playlist['nb_tracks'] ?? 0,
             ])
             ->filter(fn ($p) => $p['id'] !== null)
             ->values();
@@ -136,41 +144,35 @@ class SpotifyController extends Controller
         ]);
     }
 
-    public function showSpotifyPlaylist(string $playlist_id): JsonResponse
+    public function showDeezerPlaylist(string $playlist_id): JsonResponse
     {
-        $token = $this->accessToken();
-        if ($token === null) {
-            return response()->json(['error' => 'Failed to obtain Spotify access token'], 500);
+        $response = Http::get("https://api.deezer.com/playlist/{$playlist_id}");
+
+        if ($response->failed() || $response->json('error')) {
+            return response()->json(['error' => $response->json('error.message', 'Playlist not found')], 404);
         }
 
-        $response = Http::withToken($token)->get("https://api.spotify.com/v1/playlists/{$playlist_id}");
-
-        if ($response->failed()) {
-            return response()->json(['error' => $response->body()], $response->status());
-        }
-
-        $songs = collect($response->json('tracks.items', []))
-            ->map(fn ($entry) => $entry['track'] ?? null)
-            ->filter(fn ($track) => $track && ($track['id'] ?? null))
+        $songs = collect($response->json('tracks.data', []))
+            ->filter(fn ($track) => isset($track['id']))
             ->map(fn ($track) => [
                 'id' => random_int(1, 99999),
-                'file_id' => $track['id'],
-                'title' => $track['name'] ?? '',
-                'artist' => collect($track['artists'] ?? [])->pluck('name')->implode(', '),
-                'album' => $track['album']['name'] ?? '',
-                'image_url' => $track['album']['images'][1]['url']
-                    ?? $track['album']['images'][0]['url']
-                    ?? null,
-                'duration' => round((int) ($track['duration_ms'] ?? 0) / 1000, 0),
+                'file_id' => (string) $track['id'],
+                'title' => $track['title'] ?? '',
+                'artist' => $track['artist']['name'] ?? '',
+                'album' => $track['album']['title'] ?? '',
+                'image_url' => $track['album']['cover_medium']
+                    ?? $track['album']['cover'] ?? null,
+                'duration' => (int) ($track['duration'] ?? 0),
             ])
             ->values();
 
         return response()->json([
-            'id' => $response->json('id'),
-            'name' => $response->json('name', ''),
+            'id' => (string) $response->json('id'),
+            'name' => $response->json('title', ''),
             'description' => $response->json('description', ''),
-            'image_url' => $response->json('images.0.url'),
-            'owner' => $response->json('owner.display_name', ''),
+            'image_url' => $response->json('picture_big')
+                ?? $response->json('picture_medium'),
+            'owner' => $response->json('creator.name', ''),
             'songs' => $songs,
         ]);
     }
