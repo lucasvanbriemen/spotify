@@ -18,7 +18,7 @@ class SpotifyController extends Controller
     {
         $publicRoot = storage_path('app/public/audio');
 
-        if (Song::where('isrc', '=', $isrc, true)->exists()) {
+        if (Song::where('isrc', $isrc)->exists()) {
             return $this->returnMp3($request, $isrc);
         }
 

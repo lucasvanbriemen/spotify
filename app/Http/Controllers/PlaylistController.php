@@ -40,7 +40,7 @@ class PlaylistController extends Controller
         $data = $request->all();
 
         $song = Song::updateOrCreate(
-            ['isrc' => $data['spotify_id']],
+            ['isrc' => $data['isrc']],
             [
                 'title' => $data['title'] ?? '',
                 'artist' => $data['artist'] ?? '',
