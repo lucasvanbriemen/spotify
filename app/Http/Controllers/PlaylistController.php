@@ -24,6 +24,14 @@ class PlaylistController extends Controller
 
     public function show(string $playlist)
     {
+        if (str_starts_with($playlist, "local_")) {
+            return $this->showLocal($playlist);
+        } else {
+            return $this->showDeezer($playlist);
+        }
+    }
+
+    private function showLocal(string $playlist) {
         $id = str_replace("local_", "", $playlist);
         $playlist = Playlist::where("id", $id)->firstOrFail();
 
@@ -45,6 +53,8 @@ class PlaylistController extends Controller
 
         return response()->json($playlist);
     }
+
+    
 
     public function addSong(Request $request, Playlist $playlist)
     {
