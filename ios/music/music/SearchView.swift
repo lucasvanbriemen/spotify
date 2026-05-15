@@ -54,7 +54,8 @@ struct SearchView: View {
             return
         }
         
-        let serverResults: SearchResults? = await SeverApi.get(endpoint: "search?q=\(searchText)")
+        let query = searchText.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let serverResults: SearchResults? = await SeverApi.get(endpoint: "search?q=\(query)")
         songs = serverResults?.songs ?? []
         playlists = serverResults?.playlists ?? []
     }

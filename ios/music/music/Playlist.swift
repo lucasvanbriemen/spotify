@@ -1,7 +1,7 @@
 import Foundation
 
 class Playlist: Codable, Identifiable {
-    var id: Int
+    var id: String
     var name: String
     var image: String?
     var songs: [Song]?

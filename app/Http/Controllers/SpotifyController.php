@@ -95,7 +95,7 @@ class SpotifyController extends Controller
             return [
                 'id' => "deezer_{$playlist['id']}",
                 'name' => $playlist['title'],
-                'image' => $playlist['picture_medium'] ?? "https://firstbenefits.org/wp-content/uploads/2017/10/placeholder-300x300.png",
+                'image_url' => $playlist['picture_medium'] ?? "https://firstbenefits.org/wp-content/uploads/2017/10/placeholder-300x300.png",
                 'track_count' => $playlist['nb_tracks'],
                 'author' => $playlist['user']['name'] ?? 'Unknown',
                 'songs' => []

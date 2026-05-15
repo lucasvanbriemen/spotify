@@ -2,13 +2,13 @@ import SwiftUI
 import Foundation
 
 struct PlaylistView: View {
-    @State var playlistID: Int
+    @State var playlistID: String
     @State var playlist: Playlist?
     @State var isLoading: Bool = true
     @State var isLoopingUneven: Bool = false
     @State private var manager = PlayerManager.shared
     
-    init(playlistID: Int) {
+    init(playlistID: String) {
         self.playlistID = playlistID
     }
     

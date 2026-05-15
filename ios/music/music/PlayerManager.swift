@@ -18,7 +18,7 @@ class PlayerManager {
         }
     }
     var isPlaying: Bool = false
-    var playingPlaylistId: Int? = nil
+    var playingPlaylistId: String? = nil
     var hasSheetOpen: Bool = false
     var timeIntoSong: Double = 0
     var isSeeking: Bool = false
@@ -27,7 +27,7 @@ class PlayerManager {
     var queue: [Song] = []
     var pastQueue: [Song] = []
 
-    func isCurrentlyPlayingPlaylist(playlistId: Int?) -> Bool {
+    func isCurrentlyPlayingPlaylist(playlistId: String?) -> Bool {
         return self.isPlaying && self.playingPlaylistId == playlistId
     }
     
