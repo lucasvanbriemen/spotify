@@ -45,7 +45,7 @@ class SpotifyController extends Controller
             'isrc' => $isrc,
             'title' => $songDetails['title'],
             'artist' => $songDetails['artist']['name'],
-            'image_url' => $songDetails['album']['cover_medium'],
+            'image_url' => $songDetails['album']['cover_medium'] ?? "https://firstbenefits.org/wp-content/uploads/2017/10/placeholder-300x300.png",
             'album' => $songDetails['album']['title'],
             'duration' => $songDetails['duration'],
         ]);
@@ -62,7 +62,7 @@ class SpotifyController extends Controller
                 "title" => $track['title'],
                 "artist" => $track['artist']['name'],
                 "album" => $track['album']['title'],
-                "image_url" => $track['album']['cover_medium'],
+                "image_url" => $track['album']['cover_medium'] ?? "https://firstbenefits.org/wp-content/uploads/2017/10/placeholder-300x300.png",
                 "duration" => $track['duration'],
             ];    
 
