@@ -54,9 +54,20 @@ struct PlayerSheetView: View {
                 .foregroundStyle(Color.secondary)
                 .clipShape(Circle())
                 .rotationEffect(Angle(degrees: 90))
+                
+                Button(action: {
+                    manager.shouldShuffle.toggle()
+                    manager.applySuffle()
+                }) {
+                    Image(systemName: "repeat")
+                        .badge(1)
+                        .font(Font.system(size: 24))
+                }
+                .frame(width: 32, height: 32)
+                .clipShape(Circle())
+                .foregroundStyle(manager.shouldShuffle ? Color.accentColor : Color.secondary)
+                .clipShape(Circle())
             }
-            
-            
             
             Slider(value: $manager.timeIntoSong, in: 0...Double(manager.currentlyPlaying!.duration)) {
                 Text("Seek")
