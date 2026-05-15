@@ -9,7 +9,6 @@ struct PlayerSheetView: View {
 
         
         HStack {
-            
             Button(action: {
                 manager.shouldShuffle.toggle()
                 manager.applySuffle()
