@@ -18,7 +18,7 @@ class PlayerManager {
         }
     }
     var isPlaying: Bool = false
-    var playingPlaylistId: Int? = nil
+    var playingPlaylistId: String? = nil
     var hasSheetOpen: Bool = false
     var timeIntoSong: Double = 0
     var isSeeking: Bool = false
@@ -27,7 +27,7 @@ class PlayerManager {
     var queue: [Song] = []
     var pastQueue: [Song] = []
 
-    func isCurrentlyPlayingPlaylist(playlistId: Int?) -> Bool {
+    func isCurrentlyPlayingPlaylist(playlistId: String?) -> Bool {
         return self.isPlaying && self.playingPlaylistId == playlistId
     }
     
@@ -46,19 +46,27 @@ class PlayerManager {
     }
 
     func playPlaylist(playlist: Playlist, atIndex: Int? = nil) {
-        playingPlaylistId = playlist.id
-        
-        let index = atIndex ?? 0
-        
-        if let firstOrIndexSong = playlist.songs?[index] {
-            playSong(song: firstOrIndexSong)
-        }
-        
-        for (loopingSongIndex, song) in (playlist.songs ?? []).enumerated() {
-            if loopingSongIndex == index {
+        playSongs(songs: playlist.songs ?? [], atIndex: atIndex ?? 0, playlistId: "local:\(playlist.id)")
+    }
+
+    func playPlaylist(playlist: SpotifyPlaylist, atIndex: Int? = nil) {
+        playSongs(songs: playlist.songs ?? [], atIndex: atIndex ?? 0, playlistId: "deezer:\(playlist.id)")
+    }
+
+    private func playSongs(songs: [Song], atIndex: Int, playlistId: String) {
+        playingPlaylistId = playlistId
+        queue = []
+        pastQueue = []
+
+        guard !songs.isEmpty, atIndex < songs.count else { return }
+
+        playSong(song: songs[atIndex])
+
+        for (loopingSongIndex, song) in songs.enumerated() {
+            if loopingSongIndex == atIndex {
                 continue
             }
-            if index < loopingSongIndex {
+            if atIndex < loopingSongIndex {
                 queue.append(song)
             } else {
                 pastQueue.append(song)
@@ -67,7 +75,12 @@ class PlayerManager {
     }
     
     func playSong(song: Song) {
-        let url = URL(string: "\(Secrets.base_url)get-mp3/" + song.fileId!)
+        var components = URLComponents(string: "\(Secrets.base_url)get-mp3/" + song.fileId!)!
+        components.queryItems = [
+            URLQueryItem(name: "title", value: song.title),
+            URLQueryItem(name: "artist", value: song.artist ?? ""),
+        ]
+        let url = components.url
 
         if timeObserverToken != nil {
             player?.removeTimeObserver(timeObserverToken!)

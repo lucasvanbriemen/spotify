@@ -6,18 +6,21 @@ struct SongListingView: View {
     let bgColor: Color
     var shouldPlaySong: Bool? = true
     var playlist: Playlist? = nil
+    var spotifyPlaylist: SpotifyPlaylist? = nil
     var songIndex: Int? = nil
-    
+
     var body: some View {
         Button() {
             if shouldPlaySong == false {
                 return
             }
 
-            if playlist == nil {
-                manager.playSong(song: song)
+            if let playlist {
+                manager.playPlaylist(playlist: playlist, atIndex: songIndex!)
+            } else if let spotifyPlaylist {
+                manager.playPlaylist(playlist: spotifyPlaylist, atIndex: songIndex!)
             } else {
-                manager.playPlaylist(playlist: playlist!, atIndex: songIndex!)
+                manager.playSong(song: song)
             }
         } label: {
             HStack(alignment: .center) {
