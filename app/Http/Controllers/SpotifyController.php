@@ -91,9 +91,19 @@ class SpotifyController extends Controller
             return $track;
         });
 
+        $playlists = collect($tracksAndPlaylists['playlists'])->map(function ($playlist) {
+            return [
+                'id' => "deezer_{$playlist['id']}",
+                'name' => $playlist['title'],
+                'image' => $playlist['picture_medium'] ?? "https://firstbenefits.org/wp-content/uploads/2017/10/placeholder-300x300.png",
+                'track_count' => $playlist['nb_tracks'],
+                'author' => $playlist['user']['name'] ?? 'Unknown',
+            ];
+        });
+
         $tracksAndPlaylists = [
             'tracks' => $tracks,
-            'playlists' => $tracksAndPlaylists['playlists'],
+            'playlists' => $playlists,
         ];
 
         return response()->json($tracksAndPlaylists);
