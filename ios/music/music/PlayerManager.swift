@@ -67,7 +67,7 @@ class PlayerManager {
     }
     
     func playSong(song: Song) {
-        let url = URL(string: "\(Secrets.base_url)get-mp3/" + song.fileId!)
+        let url = URL(string: "\(Secrets.base_url)get-mp3/\(song.fileId!)?title=\(song.title)&artist=\(song.artist!)")
 
         if timeObserverToken != nil {
             player?.removeTimeObserver(timeObserverToken!)

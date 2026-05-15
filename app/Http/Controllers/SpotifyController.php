@@ -14,7 +14,7 @@ use App\Helpers\DeezerHelper;
 
 class SpotifyController extends Controller
 {
-    public function getMp3(Request $request, string $song_id)
+    public function getMp3(Request $request, string $song_id = "")
     {
         $id = $song_id;
 
@@ -26,13 +26,6 @@ class SpotifyController extends Controller
 
         $name = trim((string) $request->query('title', ''));
         $artist = trim((string) $request->query('artist', ''));
-
-        if ($name === '' || $artist === '') {
-            $token = $this->accessToken();
-            $metaData = Http::withToken($token)->get("https://api.spotify.com/v1/tracks/{$id}");
-            $name = $metaData->json('name', '');
-            $artist = $metaData->json('artists.0.name', '');
-        }
 
         $process = new Process([
             base_path('bin/yt-dlp'),
