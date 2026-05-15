@@ -49,31 +49,34 @@ class PlayerManager {
 
     func playPlaylist(playlist: Playlist, atIndex: Int? = nil) {
         playingPlaylistId = playlist.id
-        
+
         queue = []
         pastQueue = []
-        nonShuffledQueue = playlist.songs ?? []
-        
+        let songs = playlist.songs ?? []
+        nonShuffledQueue = songs
+
         let index = atIndex ?? 0
-        
-        for (loopingSongIndex, song) in (playlist.songs ?? []).enumerated() {
-            if loopingSongIndex == index {
-                continue
-            }
+
+        for (loopingSongIndex, song) in songs.enumerated() {
             if index <= loopingSongIndex {
                 queue.append(song)
             } else {
                 pastQueue.append(song)
             }
         }
-        
 
         if shouldShuffle {
             queue.shuffle()
             pastQueue.shuffle()
         }
-        
-        playSong(song: queue.removeFirst())
+
+        if let atIndex = atIndex {
+            let song = songs[atIndex]
+            queue.removeAll { $0.id == song.id }
+            playSong(song: song)
+        } else {
+            playSong(song: queue.removeFirst())
+        }
     }
     
     func playSong(song: Song) {
