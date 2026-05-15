@@ -14,14 +14,14 @@ use App\Helpers\DeezerHelper;
 
 class SpotifyController extends Controller
 {
-    public function getMp3(Request $request, string $song_id = "")
+    public function getMp3(Request $request, string $isrc = "")
     {
         $id = $song_id;
 
         $publicRoot = storage_path('app/public/audio');
 
-        if ($this->findMp3($id)) {
-            return $this->returnMp3($request, $id);
+        if ($this->findMp3($isrc)) {
+            return $this->returnMp3($request, $isrc);
         }
 
         $name = trim((string) $request->query('title', ''));
@@ -38,13 +38,13 @@ class SpotifyController extends Controller
             '--match-filter', 'age_limit<18',
             '--max-downloads', '1',
             '--ffmpeg-location', base_path('bin'),
-            '--output', "{$publicRoot}/{$id}",
+            '--output', "{$publicRoot}/{$isrc}",
             "ytsearch5: {$artist} {$name} audio",
         ], null, $this->setupEnv());
         $process->setTimeout(180);
         $process->run();
 
-        if (! $this->findMp3($id)) {
+        if (! $this->findMp3($isrc)) {
             return response()->json([
                 'error' => 'yt-dlp failed',
                 'detail' => trim($process->getErrorOutput() ?: $process->getOutput()),
@@ -52,14 +52,14 @@ class SpotifyController extends Controller
         }
 
         Song::create([
-            'isrc' => $id,
+            'isrc' => $isrc,
             'title' => $name,
             'artist' => $artist,
             'album' => '',
             'duration' => 0,
         ]);
 
-        return $this->returnMp3($request, $id);
+        return $this->returnMp3($request, $isrc);
     }
 
     public function search(Request $request)
@@ -140,22 +140,7 @@ class SpotifyController extends Controller
             return response()->json($items);
         }
 
-        $deezerResponse = Http::get('https://api.deezer.com/search/playlist', [
-            'q' => $query,
-            'limit' => 10,
-        ]);
-
-        $playlists = collect($deezerResponse->json('data', []))
-            ->map(fn ($playlist) => [
-                'id' => isset($playlist['id']) ? (string) $playlist['id'] : null,
-                'name' => $playlist['title'] ?? '',
-                'description' => '',
-                'image_url' => $playlist['picture_medium'] ?? $playlist['picture'] ?? null,
-                'owner' => $playlist['user']['name'] ?? '',
-                'track_count' => $playlist['nb_tracks'] ?? 0,
-            ])
-            ->filter(fn ($p) => $p['id'] !== null)
-            ->values();
+        
 
         return response()->json([
             'tracks' => $items,
@@ -232,9 +217,9 @@ class SpotifyController extends Controller
         });
     }
 
-    public function returnMp3 ($response, $id): BinaryFileResponse
+    public function returnMp3 ($response, $isrc): BinaryFileResponse
     {
-        $path = storage_path("app/public/audio/{$id}.mp3");
+        $path = storage_path("app/public/audio/{$isrc}.mp3");
         abort_unless(@is_file($path), 404);
 
         $response = new BinaryFileResponse($path);
@@ -247,9 +232,9 @@ class SpotifyController extends Controller
         return $response;
     }
 
-    private function findMp3($id): bool
+    private function findMp3($isrc): bool
     {
-        return @is_file(storage_path("app/public/audio/{$id}.mp3"));
+        return @is_file(storage_path("app/public/audio/{$isrc}.mp3"));
     }
 
     private function setupEnv() {
