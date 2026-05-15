@@ -7,8 +7,12 @@ class DeezerHelper {
 
   public static function search($query) {
     $tracks = self::makeRequest("/search/track", ["q" => $query])["data"];
+    $playlists = self::makeRequest("/search/playlist", ["q" => $query])["data"];
 
-    return $tracks;
+    return [
+      "tracks" => $tracks,
+      "playlists" => $playlists
+    ];
   }
 
   public static function getTrackDetails($isrc) {
