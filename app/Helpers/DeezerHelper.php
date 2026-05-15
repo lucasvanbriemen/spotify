@@ -11,6 +11,12 @@ class DeezerHelper {
     return $tracks;
   }
 
+  public static function getTrackDetails($isrc) {
+    $track = self::makeRequest("/track/isrc:$isrc");
+
+    return $track;
+  }
+
   private static function makeRequest(string $endpoint, array $params = []): array {
     $url = self::BASE_URL . $endpoint;
 

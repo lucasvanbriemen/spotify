@@ -22,8 +22,7 @@ class SpotifyController extends Controller
             return $this->returnMp3($request, $isrc);
         }
 
-        $name = trim((string) $request->query('title', ''));
-        $artist = trim((string) $request->query('artist', ''));
+        $songDetails = DeezerHelper::getTrackDetails($isrc);
 
         $process = new Process([
             base_path('bin/yt-dlp'),
@@ -37,18 +36,18 @@ class SpotifyController extends Controller
             '--max-downloads', '1',
             '--ffmpeg-location', base_path('bin'),
             '--output', "{$publicRoot}/{$isrc}",
-            "ytsearch5: {$artist} {$name} audio",
+            "ytsearch5: {$songDetails['artist']['name']} {$songDetails['title']} audio",
         ], null, $this->setupEnv());
         $process->setTimeout(180);
         $process->run();
 
         Song::create([
             'isrc' => $isrc,
-            'title' => $name,
-            'artist' => $artist,
-            'image_url' => '',
-            'album' => '',
-            'duration' => 0,
+            'title' => $songDetails['title'],
+            'artist' => $songDetails['artist']['name'],
+            'image_url' => $songDetails['album']['cover_medium'],
+            'album' => $songDetails['album']['title'],
+            'duration' => $songDetails['duration'],
         ]);
 
         return $this->returnMp3($request, $isrc);
