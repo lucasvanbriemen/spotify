@@ -58,7 +58,6 @@ class SpotifyController extends Controller
         $tracks = collect(DeezerHelper::search($request->query('q', '')));
         $tracks = $tracks->map(function ($track) {
             $formattedTrack = [
-                "id" => $track['id'],
                 "isrc" => $track['isrc'],
                 "title" => $track['title'],
                 "artist" => $track['artist']['name'],
@@ -70,7 +69,6 @@ class SpotifyController extends Controller
             return $formattedTrack;
         });
 
-        return response()->json($tracks);
 
         $query = trim((string) $request->query('q', ''));
         $types = array_filter(array_map('trim', explode(',', (string) $request->query('types', 'track'))));
@@ -131,12 +129,8 @@ class SpotifyController extends Controller
             return response()->json($items);
         }
 
-        
 
-        return response()->json([
-            'tracks' => $items,
-            'playlists' => $playlists,
-        ]);
+        return response()->json($tracks);
     }
 
     public function getLyrics(Song $song)
