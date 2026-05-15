@@ -183,6 +183,7 @@ class PlayerManager {
         if shouldRepeat {
             timeIntoSong = 0
             player?.seek(to: .zero)
+            togglePlayPause(forceState: true)
             return
         }
         
@@ -201,6 +202,7 @@ class PlayerManager {
         if shouldRepeat {
             timeIntoSong = 0
             player?.seek(to: .zero)
+            togglePlayPause(forceState: true)
             return
         }
         
