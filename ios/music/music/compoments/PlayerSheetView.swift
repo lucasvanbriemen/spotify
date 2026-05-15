@@ -12,7 +12,7 @@ struct PlayerSheetView: View {
             
             Button(action: {
                 manager.shouldShuffle.toggle()
-                manager.applyShuffle()
+                manager.applySuffle()
             }) {
                 Image(systemName: "shuffle")
                     .badge(1)
