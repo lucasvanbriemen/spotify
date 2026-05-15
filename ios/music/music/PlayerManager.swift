@@ -203,6 +203,21 @@ class PlayerManager {
     func applySuffle() {
         if shouldShuffle {
             queue.shuffle()
+        } else if let current = currentlyPlaying {
+            queue = []
+            pastQueue = []
+            var reachedCurrent = false
+            for nonShuffeldSong in nonShuffledQueue {
+                if nonShuffeldSong.id == current.id {
+                    reachedCurrent = true
+                    continue
+                }
+                if reachedCurrent {
+                    queue.append(nonShuffeldSong)
+                } else {
+                    pastQueue.append(nonShuffeldSong)
+                }
+            }
         }
     }
 }
