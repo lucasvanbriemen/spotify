@@ -179,6 +179,13 @@ class PlayerManager {
     }
     
     func playNextSong() {
+        
+        if shouldRepeat {
+            timeIntoSong = 0
+            player?.seek(to: .zero)
+            return
+        }
+        
         if let current = currentlyPlaying {
             pastQueue.append(current)
         }
@@ -191,6 +198,12 @@ class PlayerManager {
     }
     
     func playPreviousSong() {
+        if shouldRepeat {
+            timeIntoSong = 0
+            player?.seek(to: .zero)
+            return
+        }
+        
         if self.timeIntoSong < 5 && self.pastQueue.count > 0 {
             if let current = currentlyPlaying {
                 queue.insert(current, at: 0)
