@@ -9,6 +9,20 @@ struct PlayerSheetView: View {
 
         
         HStack {
+            
+            Button(action: {
+                manager.shouldShuffle.toggle()
+                manager.applyShuffle()
+            }) {
+                Image(systemName: "shuffle")
+                    .badge(1)
+                    .font(Font.system(size: 24))
+            }
+            .frame(width: 32, height: 32)
+            .clipShape(Circle())
+            .foregroundStyle(manager.shouldShuffle ? Color.accentColor : Color.secondary)
+            .clipShape(Circle())
+            
             Button(action: { manager.playPreviousSong() }) {
                 Image(systemName: "arrowtriangle.down.2.fill")
                     .font(Font.system(size: 24))

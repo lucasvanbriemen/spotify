@@ -22,10 +22,12 @@ class PlayerManager {
     var hasSheetOpen: Bool = false
     var timeIntoSong: Double = 0
     var isSeeking: Bool = false
+    var shouldShuffle: Bool = true
     private var timeObserverToken: Any? = nil
     private var endObserver: NSObjectProtocol?
     var queue: [Song] = []
     var pastQueue: [Song] = []
+    var nonShuffledQueue: [Song] = []
 
     func isCurrentlyPlayingPlaylist(playlistId: String?) -> Bool {
         return self.isPlaying && self.playingPlaylistId == playlistId
@@ -50,23 +52,28 @@ class PlayerManager {
         
         queue = []
         pastQueue = []
+        nonShuffledQueue = playlist.songs ?? []
         
         let index = atIndex ?? 0
-        
-        if let firstOrIndexSong = playlist.songs?[index] {
-            playSong(song: firstOrIndexSong)
-        }
         
         for (loopingSongIndex, song) in (playlist.songs ?? []).enumerated() {
             if loopingSongIndex == index {
                 continue
             }
-            if index < loopingSongIndex {
+            if index <= loopingSongIndex {
                 queue.append(song)
             } else {
                 pastQueue.append(song)
             }
         }
+        
+
+        if shouldShuffle {
+            queue.shuffle()
+            pastQueue.shuffle()
+        }
+        
+        playSong(song: queue.removeFirst())
     }
     
     func playSong(song: Song) {
@@ -191,5 +198,11 @@ class PlayerManager {
         
         self.player?.seek(to: .zero)
         
+    }
+    
+    func applySuffle() {
+        if shouldShuffle {
+            queue.shuffle()
+        }
     }
 }
