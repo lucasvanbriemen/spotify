@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\DeezerHelper;
 use App\Models\Playlist;
 use App\Models\Song;
 use Illuminate\Http\Request;
@@ -39,14 +40,16 @@ class PlaylistController extends Controller
     {
         $data = $request->all();
 
+        $songDetails = DeezerHelper::getTrackDetails($data['isrc']);
+
         $song = Song::updateOrCreate(
             ['isrc' => $data['isrc']],
             [
-                'title' => $data['title'] ?? '',
-                'artist' => $data['artist'] ?? '',
-                'album' => $data['album'] ?? '',
-                'image_url' => $data['image_url'] ?? '',
-                'duration' => $data['duration'] ?? 0,
+                'title' => $songDetails['title'] ?? '',
+                'artist' => $songDetails['artist']['name'] ?? '',
+                'album' => $songDetails['album']['title'] ?? '',
+                'image_url' => $songDetails['album']['cover_medium'] ?? '',
+                'duration' => $songDetails['duration'] ?? 0,
             ]
         );
 
