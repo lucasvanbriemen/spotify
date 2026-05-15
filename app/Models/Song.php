@@ -12,7 +12,7 @@ class Song extends Model
         'album',
         'image_url',
         'duration',
-        'file_id',
+        'isrc',
     ];
 
     public function playlists()
