@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(IsLoggedIn::class)->group(function () {
     Route::get('/search', [SpotifyController::class, 'search'])->name('search');
+    Route::get('/spotify-playlist/{playlist_id}', [SpotifyController::class, 'showSpotifyPlaylist'])->name('spotify-playlist.show');
     Route::get('/get-mp3/{song_id}', [SpotifyController::class, 'getMp3'])->name('get-mp3-url');
 
     Route::get('/playlists', [PlaylistController::class, 'index'])->name('playlists');

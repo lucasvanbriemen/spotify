@@ -58,8 +58,11 @@ class SpotifyController extends Controller
     public function search(Request $request): JsonResponse
     {
         $query = trim((string) $request->query('q', ''));
+        $types = array_filter(array_map('trim', explode(',', (string) $request->query('types', 'track'))));
+        $includePlaylists = \in_array('playlist', $types, true);
+
         if ($query === '') {
-            return response()->json([]);
+            return response()->json($includePlaylists ? ['tracks' => [], 'playlists' => []] : []);
         }
 
         $token = $this->accessToken();
@@ -67,9 +70,10 @@ class SpotifyController extends Controller
             return response()->json(['error' => 'Failed to obtain Spotify access token'], 500);
         }
 
+        $spotifyType = $includePlaylists ? 'track,playlist' : 'track';
         $response = Http::withToken($token)->get('https://api.spotify.com/v1/search', [
             'q' => $query,
-            'type' => 'track',
+            'type' => $spotifyType,
             'limit' => 10,
         ]);
 
@@ -109,7 +113,66 @@ class SpotifyController extends Controller
             return $item;
         });
 
-        return response()->json($items);
+        if (! $includePlaylists) {
+            return response()->json($items);
+        }
+
+        $playlists = collect($response->json('playlists.items', []))
+            ->filter()
+            ->map(fn ($playlist) => [
+                'id' => $playlist['id'] ?? null,
+                'name' => $playlist['name'] ?? '',
+                'description' => $playlist['description'] ?? '',
+                'image_url' => $playlist['images'][0]['url'] ?? null,
+                'owner' => $playlist['owner']['display_name'] ?? '',
+                'track_count' => $playlist['tracks']['total'] ?? 0,
+            ])
+            ->filter(fn ($p) => $p['id'] !== null)
+            ->values();
+
+        return response()->json([
+            'tracks' => $items,
+            'playlists' => $playlists,
+        ]);
+    }
+
+    public function showSpotifyPlaylist(string $playlist_id): JsonResponse
+    {
+        $token = $this->accessToken();
+        if ($token === null) {
+            return response()->json(['error' => 'Failed to obtain Spotify access token'], 500);
+        }
+
+        $response = Http::withToken($token)->get("https://api.spotify.com/v1/playlists/{$playlist_id}");
+
+        if ($response->failed()) {
+            return response()->json(['error' => $response->body()], $response->status());
+        }
+
+        $songs = collect($response->json('tracks.items', []))
+            ->map(fn ($entry) => $entry['track'] ?? null)
+            ->filter(fn ($track) => $track && ($track['id'] ?? null))
+            ->map(fn ($track) => [
+                'id' => random_int(1, 99999),
+                'file_id' => $track['id'],
+                'title' => $track['name'] ?? '',
+                'artist' => collect($track['artists'] ?? [])->pluck('name')->implode(', '),
+                'album' => $track['album']['name'] ?? '',
+                'image_url' => $track['album']['images'][1]['url']
+                    ?? $track['album']['images'][0]['url']
+                    ?? null,
+                'duration' => round((int) ($track['duration_ms'] ?? 0) / 1000, 0),
+            ])
+            ->values();
+
+        return response()->json([
+            'id' => $response->json('id'),
+            'name' => $response->json('name', ''),
+            'description' => $response->json('description', ''),
+            'image_url' => $response->json('images.0.url'),
+            'owner' => $response->json('owner.display_name', ''),
+            'songs' => $songs,
+        ]);
     }
 
     public function getLyrics(Song $song)
