@@ -48,6 +48,9 @@ class PlayerManager {
     func playPlaylist(playlist: Playlist, atIndex: Int? = nil) {
         playingPlaylistId = playlist.id
         
+        queue = []
+        pastQueue = []
+        
         let index = atIndex ?? 0
         
         if let firstOrIndexSong = playlist.songs?[index] {
@@ -131,13 +134,9 @@ class PlayerManager {
         }
         
         commandCenter.previousTrackCommand.addTarget { _ in
-            if self.timeIntoSong < 5 && self.pastQueue.count > 0 {
-                self.playPreviousSong()
-                return .success
-            }
-            
-            self.player?.seek(to: .zero)
+            self.playPreviousSong()
             return .success
+
         }
 
     }
@@ -181,11 +180,16 @@ class PlayerManager {
     }
     
     func playPreviousSong() {
-        if let current = currentlyPlaying {
-            queue.insert(current, at: 0)
+        if self.timeIntoSong < 5 && self.pastQueue.count > 0 {
+            if let current = currentlyPlaying {
+                queue.insert(current, at: 0)
+            }
+            if let previous = pastQueue.popLast() {
+                playSong(song: previous)
+            }
         }
-        if let previous = pastQueue.popLast() {
-            playSong(song: previous)
-        }
+        
+        self.player?.seek(to: .zero)
+        
     }
 }
