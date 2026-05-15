@@ -16,11 +16,9 @@ class SpotifyController extends Controller
 {
     public function getMp3(Request $request, string $isrc = "")
     {
-        $id = $song_id;
-
         $publicRoot = storage_path('app/public/audio');
 
-        if ($this->findMp3($isrc)) {
+        if (Song::where('isrc', '=', $isrc, true)->exists()) {
             return $this->returnMp3($request, $isrc);
         }
 
@@ -43,13 +41,6 @@ class SpotifyController extends Controller
         ], null, $this->setupEnv());
         $process->setTimeout(180);
         $process->run();
-
-        if (! $this->findMp3($isrc)) {
-            return response()->json([
-                'error' => 'yt-dlp failed',
-                'detail' => trim($process->getErrorOutput() ?: $process->getOutput()),
-            ], 500);
-        }
 
         Song::create([
             'isrc' => $isrc,
@@ -230,11 +221,6 @@ class SpotifyController extends Controller
         $response->prepare(request());
 
         return $response;
-    }
-
-    private function findMp3($isrc): bool
-    {
-        return @is_file(storage_path("app/public/audio/{$isrc}.mp3"));
     }
 
     private function setupEnv() {
