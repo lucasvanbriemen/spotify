@@ -82,7 +82,6 @@ class SpotifyController extends Controller
             foreach ($allPlaylists as $playlist) {
                 $track['is_in_playlist_map'][$playlist->id] = [
                     'name' => $playlist->name,
-                    'image_url' => $playlist->image_url,
                     'contains' => $song ? $playlist->songs->contains($song) : false,
                 ];
             }
