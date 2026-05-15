@@ -139,39 +139,6 @@ class SpotifyController extends Controller
         ]);
     }
 
-    public function showDeezerPlaylist(string $playlist_id): JsonResponse
-    {
-        $response = Http::get("https://api.deezer.com/playlist/{$playlist_id}");
-
-        if ($response->failed() || $response->json('error')) {
-            return response()->json(['error' => $response->json('error.message', 'Playlist not found')], 404);
-        }
-
-        $songs = collect($response->json('tracks.data', []))
-            ->filter(fn ($track) => isset($track['id']))
-            ->map(fn ($track) => [
-                'id' => random_int(1, 99999),
-                'file_id' => (string) $track['id'],
-                'title' => $track['title'] ?? '',
-                'artist' => $track['artist']['name'] ?? '',
-                'album' => $track['album']['title'] ?? '',
-                'image_url' => $track['album']['cover_medium']
-                    ?? $track['album']['cover'] ?? null,
-                'duration' => (int) ($track['duration'] ?? 0),
-            ])
-            ->values();
-
-        return response()->json([
-            'id' => (string) $response->json('id'),
-            'name' => $response->json('title', ''),
-            'description' => $response->json('description', ''),
-            'image_url' => $response->json('picture_big')
-                ?? $response->json('picture_medium'),
-            'owner' => $response->json('creator.name', ''),
-            'songs' => $songs,
-        ]);
-    }
-
     public function getLyrics(Song $song)
     {
         //https://lrclib.net/docs
