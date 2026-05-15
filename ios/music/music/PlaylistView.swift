@@ -33,6 +33,8 @@ struct PlaylistView: View {
                             VStack(alignment: .leading) {
                                 Text(playlist.name)
                                     .font(Font.largeTitle.bold())
+                                    .lineLimit(2)
+                                    .truncationMode(.tail)
                                 Text(String(playlist.songs?.count ?? 0) + " songs, \(playlistDuration())")
                             }
                             .foregroundStyle(Color.white)
