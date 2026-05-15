@@ -59,14 +59,22 @@ struct PlayerSheetView: View {
         Slider(value: $manager.timeIntoSong, in: 0...Double(manager.currentlyPlaying!.duration)) {
             Text("Seek")
         } minimumValueLabel: {
-            Text("0")
+            Text(numberToTime(number: manager.timeIntoSong))
         } maximumValueLabel: {
-            Text(String(manager.currentlyPlaying!.duration))
+            Text(numberToTime(number: Double(manager.currentlyPlaying!.duration)))
         } onEditingChanged: { editing in
             manager.isSeeking = editing
             if editing { return }
             manager.player?.seek(to: CMTime(value: Int64(manager.timeIntoSong), timescale: 1))
         }
+    }
+    
+    func numberToTime(number: Double) -> String {
+        let totalSeconds = Int(number)
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        
+        return String(format: "%d:%02d", minutes, seconds)
     }
 }
 
