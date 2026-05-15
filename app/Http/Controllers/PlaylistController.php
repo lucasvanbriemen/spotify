@@ -24,7 +24,6 @@ class PlaylistController extends Controller
 
     public function show(string $playlist)
     {
-        // is local? 
         $id = str_replace("local_", "", $playlist);
         $playlist = Playlist::where("id", $id)->firstOrFail();
 
