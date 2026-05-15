@@ -46,6 +46,7 @@ class SpotifyController extends Controller
             'isrc' => $isrc,
             'title' => $name,
             'artist' => $artist,
+            'image_url' => '',
             'album' => '',
             'duration' => 0,
         ]);

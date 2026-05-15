@@ -26,7 +26,7 @@ struct SongMenuView: View {
 
     private func addToPlaylist(id: String) async {
         let body: [String: Any] = [
-            "spotify_id": song.fileId ?? "",
+            "isrc": song.isrc,
             "title": song.title,
             "artist": song.artist ?? "",
             "album": song.album ?? "",
