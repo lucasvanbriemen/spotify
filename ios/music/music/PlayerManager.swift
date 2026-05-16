@@ -95,7 +95,6 @@ class PlayerManager {
             print("playSong: failed to build URL from \(urlString)")
             return
         }
-        print("playSong: loading \(url)")
 
         if timeObserverToken != nil {
             player?.removeTimeObserver(timeObserverToken!)
