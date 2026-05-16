@@ -32,6 +32,15 @@ class PlayerManager {
     var queue: [Song] = []
     var pastQueue: [Song] = []
     var nonShuffledQueue: [Song] = []
+    private var preloadedSong: Song?
+    private var preloadedPlayerItem: AVPlayerItem?
+    private var preloader: AVPlayer?
+    private var preloadedArtworkSongIsrc: String?
+    #if os(macOS)
+    private var preloadedArtworkImage: NSImage?
+    #else
+    private var preloadedArtworkImage: UIImage?
+    #endif
 
     func isCurrentlyPlayingPlaylist(playlistId: String?) -> Bool {
         return self.isPlaying && self.playingPlaylistId == playlistId
@@ -84,33 +93,96 @@ class PlayerManager {
     }
     
     func playSong(song: Song) {
-        let url = URL(string: "\(Secrets.base_url)get-mp3/\(song.isrc)")
+        let newPlayer: AVPlayer
+        if let preloaded = preloader, preloadedSong?.isrc == song.isrc {
+            newPlayer = preloaded
+            preloader = nil
+            preloadedPlayerItem = nil
+            preloadedSong = nil
+        } else {
+            let url = URL(string: "\(Secrets.base_url)get-mp3/\(song.isrc)")
+            let headers = ["Authorization": "Bearer \(Secrets.api_key)"]
+            let asset = AVURLAsset(url: url!, options: ["AVURLAssetHTTPHeaderFieldsKey": headers])
+            let playerItem = AVPlayerItem(asset: asset)
+            newPlayer = AVPlayer(playerItem: playerItem)
+        }
 
-        let headers = ["Authorization": "Bearer \(Secrets.api_key)"]
-        let asset = AVURLAsset(url: url!, options: ["AVURLAssetHTTPHeaderFieldsKey": headers])
-        let playerItem = AVPlayerItem(asset: asset)
-        
         if timeObserverToken != nil {
             player?.removeTimeObserver(timeObserverToken!)
         }
         if let observer = endObserver {
             NotificationCenter.default.removeObserver(observer)
         }
+        player?.pause()
+        player?.replaceCurrentItem(with: nil)
 
-        player = AVPlayer(playerItem: playerItem)
+        player = newPlayer
         currentlyPlaying = song
         togglePlayPause(forceState: true)
 
-        timeObserverToken = player?.addPeriodicTimeObserver(forInterval: CMTimeMake(value: 1, timescale: 1), queue: .main, using: { [weak self] time in
+        timeObserverToken = newPlayer.addPeriodicTimeObserver(forInterval: CMTimeMake(value: 1, timescale: 1), queue: .main, using: { [weak self] time in
             if self?.isSeeking == true {
                 return
             }
             self?.timeIntoSong = CMTimeGetSeconds(time)
             self?.updateNowPlayingProgress()
         })
-        endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: playerItem, queue: .main) { [weak self] _ in
-            self?.playNextSong()
+        if let currentItem = newPlayer.currentItem {
+            endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: currentItem, queue: .main) { [weak self] _ in
+                self?.playNextSong()
+            }
         }
+
+        prefetchNextSong()
+    }
+
+    private func prefetchNextSong() {
+        let nextSong = queue.first
+
+        if preloadedSong?.isrc == nextSong?.isrc {
+            return
+        }
+
+        preloader?.pause()
+        preloader?.replaceCurrentItem(with: nil)
+        preloader = nil
+        preloadedPlayerItem = nil
+        preloadedSong = nil
+        preloadedArtworkSongIsrc = nil
+        preloadedArtworkImage = nil
+
+        guard let song = nextSong else { return }
+
+        guard let url = URL(string: "\(Secrets.base_url)get-mp3/\(song.isrc)") else { return }
+        let headers = ["Authorization": "Bearer \(Secrets.api_key)"]
+        let asset = AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": headers])
+        let item = AVPlayerItem(asset: asset)
+        preloadedSong = song
+        preloadedPlayerItem = item
+        preloader = AVPlayer(playerItem: item)
+        preloader?.automaticallyWaitsToMinimizeStalling = false
+
+        guard let imageUrlString = song.imageUrl, let imageUrl = URL(string: imageUrlString) else { return }
+        URLSession.shared.dataTask(with: imageUrl) { [weak self] data, _, _ in
+            guard let data = data else { return }
+            #if os(macOS)
+                guard let image = NSImage(data: data) else { return }
+            #else
+                guard let image = UIImage(data: data) else { return }
+            #endif
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                if self.currentlyPlaying?.isrc == song.isrc {
+                    var current = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+                    current[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+                    MPNowPlayingInfoCenter.default().nowPlayingInfo = current
+                    return
+                }
+                guard self.preloadedSong?.isrc == song.isrc else { return }
+                self.preloadedArtworkSongIsrc = song.isrc
+                self.preloadedArtworkImage = image
+            }
+        }.resume()
     }
     
     func setUpBackgroundPlayback() {
@@ -175,6 +247,15 @@ class PlayerManager {
             MPMediaItemPropertyPlaybackDuration: CMTimeGetSeconds(player?.currentItem?.duration ?? .indefinite)
         ]
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+
+        if preloadedArtworkSongIsrc == song.isrc, let image = preloadedArtworkImage {
+            var current = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+            current[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = current
+            preloadedArtworkSongIsrc = nil
+            preloadedArtworkImage = nil
+            return
+        }
 
         guard let urlString = song.imageUrl, let url = URL(string: urlString) else { return }
         URLSession.shared.dataTask(with: url) { data, _, _ in
@@ -262,5 +343,6 @@ class PlayerManager {
                 }
             }
         }
+        prefetchNextSong()
     }
 }
