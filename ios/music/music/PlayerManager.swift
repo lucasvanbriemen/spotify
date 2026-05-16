@@ -108,13 +108,16 @@ class PlayerManager {
     }
     
     func setUpBackgroundPlayback() {
-        let audioSession = AVAudioSession.sharedInstance()
-        do {
-            try audioSession.setCategory(.playback, mode: .moviePlayback)
-            try audioSession.setActive(true)
-        } catch {
-            print("Failed to set the audio session configuration")
-        }
+        #if os(iOS)
+            let audioSession = AVAudioSession.sharedInstance()
+            do {
+                try audioSession.setCategory(.playback, mode: .moviePlayback)
+                try audioSession.setActive(true)
+            } catch {
+                print("Failed to set the audio session configuration")
+            }
+        #endif
+
     }
     
     func setUpExternalCommands() {
