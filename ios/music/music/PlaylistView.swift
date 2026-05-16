@@ -44,8 +44,14 @@ struct PlaylistView: View {
                         .padding(16)
                     }
                     
+                    #if os(macOS)
+                        let secondaryColor = Color(NSColor.controlBackgroundColor)
+                    #else
+                        let secondaryColor = Color(.secondarySystemBackground)
+                    #endif
+                    
                     ForEach(Array((playlist.songs ?? []).enumerated()), id: \.element.id) { index, song in
-                        let bg: Color = index.isMultiple(of: 2) ? .clear : Color(.secondarySystemBackground)
+                        let bg: Color = index.isMultiple(of: 2) ? .clear : secondaryColor
                         SongListingView(song: song, bgColor: bg, playlist: playlist, songIndex: index)
                     }
                 }
