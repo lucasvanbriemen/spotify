@@ -37,7 +37,7 @@ class PlayerManager {
         return self.isPlaying && self.playingPlaylistId == playlistId
     }
     
-    func togglePlayPause(forceState: Bool? = nil) {
+    func togglePlayPause(forceState: Bool? = nil) {        
         if forceState == nil {
             isPlaying.toggle()
         } else {
@@ -86,6 +86,10 @@ class PlayerManager {
     func playSong(song: Song) {
         let url = URL(string: "\(Secrets.base_url)get-mp3/\(song.isrc)")
 
+        let headers = ["Authorization": "Bearer \(Secrets.api_key)"]
+        let asset = AVURLAsset(url: url!, options: ["AVURLAssetHTTPHeaderFieldsKey": headers])
+        let playerItem = AVPlayerItem(asset: asset)
+        
         if timeObserverToken != nil {
             player?.removeTimeObserver(timeObserverToken!)
         }
@@ -93,7 +97,6 @@ class PlayerManager {
             NotificationCenter.default.removeObserver(observer)
         }
 
-        let playerItem = AVPlayerItem(url: url!)
         player = AVPlayer(playerItem: playerItem)
         currentlyPlaying = song
         togglePlayPause(forceState: true)
