@@ -10,7 +10,7 @@ struct PlaylistOverviewView: View {
                     Text("Playlists")
                         .fontWeight(.bold)
                         .padding([.top, .leading], 16)
-                        .foregroundStyle(Color(.label))
+                        .foregroundStyle(Color.primary)
 
                     ForEach(playlists) { playlist in
                         NavigationLink(destination: PlaylistView(playlistID: playlist.id)) {

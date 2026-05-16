@@ -1,6 +1,11 @@
 import Foundation
 import AVFoundation
 import MediaPlayer
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
 
 @Observable
 class PlayerManager {
@@ -81,7 +86,16 @@ class PlayerManager {
     }
     
     func playSong(song: Song) {
-        let url = URL(string: "\(Secrets.base_url)get-mp3/\(song.isrc)?title=\(song.title)&artist=\(song.artist!)")
+        let allowed = CharacterSet.urlQueryAllowed
+        let title = song.title.addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
+        let artist = (song.artist ?? "").addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
+        let urlString = "\(Secrets.base_url)get-mp3/\(song.isrc)?title=\(title)&artist=\(artist)"
+
+        guard let url = URL(string: urlString) else {
+            print("playSong: failed to build URL from \(urlString)")
+            return
+        }
+        print("playSong: loading \(url)")
 
         if timeObserverToken != nil {
             player?.removeTimeObserver(timeObserverToken!)
@@ -90,7 +104,35 @@ class PlayerManager {
             NotificationCenter.default.removeObserver(observer)
         }
 
-        let playerItem = AVPlayerItem(url: url!)
+        let asset = AVURLAsset(url: url, options: [
+            "AVURLAssetHTTPHeaderFieldsKey": [
+                "User-Agent": "music-app/1.0",
+                "Accept": "audio/mpeg, audio/*;q=0.9, */*;q=0.1",
+                "Authorization": "Bearer \(Secrets.api_key)"
+            ]
+        ])
+        let playerItem = AVPlayerItem(asset: asset)
+        NotificationCenter.default.addObserver(forName: .AVPlayerItemFailedToPlayToEndTime, object: playerItem, queue: .main) { note in
+            let err = note.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey]
+            print("playSong: AVPlayerItem failed to play to end — \(String(describing: err))")
+        }
+        NotificationCenter.default.addObserver(forName: .AVPlayerItemNewErrorLogEntry, object: playerItem, queue: .main) { _ in
+            if let last = playerItem.errorLog()?.events.last {
+                print("playSong: AVPlayerItem error log — \(last.errorComment ?? "(no comment)") status=\(last.errorStatusCode) domain=\(last.errorDomain)")
+            }
+        }
+        Task {
+            do {
+                let isPlayable = try await asset.load(.isPlayable)
+                print("playSong: isPlayable=\(isPlayable)")
+                if !isPlayable {
+                    let tracks = try await asset.load(.tracks)
+                    print("playSong: tracks=\(tracks.count) types=\(tracks.map { $0.mediaType.rawValue })")
+                }
+            } catch {
+                print("playSong: asset.load failed — \(error)")
+            }
+        }
         player = AVPlayer(playerItem: playerItem)
         currentlyPlaying = song
         togglePlayPause(forceState: true)
@@ -108,6 +150,7 @@ class PlayerManager {
     }
     
     func setUpBackgroundPlayback() {
+        #if os(iOS)
         let audioSession = AVAudioSession.sharedInstance()
         do {
             try audioSession.setCategory(.playback, mode: .moviePlayback)
@@ -115,6 +158,7 @@ class PlayerManager {
         } catch {
             print("Failed to set the audio session configuration")
         }
+        #endif
     }
     
     func setUpExternalCommands() {
@@ -169,7 +213,12 @@ class PlayerManager {
 
         guard let urlString = song.imageUrl, let url = URL(string: urlString) else { return }
         URLSession.shared.dataTask(with: url) { data, _, _ in
-            guard let data = data, let image = UIImage(data: data) else { return }
+            guard let data = data else { return }
+            #if os(macOS)
+            guard let image = NSImage(data: data) else { return }
+            #else
+            guard let image = UIImage(data: data) else { return }
+            #endif
             DispatchQueue.main.async {
                 guard self.currentlyPlaying?.id == song.id else { return }
                 var current = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
