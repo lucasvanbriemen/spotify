@@ -29,6 +29,8 @@ struct SearchResultsView: View {
                 }
             }
             .padding([.trailing, .leading], 8)
+            .frame(maxWidth: 880)
+            .frame(maxWidth: .infinity)
         }
         .task(id: query) {
             await getResults()

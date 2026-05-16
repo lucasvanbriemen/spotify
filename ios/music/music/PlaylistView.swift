@@ -47,6 +47,8 @@ struct PlaylistView: View {
                 }
             }
             .padding([.leading, .trailing], 10)
+            .frame(maxWidth: 880)
+            .frame(maxWidth: .infinity)
         }
         .task(id: playlistID) {
             isLoading = true
