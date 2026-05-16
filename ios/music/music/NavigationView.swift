@@ -9,6 +9,25 @@ struct NavigationView: View {
         }
         .tabViewBottomAccessory(isEnabled: PlayerManager.shared.currentlyPlaying != nil, content: { PlayerView() })
         .tabBarMinimizeBehavior(TabBarMinimizeBehavior.onScrollDown)
+        #else
+        NavigationSplitView() {
+            List() {
+                NavigationLink {
+                    PlaylistOverviewView()
+                } label: {
+                    Text("Playlists")
+                }
+                
+                NavigationLink {
+                    SearchView()
+                } label: {
+                    Text("Search")
+                }
+
+            }
+        } detail: {
+            Text("Details")
+        }
         #endif
     }
 }

@@ -11,6 +11,7 @@ struct SearchView: View {
                 VStack {
                     #if os(macOS)
                         let secondaryColor = Color(NSColor.controlBackgroundColor)
+                        TextField("Search", text: $searchText)
                     #else
                         let secondaryColor = Color(.secondarySystemBackground)
                     #endif
