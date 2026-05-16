@@ -1,6 +1,9 @@
 import Foundation
 import AVFoundation
 import MediaPlayer
+#if os(macOS)
+import AppKit
+#endif
 
 @Observable
 class PlayerManager {
@@ -172,7 +175,14 @@ class PlayerManager {
 
         guard let urlString = song.imageUrl, let url = URL(string: urlString) else { return }
         URLSession.shared.dataTask(with: url) { data, _, _ in
-            guard let data = data, let image = UIImage(data: data) else { return }
+            guard let data = data else { return }
+
+            #if os(macOS)
+                guard let image = NSImage(data: data) else { return }
+            #else
+                guard let image = UIImage(data: data) else { return }
+            #endif
+
             DispatchQueue.main.async {
                 guard self.currentlyPlaying?.id == song.id else { return }
                 var current = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]

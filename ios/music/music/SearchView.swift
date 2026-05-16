@@ -9,8 +9,14 @@ struct SearchView: View {
         NavigationStack {
             ScrollView {
                 VStack {
+                    #if os(macOS)
+                        let secondaryColor = Color(NSColor.controlBackgroundColor)
+                    #else
+                        let secondaryColor = Color(.secondarySystemBackground)
+                    #endif
+                    
                     ForEach(songs.enumerated(), id: \.element.id) { index, song in
-                        let bg: Color = index.isMultiple(of: 2) ? .clear : Color(.secondarySystemBackground)
+                        let bg: Color = index.isMultiple(of: 2) ? .clear : secondaryColor
                         SongListingView(song: song, bgColor: bg)
                     }
                     
@@ -21,7 +27,7 @@ struct SearchView: View {
                                 .padding(.top, 16)
                             
                             ForEach(playlists.enumerated(), id: \.element.id) { index, playlist in
-                                let bg: Color = index.isMultiple(of: 2) ? .clear : Color(.secondarySystemBackground)
+                                let bg: Color = index.isMultiple(of: 2) ? .clear : secondaryColor
                                 
                                 NavigationLink(destination: PlaylistView(playlistID: playlist.id)) {
                                     PlaylistListingView(playlist: playlist, bgColor: bg)
