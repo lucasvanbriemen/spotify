@@ -1,6 +1,9 @@
 import SwiftUI
 
-struct NavigationView: View {    
+struct NavigationView: View {
+    
+    @State var playlists: [Playlist] = []
+    
     var body: some View {
         #if os(iOS)
         TabView {
@@ -29,5 +32,14 @@ struct NavigationView: View {
             Text("Details")
         }
         #endif
+        
+        ScrollView {}
+            .task {
+                await getPlaylists()
+            }
+    }
+    
+    func getPlaylists() async {
+        playlists = await SeverApi.get(endpoint: "playlists") ?? []
     }
 }
