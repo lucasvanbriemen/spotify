@@ -15,12 +15,6 @@ struct NavigationView: View {
         #else
         NavigationSplitView() {
             List() {
-                NavigationLink {
-                    PlaylistOverviewView()
-                } label: {
-                    Text("Playlists")
-                }
-                
                 Section(header: Text("Playlists")) {
                     ForEach(playlists) { playlist in
                         NavigationLink(destination: PlaylistView(playlistID: playlist.id)) {
@@ -29,10 +23,12 @@ struct NavigationView: View {
                     }
                 }
                 
-                NavigationLink {
-                    SearchView()
-                } label: {
-                    Text("Search")
+                Section(header: Text("Search")) {
+                    NavigationLink {
+                        SearchView()
+                    } label: {
+                        Text("Search")
+                    }
                 }
 
             }
