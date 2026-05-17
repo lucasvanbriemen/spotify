@@ -21,6 +21,14 @@ struct NavigationView: View {
                     Text("Playlists")
                 }
                 
+                Section(header: Text("Playlists")) {
+                    ForEach(playlists) { playlist in
+                        NavigationLink(destination: PlaylistView(playlistID: playlist.id)) {
+                            Text(playlist.name)
+                        }
+                    }
+                }
+                
                 NavigationLink {
                     SearchView()
                 } label: {
@@ -31,12 +39,10 @@ struct NavigationView: View {
         } detail: {
             Text("Details")
         }
+        .task {
+            await getPlaylists()
+        }
         #endif
-        
-        ScrollView {}
-            .task {
-                await getPlaylists()
-            }
     }
     
     func getPlaylists() async {
