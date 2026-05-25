@@ -228,8 +228,14 @@ class PlayerManager {
         commandCenter.previousTrackCommand.addTarget { _ in
             self.playPreviousSong()
             return .success
-
         }
+        
+        commandCenter.changeRepeatModeCommand.isEnabled = true
+        commandCenter.changeRepeatModeCommand.addTarget { _ in
+            self.shouldRepeat.toggle()
+            return .success
+        }
+        
 
     }
     
