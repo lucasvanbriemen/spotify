@@ -308,7 +308,6 @@ class PlayerManager {
     }
     
     func playNextSong() {
-        
         if shouldRepeat {
             timeIntoSong = 0
             player?.seek(to: .zero)
@@ -323,6 +322,7 @@ class PlayerManager {
         if (!queue.isEmpty) {
             playSong(song: queue.removeFirst())
         } else if (pastQueue.isEmpty) {
+            // We are just playing a single song, so just restart it when it ends
             player?.seek(to: .zero)
         } else {
             togglePlayPause(forceState: false)
