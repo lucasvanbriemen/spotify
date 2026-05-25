@@ -322,6 +322,8 @@ class PlayerManager {
         
         if (!queue.isEmpty) {
             playSong(song: queue.removeFirst())
+        } else if (pastQueue.isEmpty) {
+            player?.seek(to: .zero)
         } else {
             togglePlayPause(forceState: false)
         }
