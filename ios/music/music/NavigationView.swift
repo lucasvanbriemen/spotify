@@ -33,7 +33,11 @@ struct NavigationView: View {
 
             }
         } detail: {
-            Text("Details")
+            ContentUnavailableView {
+                Label("Open playlist to play music", systemImage: "music.note.slash")
+            } description: {
+                Text("Open a playlist in the sidebar to start playing some fire music!!")
+            }
         }
         .task {
             await getPlaylists()
