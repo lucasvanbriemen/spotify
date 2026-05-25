@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PlaylistBackgroundView: View {
     let playlist: Playlist
+    var height: CGFloat? = 200
     
     var body: some View {
         ZStack {
@@ -14,7 +15,7 @@ struct PlaylistBackgroundView: View {
             LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .top, endPoint: .bottom)
 
         }
-        .frame(height: 200)
+        .frame(height: height)
         .clipShape(RoundedRectangle(cornerRadius: 32))
     }
 }

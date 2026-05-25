@@ -18,7 +18,14 @@ struct NavigationView: View {
                 Section(header: Text("Playlists")) {
                     ForEach(playlists) { playlist in
                         NavigationLink(destination: PlaylistView(playlistID: playlist.id)) {
-                            Text(playlist.name)
+                            ZStack(alignment: .bottomLeading) {
+                                PlaylistBackgroundView(playlist: playlist, height: 50)
+                                Text(playlist.name)
+                                    .foregroundStyle(Color.white)
+                                    .font(Font.largeTitle.bold())
+                                    .padding(16)
+                                
+                            }
                         }
                     }
                 }
