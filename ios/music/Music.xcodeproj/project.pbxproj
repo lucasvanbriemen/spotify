@@ -7,16 +7,16 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		A08BF3D12FB062F900C5AA21 /* music.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = music.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A08BF3D12FB062F900C5AA21 /* Music.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Music.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		A09454CC2FB22C3F0025D728 /* Exceptions for "music" folder in "music" target */ = {
+		A09454CC2FB22C3F0025D728 /* Exceptions for "music" folder in "Music" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = A08BF3D02FB062F900C5AA21 /* music */;
+			target = A08BF3D02FB062F900C5AA21 /* Music */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -24,7 +24,7 @@
 		A08BF3D32FB062F900C5AA21 /* music */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				A09454CC2FB22C3F0025D728 /* Exceptions for "music" folder in "music" target */,
+				A09454CC2FB22C3F0025D728 /* Exceptions for "music" folder in "Music" target */,
 			);
 			path = music;
 			sourceTree = "<group>";
@@ -53,7 +53,7 @@
 		A08BF3D22FB062F900C5AA21 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A08BF3D12FB062F900C5AA21 /* music.app */,
+				A08BF3D12FB062F900C5AA21 /* Music.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -61,9 +61,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A08BF3D02FB062F900C5AA21 /* music */ = {
+		A08BF3D02FB062F900C5AA21 /* Music */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A08BF3DC2FB062FA00C5AA21 /* Build configuration list for PBXNativeTarget "music" */;
+			buildConfigurationList = A08BF3DC2FB062FA00C5AA21 /* Build configuration list for PBXNativeTarget "Music" */;
 			buildPhases = (
 				A08BF3CD2FB062F900C5AA21 /* Sources */,
 				A08BF3CE2FB062F900C5AA21 /* Frameworks */,
@@ -76,11 +76,11 @@
 			fileSystemSynchronizedGroups = (
 				A08BF3D32FB062F900C5AA21 /* music */,
 			);
-			name = music;
+			name = Music;
 			packageProductDependencies = (
 			);
 			productName = music;
-			productReference = A08BF3D12FB062F900C5AA21 /* music.app */;
+			productReference = A08BF3D12FB062F900C5AA21 /* Music.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -98,7 +98,7 @@
 					};
 				};
 			};
-			buildConfigurationList = A08BF3CC2FB062F900C5AA21 /* Build configuration list for PBXProject "music" */;
+			buildConfigurationList = A08BF3CC2FB062F900C5AA21 /* Build configuration list for PBXProject "Music" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -112,7 +112,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A08BF3D02FB062F900C5AA21 /* music */,
+				A08BF3D02FB062F900C5AA21 /* Music */,
 			);
 		};
 /* End PBXProject section */
@@ -367,7 +367,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A08BF3CC2FB062F900C5AA21 /* Build configuration list for PBXProject "music" */ = {
+		A08BF3CC2FB062F900C5AA21 /* Build configuration list for PBXProject "Music" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A08BF3DA2FB062FA00C5AA21 /* Debug */,
@@ -376,7 +376,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A08BF3DC2FB062FA00C5AA21 /* Build configuration list for PBXNativeTarget "music" */ = {
+		A08BF3DC2FB062FA00C5AA21 /* Build configuration list for PBXNativeTarget "Music" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A08BF3DD2FB062FA00C5AA21 /* Debug */,
