@@ -4,6 +4,7 @@ struct SearchView: View {
     @State var searchText: String = ""
     @State var songs: [Song] = []
     @State var playlists: [Playlist] = []
+    @FocusState private var searchFieldFocused: Bool
     
     var body: some View {
         NavigationStack {
@@ -41,6 +42,11 @@ struct SearchView: View {
             }
         }
         .searchable(text: $searchText, prompt: "Search songs")
+        .searchFocused($searchFieldFocused)
+        .task {
+            try? await Task.sleep(for: .milliseconds(150))
+            searchFieldFocused = true
+        }
         .onChange(of: searchText) { oldValue, newValue in
             Task {
                 await getResults()
