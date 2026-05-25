@@ -65,7 +65,7 @@ struct PlaylistView: View {
     
     
     func getPlaylist() async {
-        playlist = await SeverApi.get(endpoint: "playlist/\(String(playlistID))")
+        playlist = await ServerApi.get(endpoint: "playlist/\(String(playlistID))")
         isLoading = false
         print(playlist?.songs?.count ?? 0)
     }

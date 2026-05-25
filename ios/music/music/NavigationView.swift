@@ -42,6 +42,6 @@ struct NavigationView: View {
     }
     
     func getPlaylists() async {
-        playlists = await SeverApi.get(endpoint: "playlists") ?? []
+        playlists = await ServerApi.get(endpoint: "playlists") ?? []
     }
 }

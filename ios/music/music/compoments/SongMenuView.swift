@@ -29,7 +29,7 @@ struct SongMenuView: View {
             "isrc": song.isrc
         ]
 
-        let result: Song? = await SeverApi.post(endpoint: "playlist/\(id)/songs", body: body)
+        let result: Song? = await ServerApi.post(endpoint: "playlist/\(id)/songs", body: body)
         if result != nil, var entry = playlistMap[id] {
             entry.contains = true
             playlistMap[id] = entry

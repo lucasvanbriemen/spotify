@@ -1,6 +1,6 @@
 import Foundation
 
-class SeverApi {
+class ServerApi {
     private static let baseUrl: String = Secrets.base_url
     private static let apiKey: String = Secrets.api_key
     
