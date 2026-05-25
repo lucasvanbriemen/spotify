@@ -302,6 +302,8 @@ class PlayerManager {
         guard var info = MPNowPlayingInfoCenter.default().nowPlayingInfo else { return }
         info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = self.timeIntoSong
         info[MPNowPlayingInfoPropertyPlaybackRate] = self.isPlaying ? 1.0 : 0.0
+        info[MPMediaItemPropertyPlaybackDuration] = CMTimeGetSeconds(player?.currentItem?.duration ?? .indefinite)
+
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
     }
     
