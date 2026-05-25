@@ -43,7 +43,13 @@ class PlayerManager {
     #endif
 
     func isCurrentlyPlayingPlaylist(playlistId: String?) -> Bool {
-        return self.isPlaying && self.playingPlaylistId == playlistId
+        var playlistIDNoPrefix = playlistId
+        // Remove the deezer/local prefix if it exists
+        if let playlistId = playlistId, let underscoreIndex = playlistId.firstIndex(of: "_") {
+            playlistIDNoPrefix = String(playlistId[playlistId.index(after: underscoreIndex)...])
+        }
+
+        return self.isPlaying && self.playingPlaylistId == playlistIDNoPrefix
     }
     
     func togglePlayPause(forceState: Bool? = nil) {        
