@@ -211,6 +211,11 @@ class PlayerManager {
             return .success
         }
         
+        commandCenter.togglePlayPauseCommand.addTarget { _ in
+            self.togglePlayPause(forceState: nil)
+            return .success
+        }
+        
         commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
             guard let event = event as? MPChangePlaybackPositionCommandEvent else {
                 return .commandFailed
@@ -234,6 +239,17 @@ class PlayerManager {
         commandCenter.changeRepeatModeCommand.addTarget { _ in
             self.shouldRepeat.toggle()
             return .success
+        }
+        
+        commandCenter.changeShuffleModeCommand.isEnabled = true
+        commandCenter.changeShuffleModeCommand.addTarget { _ in
+            self.shouldShuffle.toggle()
+            
+            if self.shouldShuffle {
+                self.applySuffle()
+            }
+            
+            return.success
         }
         
 
