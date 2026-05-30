@@ -6,8 +6,43 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		0E4E62AC2474C101385314C4 /* SiriIntents.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3C63D7082C84ECE8EDE2F9C5 /* SiriIntents.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		6DDA2DD1B44319B6EE22CCC2 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A29C15635C0D8378E896259B /* Foundation.framework */; };
+		FE656265DA274BFE2787A83E /* IntentHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26E5579A4E7911C612B04582 /* IntentHandler.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		181C952BC1DEB8C36F458AF8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A08BF3C92FB062F900C5AA21 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1EC1A9FDC822E613888F3857;
+			remoteInfo = SiriIntents;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		B9169BE43F59455323419772 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				0E4E62AC2474C101385314C4 /* SiriIntents.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		26E5579A4E7911C612B04582 /* IntentHandler.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IntentHandler.swift; sourceTree = "<group>"; };
+		3C63D7082C84ECE8EDE2F9C5 /* SiriIntents.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SiriIntents.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		82A550AA887941EE324C6620 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A08BF3D12FB062F900C5AA21 /* Music.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Music.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A29C15635C0D8378E896259B /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		FDC9172C3ADF11B9027F1E4E /* SiriIntents.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = SiriIntents.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -32,6 +67,14 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		55C659E59CBB6E78782D9BF2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6DDA2DD1B44319B6EE22CCC2 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A08BF3CE2FB062F900C5AA21 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -42,11 +85,29 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		5B7DEFAE7074E845AFFCA9CF /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				A29C15635C0D8378E896259B /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
+		8F4A1D8C6C8460DB3B97E361 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				5B7DEFAE7074E845AFFCA9CF /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		A08BF3C82FB062F900C5AA21 = {
 			isa = PBXGroup;
 			children = (
 				A08BF3D32FB062F900C5AA21 /* music */,
 				A08BF3D22FB062F900C5AA21 /* Products */,
+				8F4A1D8C6C8460DB3B97E361 /* Frameworks */,
+				CFAD62774AC7D3F39613D106 /* SiriIntents */,
 			);
 			sourceTree = "<group>";
 		};
@@ -54,13 +115,41 @@
 			isa = PBXGroup;
 			children = (
 				A08BF3D12FB062F900C5AA21 /* Music.app */,
+				3C63D7082C84ECE8EDE2F9C5 /* SiriIntents.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		CFAD62774AC7D3F39613D106 /* SiriIntents */ = {
+			isa = PBXGroup;
+			children = (
+				26E5579A4E7911C612B04582 /* IntentHandler.swift */,
+				82A550AA887941EE324C6620 /* Info.plist */,
+				FDC9172C3ADF11B9027F1E4E /* SiriIntents.entitlements */,
+			);
+			path = SiriIntents;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		1EC1A9FDC822E613888F3857 /* SiriIntents */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0DFAB6A79FC97CE085CD0D66 /* Build configuration list for PBXNativeTarget "SiriIntents" */;
+			buildPhases = (
+				36BACD23240DD1C0AEC11E90 /* Sources */,
+				55C659E59CBB6E78782D9BF2 /* Frameworks */,
+				49811C3ADF21204D0201FDFB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SiriIntents;
+			productName = SiriIntents;
+			productReference = 3C63D7082C84ECE8EDE2F9C5 /* SiriIntents.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		A08BF3D02FB062F900C5AA21 /* Music */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A08BF3DC2FB062FA00C5AA21 /* Build configuration list for PBXNativeTarget "Music" */;
@@ -68,17 +157,17 @@
 				A08BF3CD2FB062F900C5AA21 /* Sources */,
 				A08BF3CE2FB062F900C5AA21 /* Frameworks */,
 				A08BF3CF2FB062F900C5AA21 /* Resources */,
+				B9169BE43F59455323419772 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				7C0643C3CB72D9C42C324616 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				A08BF3D32FB062F900C5AA21 /* music */,
 			);
 			name = Music;
-			packageProductDependencies = (
-			);
 			productName = music;
 			productReference = A08BF3D12FB062F900C5AA21 /* Music.app */;
 			productType = "com.apple.product-type.application";
@@ -113,11 +202,19 @@
 			projectRoot = "";
 			targets = (
 				A08BF3D02FB062F900C5AA21 /* Music */,
+				1EC1A9FDC822E613888F3857 /* SiriIntents */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		49811C3ADF21204D0201FDFB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A08BF3CF2FB062F900C5AA21 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -128,6 +225,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		36BACD23240DD1C0AEC11E90 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FE656265DA274BFE2787A83E /* IntentHandler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A08BF3CD2FB062F900C5AA21 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -137,7 +242,75 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		7C0643C3CB72D9C42C324616 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = SiriIntents;
+			target = 1EC1A9FDC822E613888F3857 /* SiriIntents */;
+			targetProxy = 181C952BC1DEB8C36F458AF8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		60B90C26F396104F52A3CE9F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = SiriIntents/SiriIntents.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DGTBJZL464;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SiriIntents/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nl.ltvb.music.SiriIntents;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		6FE8E8D82BF395710A4DF23A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = SiriIntents/SiriIntents.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DGTBJZL464;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SiriIntents/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nl.ltvb.music.SiriIntents;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 		A08BF3DA2FB062FA00C5AA21 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -259,6 +432,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = music/music.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = music/music.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = music/music.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = DGTBJZL464;
@@ -278,6 +454,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = music/Info.plist;
+				INFOPLIST_KEY_NSSiriUsageDescription = "Lets you ask Siri to play songs from your library.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -314,6 +491,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = music/music.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = music/music.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = music/music.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = DGTBJZL464;
@@ -333,6 +513,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = music/Info.plist;
+				INFOPLIST_KEY_NSSiriUsageDescription = "Lets you ask Siri to play songs from your library.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -367,6 +548,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		0DFAB6A79FC97CE085CD0D66 /* Build configuration list for PBXNativeTarget "SiriIntents" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				60B90C26F396104F52A3CE9F /* Release */,
+				6FE8E8D82BF395710A4DF23A /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		A08BF3CC2FB062F900C5AA21 /* Build configuration list for PBXProject "Music" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

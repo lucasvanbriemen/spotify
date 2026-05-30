@@ -25,6 +25,15 @@ class Song: Codable, Identifiable {
         case imageUrl = "image_url"
         case isInPlaylistMap = "is_in_playlist_map"
     }
+
+    init(isrc: String = "", title: String = "", duration: Int = 0, imageUrl: String? = nil, artist: String? = nil, album: String? = nil) {
+        self.isrc = isrc
+        self.title = title
+        self.duration = duration
+        self.imageUrl = imageUrl
+        self.artist = artist
+        self.album = album
+    }
 }
 
 struct SearchResults: Codable {
