@@ -37,7 +37,7 @@ class IsLoggedIn
                 ?? $request->bearerToken();
         }
 
-        $ch = curl_init('https://login.ltvb.nl/api/user/token/' . $authToken);
+        $ch = curl_init('https://login.ltvb.nl/session/' . $authToken);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // Prevent direct output
         $responseBody = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
