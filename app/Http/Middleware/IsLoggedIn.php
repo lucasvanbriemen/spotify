@@ -45,8 +45,6 @@ class IsLoggedIn
 
         if ($httpCode === 200) {
             $current_user = json_decode($responseBody); // Convert JSON to object
-            $current_user = $current_user->user;
-            app()->instance('current_user', $current_user);
 
             if ($request->query('auth_token') && !app()->environment('local')) {
                 setcookie('auth_token', $authToken, time() + 10 * 24 * 60 * 60, '/', '.ltvb.nl', true, true);
