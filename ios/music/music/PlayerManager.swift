@@ -29,6 +29,7 @@ class PlayerManager {
     var shouldRepeat: Bool = false
     private var timeObserverToken: Any? = nil
     private var endObserver: NSObjectProtocol?
+    private var secondsPlayedCurrentSong: Int = 0
     var queue: [Song] = []
     var pastQueue: [Song] = []
     var nonShuffledQueue: [Song] = []
@@ -99,6 +100,8 @@ class PlayerManager {
     }
     
     func playSong(song: Song) {
+        reportPlay()
+
         let newPlayer: AVPlayer
         if let preloaded = preloader, preloadedSong?.isrc == song.isrc {
             newPlayer = preloaded
@@ -131,6 +134,7 @@ class PlayerManager {
                 return
             }
             self?.timeIntoSong = CMTimeGetSeconds(time)
+            self?.secondsPlayedCurrentSong += 1
             self?.updateNowPlayingProgress()
         })
         if let currentItem = newPlayer.currentItem {
@@ -313,7 +317,25 @@ class PlayerManager {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
     }
     
+    // Sends the listened duration of the current song to the server so we can show statistics about our listening habits. Resets the counter so a play is never reported twice.
+    private func reportPlay() {
+        let seconds = secondsPlayedCurrentSong
+        secondsPlayedCurrentSong = 0
+
+        // Skipping a song right after it started shouldn't count as a play
+        guard seconds >= 5, let song = currentlyPlaying else { return }
+
+        Task {
+            let _: RecordedPlay? = await ServerApi.post(endpoint: "plays", body: [
+                "isrc": song.isrc,
+                "seconds_played": seconds,
+            ])
+        }
+    }
+
     func playNextSong() {
+        reportPlay()
+
         if shouldRepeat {
             timeIntoSong = 0
             player?.seek(to: .zero)
@@ -336,6 +358,8 @@ class PlayerManager {
     }
     
     func playPreviousSong() {
+        reportPlay()
+
         if shouldRepeat {
             timeIntoSong = 0
             player?.seek(to: .zero)

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\SpotifyController;
 use App\Http\Controllers\PlaylistController;
+use App\Http\Controllers\StatsController;
 use App\Http\Middleware\IsLoggedIn;
 use Illuminate\Support\Facades\Route;
 
@@ -15,4 +16,7 @@ Route::middleware(IsLoggedIn::class)->group(function () {
 
     Route::get('/playlist/{playlist}', [PlaylistController::class, 'show'])->name('playlist.show');
     Route::post('/playlist/{playlist}/songs', [PlaylistController::class, 'addSong'])->name('playlist.songs.store');
+
+    Route::post('/plays', [StatsController::class, 'storePlay'])->name('plays.store');
+    Route::get('/stats', [StatsController::class, 'index'])->name('stats');
 });

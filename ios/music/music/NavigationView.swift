@@ -9,6 +9,7 @@ struct NavigationView: View {
         #if os(iOS)
         TabView {
             Tab("Playlists", systemImage: "play.square.stack", content: { PlaylistOverviewView() })
+            Tab("Stats", systemImage: "chart.bar", content: { StatsView() })
             Tab(role: .search, content: { SearchView() })
         }
         .tabViewBottomAccessory(isEnabled: PlayerManager.shared.currentlyPlaying != nil, content: { PlayerView() })
@@ -44,6 +45,14 @@ struct NavigationView: View {
                         SearchView()
                     } label: {
                         Text("Search")
+                    }
+                }
+
+                Section(header: Text("Stats")) {
+                    NavigationLink {
+                        StatsView()
+                    } label: {
+                        Text("Stats")
                     }
                 }
 
