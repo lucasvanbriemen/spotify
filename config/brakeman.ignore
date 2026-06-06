@@ -1,0 +1,9 @@
+{
+  "ignored_warnings": [
+    {
+      "fingerprint": "313d7cbb47db4061bbc84facd7a12015414f8df1ebfea4a751584e41288ceaae",
+      "note": "Process.spawn is called with an argv array (no shell), so the dynamic yt-dlp search string cannot inject commands. The isrc used in the output path is validated against /\\A[a-zA-Z0-9-]+\\z/ in get_mp3."
+    }
+  ],
+  "brakeman_version": "7.1.1"
+}

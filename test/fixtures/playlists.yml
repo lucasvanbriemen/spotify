@@ -1,0 +1,6 @@
+favorites:
+  name: Favorites
+  image_url: https://example.com/playlists/favorites.jpg
+
+workout:
+  name: Workout
