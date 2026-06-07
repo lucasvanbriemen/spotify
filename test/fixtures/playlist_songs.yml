@@ -1,5 +1,0 @@
-# song_isrc is set directly (not via the song label) because songs use a
-# custom string primary key.
-favorites_one:
-  playlist: favorites
-  song_isrc: USUM71900001
