@@ -5,8 +5,8 @@ module Authentication
 
   LOGIN_URL = "https://login.ltvb.nl"
 
-  # Matches the Laravel app's 10-day auth cookie.
-  AUTH_COOKIE_DURATION = 10.days
+  # Matches Token::TOKEN_DURATION in the login app.
+  AUTH_COOKIE_DURATION = 1.week
 
   included do
     before_action :require_login
