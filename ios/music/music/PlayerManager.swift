@@ -25,8 +25,16 @@ class PlayerManager {
     var hasSheetOpen: Bool = false
     var timeIntoSong: Double = 0
     var isSeeking: Bool = false
-    var shouldShuffle: Bool = true
-    var shouldRepeat: Bool = false
+    var shouldShuffle: Bool = true {
+        didSet {
+            MPRemoteCommandCenter.shared().changeShuffleModeCommand.currentShuffleType = shouldShuffle ? .items : .off
+        }
+    }
+    var shouldRepeat: Bool = false {
+        didSet {
+            MPRemoteCommandCenter.shared().changeRepeatModeCommand.currentRepeatType = shouldRepeat ? .one : .off
+        }
+    }
     private var timeObserverToken: Any? = nil
     private var endObserver: NSObjectProtocol?
     private var secondsPlayedCurrentSong: Int = 0
@@ -246,20 +254,24 @@ class PlayerManager {
         }
         
         commandCenter.changeRepeatModeCommand.isEnabled = true
-        commandCenter.changeRepeatModeCommand.addTarget { _ in
-            self.shouldRepeat.toggle()
+        commandCenter.changeRepeatModeCommand.currentRepeatType = shouldRepeat ? .one : .off
+        commandCenter.changeRepeatModeCommand.addTarget { event in
+            guard let event = event as? MPChangeRepeatModeCommandEvent else {
+                return .commandFailed
+            }
+            self.shouldRepeat = event.repeatType != .off
             return .success
         }
-        
+
         commandCenter.changeShuffleModeCommand.isEnabled = true
-        commandCenter.changeShuffleModeCommand.addTarget { _ in
-            self.shouldShuffle.toggle()
-            
-            if self.shouldShuffle {
-                self.applySuffle()
+        commandCenter.changeShuffleModeCommand.currentShuffleType = shouldShuffle ? .items : .off
+        commandCenter.changeShuffleModeCommand.addTarget { event in
+            guard let event = event as? MPChangeShuffleModeCommandEvent else {
+                return .commandFailed
             }
-            
-            return.success
+            self.shouldShuffle = event.shuffleType != .off
+            self.applySuffle()
+            return .success
         }
         
 
