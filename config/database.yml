@@ -1,0 +1,46 @@
+# Primary database: the music app's MySQL/MariaDB database,
+# accessed through the trilogy adapter. Connection details come from the
+# environment (see .env for local development); they mirror the old Laravel
+# project's DB_* variables.
+default: &default
+  adapter: trilogy
+  encoding: utf8mb4
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  host: <%= ENV.fetch("DB_HOST", "127.0.0.1") %>
+  port: <%= ENV.fetch("DB_PORT", 3306) %>
+  username: <%= ENV.fetch("DB_USERNAME", "root") %>
+  password: <%= ENV.fetch("DB_PASSWORD", "") %>
+
+# Solid Cache/Queue/Cable keep their own local SQLite stores so they do not
+# add framework tables to the shared music database.
+sqlite_default: &sqlite_default
+  adapter: sqlite3
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  timeout: 5000
+
+development:
+  <<: *default
+  database: <%= ENV.fetch("DB_DATABASE", "music") %>
+
+# Warning: Rails erases and regenerates the "test" database. It must never
+# point at the live music data, so it uses a separate, suffixed database.
+test:
+  <<: *default
+  database: <%= ENV.fetch("DB_DATABASE_TEST", "music_test") %>
+
+production:
+  primary:
+    <<: *default
+    database: <%= ENV.fetch("DB_DATABASE", "music") %>
+  cache:
+    <<: *sqlite_default
+    database: storage/production_cache.sqlite3
+    migrations_paths: db/cache_migrate
+  queue:
+    <<: *sqlite_default
+    database: storage/production_queue.sqlite3
+    migrations_paths: db/queue_migrate
+  cable:
+    <<: *sqlite_default
+    database: storage/production_cable.sqlite3
+    migrations_paths: db/cable_migrate

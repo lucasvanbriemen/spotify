@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || "Music" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
+    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
+
+    <link rel="icon" href="/icon.svg">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <%# Local app styles (app/assets/stylesheets) + every shared stylesheet,
+        auto-discovered in config/application.rb. %>
+    <%= stylesheet_link_tag :application, "data-turbo-track": "reload" %>
+    <% Array(Rails.application.config.x.shared_stylesheets).each do |sheet| %>
+      <%= stylesheet_link_tag sheet, "data-turbo-track": "reload" %>
+    <% end %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body>
+    <%= yield %>
+  </body>
+</html>
