@@ -47,7 +47,9 @@ class PlaylistsController < ApiController
       song.as_json.merge("is_in_playlist_map" => playlist_map(all_playlists) { |p| p.songs.include?(song) })
     end
 
-    render json: playlist.as_json.merge("songs" => songs)
+    # The iOS app decodes `id` as a String (the Laravel model cast it with
+    # `$casts = ['id' => 'string']`), so keep serving it as one.
+    render json: playlist.as_json.merge("id" => playlist.id.to_s, "songs" => songs)
   end
 
   def show_deezer
