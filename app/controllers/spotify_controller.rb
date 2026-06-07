@@ -12,7 +12,7 @@ class SpotifyController < ApiController
 
     return render json: { songs: [], playlists: [] } if query.empty?
 
-    results = Deezer::Client.search(query)
+    results = SongSearch.search(query)
 
     render json: {
       songs: format_tracks(results[:tracks]),

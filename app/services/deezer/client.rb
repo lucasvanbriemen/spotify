@@ -14,10 +14,14 @@ module Deezer
       # Searches tracks and playlists concurrently (the Laravel app used
       # Http::pool for the same effect).
       def search(query)
-        tracks = Concurrent::Promises.future { data_from(get("/search/track", q: query, limit: 100)) }
+        tracks = Concurrent::Promises.future { search_tracks(query) }
         playlists = Concurrent::Promises.future { data_from(get("/search/playlist", q: query, limit: 25)) }
 
         { tracks: tracks.value!, playlists: playlists.value! }
+      end
+
+      def search_tracks(query, limit: 100)
+        data_from(get("/search/track", q: query, limit: limit))
       end
 
       def track_details(isrc)
