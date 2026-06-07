@@ -75,7 +75,9 @@ class SongSearch
     def resolve_track(artist, title)
       return nil if artist.blank? || title.blank?
 
-      Rails.cache.fetch("deezer_track/v1/#{artist.downcase}/#{title.downcase}", expires_in: RESOLVE_CACHE_TTL) do
+      # skip_nil: a transient Deezer failure must not cache the miss for 30
+      # days, or the song silently vanishes from every search until then.
+      Rails.cache.fetch("deezer_track/v1/#{artist.downcase}/#{title.downcase}", expires_in: RESOLVE_CACHE_TTL, skip_nil: true) do
         candidates = Deezer::Client.search_tracks("#{artist} #{title}", limit: 5)
         # iTunes suffixes like "(2024 Remaster)" can miss on Deezer; retry bare.
         candidates = Deezer::Client.search_tracks("#{artist} #{bare_title(title)}", limit: 5) if candidates.empty? && bare_title(title) != title
