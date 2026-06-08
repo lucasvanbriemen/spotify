@@ -52,16 +52,16 @@ struct StatsView: View {
     func getStats() async {
         stats = await ServerApi.get(endpoint: "stats")
     }
+}
 
-    func formatPlayTime(seconds: Int) -> String {
-        let hours = seconds / 3600
-        let minutes = (seconds % 3600) / 60
+func formatPlayTime(seconds: Int) -> String {
+    let hours = seconds / 3600
+    let minutes = (seconds % 3600) / 60
 
-        if hours > 0 {
-            return "\(hours)h \(minutes)m"
-        }
-        return "\(minutes)m"
+    if hours > 0 {
+        return "\(hours)h \(minutes)m"
     }
+    return "\(minutes)m"
 }
 
 struct StatCardView: View {

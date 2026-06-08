@@ -35,3 +35,15 @@ struct TopSong: Codable, Identifiable {
 struct RecordedPlay: Codable {
     var id: Int
 }
+
+struct SongStats: Codable {
+    var isrc: String
+    var playCount: Int
+    var secondsPlayed: Int
+
+    enum CodingKeys: String, CodingKey {
+        case isrc
+        case playCount = "play_count"
+        case secondsPlayed = "seconds_played"
+    }
+}

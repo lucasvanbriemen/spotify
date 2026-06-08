@@ -10,6 +10,16 @@ class StatsController < ApiController
     end
   end
 
+  def song
+    plays = Play.where(song_isrc: params[:isrc])
+
+    render json: {
+      isrc: params[:isrc],
+      play_count: plays.count,
+      seconds_played: plays.sum(:seconds_played).to_i
+    }
+  end
+
   def index
     top = Play.group(:song_isrc)
       .select("song_isrc, COUNT(*) AS play_count, SUM(seconds_played) AS seconds_played")

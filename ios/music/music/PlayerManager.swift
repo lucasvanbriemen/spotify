@@ -1,6 +1,8 @@
 import Foundation
 import AVFoundation
 import MediaPlayer
+import SwiftUI
+import ImageIO
 #if os(macOS)
 import AppKit
 #endif
@@ -35,6 +37,13 @@ class PlayerManager {
             MPRemoteCommandCenter.shared().changeRepeatModeCommand.currentRepeatType = shouldRepeat ? .one : .off
         }
     }
+    // Rich detail for the currently playing song, surfaced in the player sheet
+    // and the landscape ambient view. All reset on every song change.
+    var currentLyrics: [LyricLine] = []
+    var plainLyrics: String?
+    var currentSongStats: SongStats?
+    var artworkPalette: [Color] = []
+
     private var timeObserverToken: Any? = nil
     private var endObserver: NSObjectProtocol?
     private var secondsPlayedCurrentSong: Int = 0
@@ -136,6 +145,13 @@ class PlayerManager {
         player = newPlayer
         currentlyPlaying = song
         togglePlayPause(forceState: true)
+
+        // Clear the previous song's detail so stale data never flashes, then fetch fresh.
+        currentLyrics = []
+        plainLyrics = nil
+        currentSongStats = nil
+        artworkPalette = []
+        fetchSongDetails(for: song)
 
         timeObserverToken = newPlayer.addPeriodicTimeObserver(forInterval: CMTimeMake(value: 1, timescale: 1), queue: .main, using: { [weak self] time in
             if self?.isSeeking == true {
@@ -329,6 +345,64 @@ class PlayerManager {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
     }
     
+    // Fetches lyrics, per-song stats, and the artwork color palette for the
+    // sheet/ambient views. Every assignment re-checks that the song is still
+    // current so a slow response for a skipped song can't overwrite fresh data.
+    private func fetchSongDetails(for song: Song) {
+        Task {
+            let lyrics: LyricsResponse? = await ServerApi.get(endpoint: "song/\(song.isrc)/lyrics")
+            await MainActor.run {
+                guard self.currentlyPlaying?.isrc == song.isrc else { return }
+                if let synced = lyrics?.syncedLyrics, !synced.isEmpty {
+                    self.currentLyrics = parseLRC(synced)
+                }
+                self.plainLyrics = lyrics?.plainLyrics
+            }
+        }
+
+        Task {
+            let stats: SongStats? = await ServerApi.get(endpoint: "song/\(song.isrc)/stats")
+            await MainActor.run {
+                guard self.currentlyPlaying?.isrc == song.isrc else { return }
+                self.currentSongStats = stats
+            }
+        }
+
+        loadArtworkPalette(for: song)
+    }
+
+    private func loadArtworkPalette(for song: Song) {
+        guard let urlString = song.imageUrl, let url = URL(string: urlString) else { return }
+        URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
+            guard
+                let self,
+                let data,
+                let source = CGImageSourceCreateWithData(data as CFData, nil),
+                let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil)
+            else { return }
+
+            let colors = dominantColors(from: cgImage)
+            DispatchQueue.main.async {
+                guard self.currentlyPlaying?.isrc == song.isrc else { return }
+                self.artworkPalette = colors
+            }
+        }.resume()
+    }
+
+    // Index of the synced lyric line that should be highlighted at the given playback time.
+    func currentLyricIndex(at time: Double) -> Int? {
+        guard !currentLyrics.isEmpty else { return nil }
+        var result: Int?
+        for (index, line) in currentLyrics.enumerated() {
+            if line.time <= time {
+                result = index
+            } else {
+                break
+            }
+        }
+        return result
+    }
+
     // Sends the listened duration of the current song to the server so we can show statistics about our listening habits. Resets the counter so a play is never reported twice.
     private func reportPlay() {
         let seconds = secondsPlayedCurrentSong
