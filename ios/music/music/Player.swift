@@ -44,6 +44,5 @@ struct PlayerView: View {
             }
             .padding(8)
         }
-        .sheet(isPresented: $manager.hasSheetOpen, content: {PlayerSheetView() })
     }
 }

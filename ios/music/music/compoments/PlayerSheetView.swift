@@ -3,21 +3,8 @@ import AVFoundation
 
 struct PlayerSheetView: View {
     @State private var manager = PlayerManager.shared
-    // `.compact` height = landscape on iPhone. Rotating presents the ambient
-    // view as a true full-screen cover (not cramped inside the sheet card).
-    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     var body: some View {
-        portrait
-            .fullScreenCover(isPresented: Binding(
-                get: { verticalSizeClass == .compact && manager.hasSheetOpen },
-                set: { _ in }
-            )) {
-                AmbientPlayerView()
-            }
-    }
-
-    private var portrait: some View {
         VStack {
             if let song = manager.currentlyPlaying {
                 SongListingView(song: song, bgColor: Color.clear, shouldPlaySong: false)
