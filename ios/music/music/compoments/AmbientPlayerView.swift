@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#endif
 
 /// Full-screen "put the phone down" experience shown when the sheet is in
 /// landscape: a clock, huge artwork, an artwork-derived animated gradient, the
@@ -74,7 +77,36 @@ struct AmbientPlayerView: View {
                 try? await Task.sleep(for: .seconds(6))
             }
         }
+        // Keep the screen lit (like YouTube/Netflix) while this lean-back view is
+        // up — but only when plugged in, so we never drain an unattended battery.
+        .onAppear {
+            #if os(iOS)
+            UIDevice.current.isBatteryMonitoringEnabled = true
+            updateIdleTimer()
+            #endif
+        }
+        .onDisappear {
+            #if os(iOS)
+            // Hand the system its normal auto-lock back when we leave.
+            UIApplication.shared.isIdleTimerDisabled = false
+            #endif
+        }
+        #if os(iOS)
+        .onReceive(NotificationCenter.default.publisher(for: UIDevice.batteryStateDidChangeNotification)) { _ in
+            updateIdleTimer()
+        }
+        #endif
     }
+
+    #if os(iOS)
+    /// Disable auto-lock only while charging or fully charged on power; otherwise
+    /// let the device sleep normally.
+    private func updateIdleTimer() {
+        let state = UIDevice.current.batteryState
+        let pluggedIn = state == .charging || state == .full
+        UIApplication.shared.isIdleTimerDisabled = pluggedIn
+    }
+    #endif
 
     private func clock(sleepActive: Bool) -> some View {
         TimelineView(.everyMinute) { context in
