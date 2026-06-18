@@ -13,6 +13,7 @@ struct NavigationView: View {
             Tab(role: .search, content: { SearchView() })
         }
         .tabViewBottomAccessory(isEnabled: PlayerManager.shared.currentlyPlaying != nil, content: { PlayerView() })
+        .sheet(isPresented: PlayerManager.shared.hasSheetOpen, content: {PlayerSheetView() })
         .tabBarMinimizeBehavior(TabBarMinimizeBehavior.onScrollDown)
         #else
         NavigationSplitView() {

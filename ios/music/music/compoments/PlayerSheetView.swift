@@ -8,7 +8,8 @@ struct PlayerSheetView: View {
         VStack {
             SongListingView(song: manager.currentlyPlaying!, bgColor: Color.clear, shouldPlaySong: false)
             
-            Spacer()
+            LyricsView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             
             HStack {
                 Button(action: {
@@ -91,4 +92,3 @@ struct PlayerSheetView: View {
         return String(format: "%d:%02d", minutes, seconds)
     }
 }
-
