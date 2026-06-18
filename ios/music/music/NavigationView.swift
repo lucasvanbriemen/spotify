@@ -19,7 +19,8 @@ struct NavigationView: View {
             Tab("Stats", systemImage: "chart.bar", content: { StatsView() })
             Tab(role: .search, content: { SearchView() })
         }
-        .tabViewBottomAccessory(isEnabled: manager.currentlyPlaying != nil, content: { PlayerView() })
+        .tabViewBottomAccessory(isEnabled: PlayerManager.shared.currentlyPlaying != nil, content: { PlayerView() })
+        .sheet(isPresented: PlayerManager.shared.hasSheetOpen, content: {PlayerSheetView() })
         .tabBarMinimizeBehavior(TabBarMinimizeBehavior.onScrollDown)
         // Presentations are anchored to the TabView (a stable view), not to the
         // bottom-accessory PlayerView, so they persist across song changes. The

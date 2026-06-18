@@ -6,44 +6,12 @@ struct PlayerSheetView: View {
 
     var body: some View {
         VStack {
-            if let song = manager.currentlyPlaying {
-                SongListingView(song: song, bgColor: Color.clear, shouldPlaySong: false)
-            }
-
+            SongListingView(song: manager.currentlyPlaying!, bgColor: Color.clear, shouldPlaySong: false)
+            
             LyricsView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            PlayerControlsView()
-
-            if let song = manager.currentlyPlaying {
-                Slider(value: $manager.timeIntoSong, in: 0...Double(song.duration)) {
-                    Text("Seek")
-                } minimumValueLabel: {
-                    Text(numberToTime(number: manager.timeIntoSong))
-                } maximumValueLabel: {
-                    Text(numberToTime(number: Double(song.duration)))
-                } onEditingChanged: { editing in
-                    manager.isSeeking = editing
-                    if editing { return }
-                    manager.player?.seek(to: CMTime(value: Int64(manager.timeIntoSong), timescale: 1))
-                }
-            }
-        }
-        .padding(16)
-    }
-}
-
-/// Transport controls (shuffle / prev / play / next / repeat). Set `compact`
-/// to show only the essentials (play/pause + next) for the ambient view.
-struct PlayerControlsView: View {
-    @State private var manager = PlayerManager.shared
-    var compact: Bool = false
-    var tint: Color = .accentColor
-    var playIconColor: Color = .white
-
-    var body: some View {
-        HStack {
-            if !compact {
+            
+            HStack {
                 Button(action: {
                     manager.shouldShuffle.toggle()
                     manager.applySuffle()
