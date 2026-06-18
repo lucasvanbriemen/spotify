@@ -11,7 +11,6 @@ Rails.application.routes.draw do
     get "search", to: "spotify#search", as: :search
     get "get-mp3/:isrc", to: "spotify#get_mp3", as: :get_mp3, constraints: { isrc: /[^\/]+/ }
     get "song/:isrc/lyrics", to: "spotify#lyrics", as: :song_lyrics, constraints: { isrc: /[^\/]+/ }
-    get "song/:isrc/stats", to: "stats#song", as: :song_stats, constraints: { isrc: /[^\/]+/ }
 
     get "playlists", to: "playlists#index", as: :playlists
     get "playlist/:id", to: "playlists#show", as: :playlist
