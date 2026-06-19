@@ -6,7 +6,5 @@
 	<array>
 		<string>audio</string>
 	</array>
-	<key>NSFocusStatusUsageDescription</key>
-	<string>Detects when a Focus such as Sleep is on so the player can dim to a darker, nighttime-friendly look.</string>
 </dict>
 </plist>

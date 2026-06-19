@@ -3,15 +3,66 @@ import AVFoundation
 
 struct PlayerSheetView: View {
     @State private var manager = PlayerManager.shared
+#if os(iOS)
+    // `.compact` height = landscape on iPhone. Rotating presents the ambient
+    // view as a true full-screen cover (not cramped inside the sheet card).
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+#endif
 
     var body: some View {
+#if os(iOS)
+        portrait
+            .fullScreenCover(isPresented: Binding(
+                get: { verticalSizeClass == .compact && manager.hasSheetOpen },
+                set: { _ in }
+            )) {
+                AmbientPlayerView()
+            }
+#else
+        portrait
+#endif
+    }
+
+    private var portrait: some View {
         VStack {
-            SongListingView(song: manager.currentlyPlaying!, bgColor: Color.clear, shouldPlaySong: false)
-            
+            if let song = manager.currentlyPlaying {
+                SongListingView(song: song, bgColor: Color.clear, shouldPlaySong: false)
+            }
+
             LyricsView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            
-            HStack {
+
+            PlayerControlsView()
+
+            if let song = manager.currentlyPlaying {
+                Slider(value: $manager.timeIntoSong, in: 0...Double(song.duration)) {
+                    Text("Seek")
+                } minimumValueLabel: {
+                    Text(numberToTime(number: manager.timeIntoSong))
+                } maximumValueLabel: {
+                    Text(numberToTime(number: Double(song.duration)))
+                } onEditingChanged: { editing in
+                    manager.isSeeking = editing
+                    if editing { return }
+                    manager.player?.seek(to: CMTime(value: Int64(manager.timeIntoSong), timescale: 1))
+                }
+            }
+        }
+        .padding(16)
+    }
+}
+
+/// Transport controls (shuffle / prev / play / next / repeat). Set `compact`
+/// to show only the essentials (play/pause + next) for the ambient view.
+struct PlayerControlsView: View {
+    @State private var manager = PlayerManager.shared
+    var compact: Bool = false
+    var tint: Color = .accentColor
+    var playIconColor: Color = .white
+
+    var body: some View {
+        HStack {
+            if !compact {
                 Button(action: {
                     manager.shouldShuffle.toggle()
                     manager.applySuffle()
