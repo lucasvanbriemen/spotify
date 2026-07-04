@@ -18,6 +18,13 @@ Rails.application.configure do
   # Cache assets for far-future expiry since they are all digest stamped.
   config.public_file_server.headers = { "cache-control" => "public, max-age=#{1.year.to_i}" }
 
+  # Let Apache (mod_xsendfile) serve large audio files via the X-Sendfile
+  # header. Without this, a Passenger app process stays busy streaming the whole
+  # MP3 to the client; AVPlayer only drains the socket as fast as it buffers, so
+  # the process is pinned for much of the song. Handing the file to Apache frees
+  # the process immediately and lets Apache handle Range requests natively.
+  config.action_dispatch.x_sendfile_header = "X-Sendfile"
+
   # Enable serving of images, stylesheets, and JavaScripts from an asset server.
   # config.asset_host = "http://assets.example.com"
 

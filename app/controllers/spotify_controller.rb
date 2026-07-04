@@ -144,10 +144,16 @@ class SpotifyController < ApiController
 
     return head :not_found unless path.file?
 
-    response.headers["Accept-Ranges"] = "bytes"
+    # In production, X-Sendfile is configured so send_file only emits the
+    # X-Sendfile header and an empty body: Apache (mod_xsendfile) serves the
+    # bytes and handles Range requests itself, freeing the app process at once.
+    if Rails.application.config.action_dispatch.x_sendfile_header.present?
+      return send_file path, type: "audio/mpeg", disposition: "inline"
+    end
 
-    # Serve single-range requests ourselves so clients (AVPlayer) can seek;
-    # Laravel's BinaryFileResponse did this out of the box.
+    # Dev fallback (no X-Sendfile): serve single-range requests ourselves so
+    # clients (AVPlayer) can still seek.
+    response.headers["Accept-Ranges"] = "bytes"
     ranges = Rack::Utils.get_byte_ranges(request.headers["Range"], path.size)
     if ranges&.one?
       range = ranges.first
