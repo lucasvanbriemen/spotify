@@ -46,4 +46,4 @@
 
 # Downloaded MP3 cache.
 /storage/audio/
-/ios/music/music/Secerts.swift
+/ios/music/shared/Secerts.swift

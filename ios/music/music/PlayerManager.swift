@@ -6,6 +6,9 @@ import ImageIO
 #if os(macOS)
 import AppKit
 #endif
+#if os(iOS)
+import WidgetKit
+#endif
 
 @Observable
 class PlayerManager {
@@ -13,6 +16,16 @@ class PlayerManager {
     private init() {
         setUpBackgroundPlayback()
         setUpExternalCommands()
+
+        #if os(iOS)
+        // The app was just (re)launched, so whatever the widget still shows
+        // from a previous run is no longer actually playing.
+        if var snapshot = NowPlayingSnapshot.load(), snapshot.isPlaying {
+            snapshot.isPlaying = false
+            snapshot.save()
+            WidgetCenter.shared.reloadTimelines(ofKind: NowPlayingSnapshot.widgetKind)
+        }
+        #endif
     }
 
     var player: AVPlayer?
@@ -20,6 +33,7 @@ class PlayerManager {
     var currentlyPlaying: Song? {
         didSet {
             sncyNowPlayingInfo()
+            syncWidgetSnapshot()
         }
     }
     var isPlaying: Bool = false
@@ -82,6 +96,22 @@ class PlayerManager {
         } else {
             player?.pause()
         }
+
+        syncWidgetSnapshot()
+    }
+
+    // Mirrors the current song into the app group container so the home-screen
+    // widget can render it, then asks WidgetKit to redraw. Artwork is written
+    // separately by sncyNowPlayingInfo once it has been downloaded.
+    func syncWidgetSnapshot() {
+        #if os(iOS)
+        if let song = currentlyPlaying {
+            NowPlayingSnapshot(title: song.title, artist: song.artist, isPlaying: isPlaying).save()
+        } else {
+            NowPlayingSnapshot.clear()
+        }
+        WidgetCenter.shared.reloadTimelines(ofKind: NowPlayingSnapshot.widgetKind)
+        #endif
     }
 
     func playPlaylist(playlist: Playlist, atIndex: Int? = nil) {
@@ -216,6 +246,10 @@ class PlayerManager {
                     var current = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
                     current[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
                     MPNowPlayingInfoCenter.default().nowPlayingInfo = current
+                    #if os(iOS)
+                    NowPlayingSnapshot.saveArtwork(data)
+                    WidgetCenter.shared.reloadTimelines(ofKind: NowPlayingSnapshot.widgetKind)
+                    #endif
                     return
                 }
                 guard self.preloadedSong?.isrc == song.isrc else { return }
@@ -320,6 +354,10 @@ class PlayerManager {
             MPNowPlayingInfoCenter.default().nowPlayingInfo = current
             preloadedArtworkSongIsrc = nil
             preloadedArtworkImage = nil
+            #if os(iOS)
+            NowPlayingSnapshot.saveArtwork(image.jpegData(compressionQuality: 0.85))
+            WidgetCenter.shared.reloadTimelines(ofKind: NowPlayingSnapshot.widgetKind)
+            #endif
             return
         }
 
@@ -338,6 +376,10 @@ class PlayerManager {
                 var current = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
                 current[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
                 MPNowPlayingInfoCenter.default().nowPlayingInfo = current
+                #if os(iOS)
+                NowPlayingSnapshot.saveArtwork(data)
+                WidgetCenter.shared.reloadTimelines(ofKind: NowPlayingSnapshot.widgetKind)
+                #endif
             }
         }.resume()
     }
