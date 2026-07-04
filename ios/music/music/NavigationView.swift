@@ -1,9 +1,15 @@
 import SwiftUI
 
 struct NavigationView: View {
+    /// What the macOS sidebar can select: a fixed library entry or a playlist.
+    enum SidebarItem: Hashable {
+        case search
+        case stats
+        case playlist(String)
+    }
 
     @State var playlists: [Playlist] = []
-    @State var selectedPlaylistId: String?
+    @State private var sidebarSelection: SidebarItem?
     @State private var manager = PlayerManager.shared
     #if os(iOS)
     // Landscape on iPhone reports a `.compact` vertical size class. Read it here
@@ -28,52 +34,41 @@ struct NavigationView: View {
         .sheet(isPresented: portraitSheetBinding) { PlayerSheetView() }
         .fullScreenCover(isPresented: ambientCoverBinding) { AmbientPlayerView() }
         #else
+        // A standard macOS source-list sidebar: compact rows with a small
+        // artwork thumbnail, native selection highlight, and the fixed
+        // library entries grouped above the playlists.
         NavigationSplitView() {
-            List {
-                Section(header: Text("Playlists")) {
+            List(selection: $sidebarSelection) {
+                Section("Library") {
+                    Label("Search", systemImage: "magnifyingglass")
+                        .tag(SidebarItem.search)
+                    Label("Stats", systemImage: "chart.bar")
+                        .tag(SidebarItem.stats)
+                }
+
+                Section("Playlists") {
                     ForEach(playlists) { playlist in
-                        Button {
-                            selectedPlaylistId = playlist.id
-                        } label: {
-                            ZStack(alignment: .bottomLeading) {
-                                PlaylistBackgroundView(playlist: playlist, height: 100)
-                                Text(playlist.name)
-                                    .foregroundStyle(Color.white)
-                                    .font(Font.largeTitle.bold())
-                                    .padding(16)
-                            }
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 32)
-                                    .strokeBorder(Color.accentColor, lineWidth: selectedPlaylistId == playlist.id ? 5 : 0)
-                            }
+                        Label {
+                            Text(playlist.name)
+                        } icon: {
+                            SidebarArtworkView(url: playlist.image)
                         }
-                        .buttonStyle(.plain)
-                        .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
-                        .listRowBackground(Color.clear)
+                        .tag(SidebarItem.playlist(playlist.id))
                     }
                 }
-
-                Section(header: Text("Search")) {
-                    NavigationLink {
-                        SearchView()
-                    } label: {
-                        Text("Search")
-                    }
-                }
-
-                Section(header: Text("Stats")) {
-                    NavigationLink {
-                        StatsView()
-                    } label: {
-                        Text("Stats")
-                    }
-                }
-
             }
+            .listStyle(.sidebar)
+            .navigationSplitViewColumnWidth(min: 200, ideal: 230)
         } detail: {
-            if let selectedPlaylistId {
-                PlaylistView(playlistID: selectedPlaylistId)
-            } else {
+            switch sidebarSelection {
+            case .search:
+                SearchView()
+            case .stats:
+                StatsView()
+            case .playlist(let id):
+                PlaylistView(playlistID: id)
+                    .id(id) // rebuild (and refetch) when switching playlists
+            case nil:
                 ContentUnavailableView {
                     Label("Open playlist to play music", systemImage: "music.note.slash")
                 } description: {
@@ -81,13 +76,14 @@ struct NavigationView: View {
                 }
             }
         }
-        // The split view has no tab-bar accessory, so dock a glass mini-player
-        // pill at the bottom, matching the macOS look.
+        // The split view has no tab-bar accessory, so float a glass mini-player
+        // pill at the bottom. Capped in width so it reads as a pill, not a bar.
         .safeAreaInset(edge: .bottom) {
             if manager.currentlyPlaying != nil {
                 PlayerView()
+                    .frame(maxWidth: 440)
                     .glassEffect()
-                    .padding(12)
+                    .padding(.bottom, 12)
             }
         }
         .task {
@@ -132,3 +128,20 @@ struct NavigationView: View {
         playlists = await ServerApi.get(endpoint: "playlists") ?? []
     }
 }
+
+#if os(macOS)
+/// Small rounded playlist artwork used in the sidebar rows.
+private struct SidebarArtworkView: View {
+    let url: String?
+
+    var body: some View {
+        AsyncImage(url: URL(string: url ?? "")) { image in
+            image.resizable().scaledToFill()
+        } placeholder: {
+            RoundedRectangle(cornerRadius: 5).fill(.quaternary)
+        }
+        .frame(width: 22, height: 22)
+        .clipShape(RoundedRectangle(cornerRadius: 5))
+    }
+}
+#endif

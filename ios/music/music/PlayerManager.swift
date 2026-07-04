@@ -171,6 +171,12 @@ class PlayerManager {
     }
 
     private func prefetchNextSong() {
+        // Ask the server to cache the next few queued songs in the background,
+        // so skipping ahead never waits on a fresh yt-dlp download.
+        for upcoming in queue.prefix(3) {
+            ServerApi.warm(endpoint: "get-mp3/\(upcoming.isrc)/prepare")
+        }
+
         let nextSong = queue.first
 
         if preloadedSong?.isrc == nextSong?.isrc {

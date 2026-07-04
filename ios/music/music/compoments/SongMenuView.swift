@@ -19,6 +19,13 @@ struct SongMenuView: View {
                 .rotationEffect(Angle(degrees: 90))
                 .padding(10)
         }
+        #if os(macOS)
+        // Keep the ellipsis a quiet glyph instead of a bezeled popup button.
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .foregroundStyle(Color.secondary)
+        #endif
         .onAppear {
             playlistMap = song.isInPlaylistMap ?? [:]
         }

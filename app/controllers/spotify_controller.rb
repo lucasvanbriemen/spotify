@@ -1,11 +1,7 @@
-require "open3"
-
 # Search, MP3 fetching/serving and lyrics (port of the Laravel
 # SpotifyController).
 class SpotifyController < ApiController
-  AUDIO_DIR = Rails.root.join("storage/audio")
   LYRICS_URL = "https://lrclib.net/api/get"
-  DOWNLOAD_TIMEOUT_SECONDS = 180
 
   def search
     query = params[:q].to_s.strip
@@ -26,21 +22,19 @@ class SpotifyController < ApiController
     # audio file path below.
     return head :bad_request unless isrc.match?(/\A[a-zA-Z0-9-]+\z/)
 
-    unless Song.exists?(isrc: isrc)
-      details = Deezer::Client.track_details(isrc)
-      download_mp3(isrc, details)
-
-      Song.create!(
-        isrc: isrc,
-        title: details["title"],
-        artist: details.dig("artist", "name"),
-        image_url: details.dig("album", "cover_medium") || Song::PLACEHOLDER_IMAGE,
-        album: details.dig("album", "title"),
-        duration: details["duration"]
-      )
-    end
-
+    SongCache.ensure_cached(isrc)
     send_mp3(isrc)
+  end
+
+  # Fire-and-forget warmup used by the app for upcoming queue songs: caches
+  # the MP3 in the background so pressing play on it later is instant.
+  def prepare
+    isrc = params[:isrc]
+    return head :bad_request unless isrc.match?(/\A[a-zA-Z0-9-]+\z/)
+    return head :ok if SongCache.cached?(isrc)
+
+    CacheSongJob.perform_later(isrc)
+    head :accepted
   end
 
   def lyrics
@@ -109,38 +103,8 @@ class SpotifyController < ApiController
     {}
   end
 
-  def download_mp3(isrc, details)
-    tmp_dir = Rails.root.join("tmp/yt-dlp")
-    FileUtils.mkdir_p(tmp_dir)
-    FileUtils.mkdir_p(AUDIO_DIR)
-
-    env = { "TMP" => tmp_dir.to_s, "TEMP" => tmp_dir.to_s, "TMPDIR" => tmp_dir.to_s }
-    command = [
-      Rails.root.join("bin/yt-dlp").to_s,
-      "--no-playlist",
-      "--extract-audio",
-      "--audio-format", "mp3",
-      "--audio-quality", "0",
-      "--restrict-filenames",
-      "--no-progress",
-      "--match-filter", "age_limit<18",
-      "--max-downloads", "1",
-      "--ffmpeg-location", Rails.root.join("bin").to_s,
-      "--output", AUDIO_DIR.join(isrc).to_s,
-      "ytsearch5: #{details.dig("artist", "name")} #{details["title"]} audio"
-    ]
-
-    # The exit status is ignored, like in the Laravel app: send_mp3 responds
-    # with 404 when no file was produced.
-    pid = Process.spawn(env, *command, out: File::NULL, err: File::NULL)
-    Timeout.timeout(DOWNLOAD_TIMEOUT_SECONDS) { Process.wait(pid) }
-  rescue Timeout::Error
-    Process.kill("KILL", pid)
-    Process.wait(pid)
-  end
-
   def send_mp3(isrc)
-    path = AUDIO_DIR.join("#{isrc}.mp3")
+    path = SongCache.path(isrc)
 
     return head :not_found unless path.file?
 

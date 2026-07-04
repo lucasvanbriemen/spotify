@@ -10,10 +10,12 @@ Rails.application.routes.draw do
   scope "api" do
     get "search", to: "spotify#search", as: :search
     get "get-mp3/:isrc", to: "spotify#get_mp3", as: :get_mp3, constraints: { isrc: /[^\/]+/ }
+    post "get-mp3/:isrc/prepare", to: "spotify#prepare", as: :prepare_mp3, constraints: { isrc: /[^\/]+/ }
     get "song/:isrc/lyrics", to: "spotify#lyrics", as: :song_lyrics, constraints: { isrc: /[^\/]+/ }
 
     get "playlists", to: "playlists#index", as: :playlists
     get "playlist/:id", to: "playlists#show", as: :playlist
+    post "playlist/:id/prepare", to: "playlists#prepare", as: :playlist_prepare
     post "playlist/:id/songs", to: "playlists#add_song", as: :playlist_songs
 
     post "plays", to: "stats#store_play", as: :plays

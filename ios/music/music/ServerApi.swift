@@ -13,6 +13,16 @@ class ServerApi {
         return await makeRequest(method: "POST", endpoint: endpoint, data: data)
     }
 
+    /// Fire-and-forget POST used for cache warmups (the "prepare" endpoints).
+    /// The response carries no useful body, so it is ignored.
+    public static func warm(endpoint: String) {
+        guard let url = URL(string: "\(baseUrl)\(endpoint)") else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        URLSession.shared.dataTask(with: request).resume()
+    }
+
     private static func makeRequest<T: Decodable>(method: String = "GET", endpoint: String, data: Data? = nil) async -> T? {
         do {
             var request = URLRequest(url: URL(string: "\(baseUrl)\(endpoint)")!)

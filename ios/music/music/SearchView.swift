@@ -10,13 +10,14 @@ struct SearchView: View {
         NavigationStack {
             ScrollView {
                 VStack {
+                    // The toolbar search field from `.searchable` covers macOS
+                    // too, so no inline TextField; zebra rows match PlaylistView.
                     #if os(macOS)
-                        let secondaryColor = Color(NSColor.controlBackgroundColor)
-                        TextField("Search", text: $searchText)
+                        let secondaryColor = Color.primary.opacity(0.045)
                     #else
                         let secondaryColor = Color(.secondarySystemBackground)
                     #endif
-                    
+
                     ForEach(songs.enumerated(), id: \.element.id) { index, song in
                         let bg: Color = index.isMultiple(of: 2) ? .clear : secondaryColor
                         SongListingView(song: song, bgColor: bg)

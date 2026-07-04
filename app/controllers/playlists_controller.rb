@@ -18,6 +18,21 @@ class PlaylistsController < ApiController
     end
   end
 
+  # Warm the MP3 cache for every song in a local playlist (fired by the app
+  # when the playlist is opened) so tapping any of them plays instantly.
+  # Deezer playlists browsed from search are skipped — we don't want dozens of
+  # speculative downloads for a playlist that was only glanced at.
+  def prepare
+    return head :ok unless params[:id].start_with?("local_")
+
+    playlist = Playlist.find(params[:id].delete_prefix("local_"))
+    playlist.playlist_songs.pluck(:song_isrc)
+      .reject { |isrc| SongCache.cached?(isrc) }
+      .each { |isrc| CacheSongJob.perform_later(isrc) }
+
+    head :accepted
+  end
+
   def add_song
     details = Deezer::Client.track_details(params[:isrc])
 
