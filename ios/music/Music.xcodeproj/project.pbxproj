@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A0AA00202FB9000000C5AA21 /* MusicWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A0AA00012FB9000000C5AA21 /* MusicWidgetExtension.appex */; platformFilters = (ios, ); settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		A0AA00212FB9000000C5AA21 /* MusicWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A0AA00022FB9000000C5AA21 /* MusicWatch.app */; platformFilters = (ios, ); settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A0AA00202FB9000000C5AA21 /* MusicWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A0AA00012FB9000000C5AA21 /* MusicWidgetExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A0AA00212FB9000000C5AA21 /* MusicWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A0AA00022FB9000000C5AA21 /* MusicWatch.app */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -204,8 +204,8 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				A0AA00112FB9000000C5AA21 /* MusicWidget */,
 				A0AA00102FB9000000C5AA21 /* shared */,
+				A0AA00112FB9000000C5AA21 /* MusicWidget */,
 			);
 			name = MusicWidgetExtension;
 			packageProductDependencies = (
@@ -227,8 +227,8 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				A0AA00122FB9000000C5AA21 /* MusicWatch */,
 				A0AA00102FB9000000C5AA21 /* shared */,
+				A0AA00122FB9000000C5AA21 /* MusicWatch */,
 			);
 			name = MusicWatch;
 			packageProductDependencies = (
@@ -324,13 +324,13 @@
 /* Begin PBXTargetDependency section */
 		A0AA00502FB9000000C5AA21 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			platformFilters = (ios, );
+			platformFilter = ios;
 			target = A0AA00402FB9000000C5AA21 /* MusicWidgetExtension */;
 			targetProxy = A0AA00512FB9000000C5AA21 /* PBXContainerItemProxy */;
 		};
 		A0AA00522FB9000000C5AA21 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			platformFilters = (ios, );
+			platformFilter = ios;
 			target = A0AA00412FB9000000C5AA21 /* MusicWatch */;
 			targetProxy = A0AA00532FB9000000C5AA21 /* PBXContainerItemProxy */;
 		};

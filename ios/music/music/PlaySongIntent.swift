@@ -20,6 +20,8 @@ struct PlaySongIntent: AudioPlaybackIntent {
         }
 
         PlayerManager.shared.playSong(song: match)
-        return .result(dialog: "Playing \(match.title).")
+        // Speak the sayable form — "Playing Thriller", not
+        // "Playing Thriller (2003 Edit)".
+        return .result(dialog: "Playing \(SongEntity.sayableTitle(match.title)).")
     }
 }

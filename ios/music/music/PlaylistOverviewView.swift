@@ -10,7 +10,7 @@ struct PlaylistOverviewView: View {
                     Text("Playlists")
                         .fontWeight(.bold)
                         .padding([.top, .leading], 16)
-                    #if os(iOS)
+                    #if !os(macOS)
                         .foregroundStyle(Color(.label))
                     #else
                         .foregroundStyle(Color(NSColor.controlBackgroundColor))

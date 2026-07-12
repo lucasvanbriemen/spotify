@@ -37,9 +37,13 @@ struct SongMenuView: View {
         ]
 
         let result: Song? = await ServerApi.post(endpoint: "playlist/\(id)/songs", body: body)
-        if result != nil, var entry = playlistMap[id] {
-            entry.contains = true
-            playlistMap[id] = entry
+        if result != nil {
+            if var entry = playlistMap[id] {
+                entry.contains = true
+                playlistMap[id] = entry
+            }
+            // Make the song sayable through Siri without waiting for the cache TTL.
+            Task { await PlaylistLibrary.shared.playlistsDidChange() }
         }
     }
 }

@@ -2,6 +2,31 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>INAlternativeAppNames</key>
+	<array>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>LTVB</string>
+			<key>INAlternativeAppNamePronunciationHint</key>
+			<string>el tee vee bee</string>
+		</dict>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>LTVB Music</string>
+		</dict>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>My Music</string>
+		</dict>
+	</array>
+	<key>INIntentsSupported</key>
+	<array>
+		<string>INPlayMediaIntent</string>
+	</array>
+	<key>INSupportedMediaCategories</key>
+	<array>
+		<string>INMediaCategoryMusic</string>
+	</array>
 	<key>NSSiriUsageDescription</key>
 	<string>Lets you ask Siri to play songs from your playlists.</string>
 	<key>UIBackgroundModes</key>
