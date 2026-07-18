@@ -90,6 +90,17 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         intent is INPlayMediaIntent ? PlayMediaIntentHandler() : nil
     }
 
+    /// Routes the external (screen-mirroring) display to the TV scene; every
+    /// other role returns a bare configuration so SwiftUI keeps managing it.
+    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        NSLog("MUSICDBG configurationForConnecting role=%@", connectingSceneSession.role.rawValue)
+        let config = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
+        if connectingSceneSession.role == .windowExternalDisplayNonInteractive {
+            config.delegateClass = ExternalSceneDelegate.self
+        }
+        return config
+    }
+
     /// Fallback for the .handleInApp background-launch path, in case the
     /// system delivers the final playback request here instead.
     func application(_ application: UIApplication, handle intent: INIntent, completionHandler: @escaping (INIntentResponse) -> Void) {

@@ -34,6 +34,15 @@ struct PlayerSheetView: View {
 
             PlayerControlsView()
 
+#if os(iOS)
+            if let routeName = manager.externalRouteName {
+                Label(routeName, systemImage: "airplay.audio")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 4)
+            }
+#endif
+
             if let song = manager.currentlyPlaying {
                 Slider(value: $manager.timeIntoSong, in: 0...Double(song.duration)) {
                     Text("Seek")
@@ -119,6 +128,9 @@ struct PlayerControlsView: View {
                 .clipShape(Circle())
                 .foregroundStyle(manager.shouldRepeat ? tint : Color.secondary)
                 .clipShape(Circle())
+
+                RoutePickerView(tint: tint)
+                    .frame(width: 32, height: 32)
             }
         }
     }

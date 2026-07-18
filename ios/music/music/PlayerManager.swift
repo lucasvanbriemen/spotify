@@ -57,6 +57,9 @@ class PlayerManager {
     var plainLyrics: String?
     var currentSongStats: SongStats?
     var artworkPalette: [Color] = []
+    // Name of the AirPlay/Bluetooth output audio is routed to, nil for the
+    // built-in speaker. Drives the "Playing on …" label in the player sheet.
+    var externalRouteName: String?
 
     private var timeObserverToken: Any? = nil
     private var endObserver: NSObjectProtocol?
@@ -162,6 +165,9 @@ class PlayerManager {
             let playerItem = AVPlayerItem(asset: asset)
             newPlayer = AVPlayer(playerItem: playerItem)
         }
+        // Keep AirPlay device-rendered: the MP3 URL needs our Authorization
+        // header, so the AirPlay device must never fetch it directly.
+        newPlayer.allowsExternalPlayback = false
 
         if timeObserverToken != nil {
             player?.removeTimeObserver(timeObserverToken!)
@@ -231,6 +237,8 @@ class PlayerManager {
         preloadedPlayerItem = item
         preloader = AVPlayer(playerItem: item)
         preloader?.automaticallyWaitsToMinimizeStalling = false
+        // Must match the main player: this AVPlayer gets promoted in playSong.
+        preloader?.allowsExternalPlayback = false
 
         guard let imageUrlString = song.imageUrl, let imageUrl = URL(string: imageUrlString) else { return }
         URLSession.shared.dataTask(with: imageUrl) { [weak self] data, _, _ in
@@ -263,15 +271,38 @@ class PlayerManager {
         #if os(iOS)
             let audioSession = AVAudioSession.sharedInstance()
             do {
-                try audioSession.setCategory(.playback, mode: .moviePlayback)
+                // .longFormAudio opts us into AirPlay 2 buffered audio, so the
+                // system route picker offers TVs/HomePods like it does for Apple Music.
+                try audioSession.setCategory(.playback, mode: .default, policy: .longFormAudio)
                 try audioSession.setActive(true)
             } catch {
                 print("Failed to set the audio session configuration")
             }
+            observeRouteChanges()
         #endif
 
     }
-    
+
+    #if os(iOS)
+    private func observeRouteChanges() {
+        updateExternalRouteName()
+        NotificationCenter.default.addObserver(
+            forName: AVAudioSession.routeChangeNotification,
+            object: AVAudioSession.sharedInstance(),
+            queue: .main
+        ) { [weak self] _ in
+            self?.updateExternalRouteName()
+        }
+    }
+
+    private func updateExternalRouteName() {
+        let external = AVAudioSession.sharedInstance().currentRoute.outputs.first {
+            $0.portType != .builtInSpeaker && $0.portType != .builtInReceiver
+        }
+        externalRouteName = external?.portName
+    }
+    #endif
+
     func setUpExternalCommands() {
         let commandCenter = MPRemoteCommandCenter.shared()
 

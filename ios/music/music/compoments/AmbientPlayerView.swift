@@ -13,6 +13,10 @@ struct AmbientPlayerView: View {
     @State private var manager = PlayerManager.shared
     @State private var sleep = SleepMonitor.shared
     @State private var charging = false
+    /// True when rendered on the TV scene during screen mirroring: interactive
+    /// controls are hidden (the display can't be touched) and the phone-side
+    /// battery/idle-timer handling is skipped — the scene delegate owns that.
+    var onExternalDisplay = false
 
     var body: some View {
         let sleepActive = sleep.isActive
@@ -29,9 +33,11 @@ struct AmbientPlayerView: View {
             let lyricSize: CGFloat = 46
             let titleSize: CGFloat = 34
             #else
-            let side = max(120, geo.size.height * 0.6)
-            let lyricSize: CGFloat = 24
-            let titleSize: CGFloat = 26
+            // The TV is wide like a Mac window and viewed from the couch:
+            // shrink the artwork and let big lyrics carry the screen.
+            let side = onExternalDisplay ? max(160, geo.size.height * 0.42) : max(120, geo.size.height * 0.6)
+            let lyricSize: CGFloat = onExternalDisplay ? 46 : 24
+            let titleSize: CGFloat = onExternalDisplay ? 34 : 26
             #endif
 
             ZStack {
@@ -42,31 +48,44 @@ struct AmbientPlayerView: View {
                 // bright, washed-out cover; sleep (and charging) deepen it.
                 Color.black.opacity(dimming.scrimOpacity).ignoresSafeArea()
 
-                HStack(spacing: 44) {
-                    // Clock sits directly above the artwork and is capped to its
-                    // width, so the time fills the image but never overruns it.
-                    VStack(alignment: .leading, spacing: 4) {
+                if onExternalDisplay && manager.currentlyPlaying == nil {
+                    // Mirroring started before any music: a quiet clock screen
+                    // instead of an empty artwork frame.
+                    VStack(spacing: 8) {
                         clock(sleepActive: sleepActive)
-                            .frame(width: side, alignment: .leading)
-                        artwork(sleepActive: sleepActive)
-                            .frame(width: side, height: side)
+                        Text("Nothing playing")
+                            .font(.system(size: 22, weight: .light))
+                            .foregroundStyle(.white.opacity(0.5))
                     }
-                    details(sleepActive: sleepActive, lyricSize: lyricSize, titleSize: titleSize)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    HStack(spacing: 44) {
+                        // Clock sits directly above the artwork and is capped to its
+                        // width, so the time fills the image but never overruns it.
+                        VStack(alignment: .leading, spacing: 4) {
+                            clock(sleepActive: sleepActive)
+                                .frame(width: side, alignment: .leading)
+                            artwork(sleepActive: sleepActive)
+                                .frame(width: side, height: side)
+                        }
+                        details(sleepActive: sleepActive, lyricSize: lyricSize, titleSize: titleSize)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(.horizontal, 48)
+                    .padding(.vertical, 24)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .padding(.horizontal, 48)
-                .padding(.vertical, 24)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .overlay(alignment: .topTrailing) {
-                Button(action: { manager.hasSheetOpen = false }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 16, weight: .bold))
-                        .padding(12)
-                        .background(.white.opacity(0.15), in: Circle())
+                if !onExternalDisplay {
+                    Button(action: { manager.hasSheetOpen = false }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .bold))
+                            .padding(12)
+                            .background(.white.opacity(0.15), in: Circle())
+                    }
+                    .foregroundStyle(.white)
+                    .padding(24)
                 }
-                .foregroundStyle(.white)
-                .padding(24)
             }
         }
         .foregroundStyle(.white)
@@ -86,31 +105,36 @@ struct AmbientPlayerView: View {
         // up — but only when plugged in, so we never drain an unattended battery.
         .onAppear {
             #if os(iOS)
+            guard !onExternalDisplay else { return }
             UIDevice.current.isBatteryMonitoringEnabled = true
             updateIdleTimer()
             #endif
         }
         .onDisappear {
             #if os(iOS)
-            // Hand the system its normal auto-lock back when we leave.
-            UIApplication.shared.isIdleTimerDisabled = false
+            // Hand the system its normal auto-lock back when we leave — unless
+            // the TV scene still needs the screen (handled by the shared state).
+            guard !onExternalDisplay else { return }
+            ExternalDisplayState.shared.ambientKeepAwake = false
             #endif
         }
         #if os(iOS)
         .onReceive(NotificationCenter.default.publisher(for: UIDevice.batteryStateDidChangeNotification)) { _ in
+            guard !onExternalDisplay else { return }
             updateIdleTimer()
         }
         #endif
     }
 
     #if os(iOS)
-    /// Disable auto-lock only while charging or fully charged on power; otherwise
-    /// let the device sleep normally.
+    /// Keep the screen awake only while charging or fully charged on power;
+    /// otherwise let the device sleep normally. Routed through
+    /// ExternalDisplayState so the TV scene's needs always win.
     private func updateIdleTimer() {
         let state = UIDevice.current.batteryState
         let pluggedIn = state == .charging || state == .full
         charging = pluggedIn
-        UIApplication.shared.isIdleTimerDisabled = pluggedIn
+        ExternalDisplayState.shared.ambientKeepAwake = pluggedIn
     }
     #endif
 
@@ -165,13 +189,35 @@ struct AmbientPlayerView: View {
             }
 
             if let song = manager.currentlyPlaying {
-                seekBar(duration: song.duration)
+                if onExternalDisplay {
+                    progressBar(duration: song.duration)
+                } else {
+                    seekBar(duration: song.duration)
+                }
             }
 
-            PlayerControlsView(tint: .white, playIconColor: .black)
-                .padding(.top, 8)
+            if !onExternalDisplay {
+                PlayerControlsView(tint: .white, playIconColor: .black)
+                    .padding(.top, 8)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Read-only counterpart of the seek bar for the non-interactive TV scene.
+    private func progressBar(duration: Int) -> some View {
+        HStack(spacing: 12) {
+            Text(numberToTime(number: manager.timeIntoSong))
+                .font(.system(size: 13, weight: .medium))
+                .monospacedDigit()
+                .foregroundStyle(.white.opacity(0.7))
+            ProgressView(value: min(manager.timeIntoSong, Double(duration)), total: Double(max(duration, 1)))
+                .tint(.white)
+            Text(numberToTime(number: Double(duration)))
+                .font(.system(size: 13, weight: .medium))
+                .monospacedDigit()
+                .foregroundStyle(.white.opacity(0.7))
+        }
     }
 
     /// Scrub bar with elapsed / remaining labels, styled for the dark ambient
