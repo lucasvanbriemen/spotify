@@ -25,6 +25,12 @@ struct PlayerSheetView: View {
 
     private var portrait: some View {
         VStack {
+            if let station = manager.currentStation {
+                Label("LTVB Radio — \(station.name)", systemImage: "dot.radiowaves.left.and.right")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             if let song = manager.currentlyPlaying {
                 SongListingView(song: song, bgColor: Color.clear, shouldPlaySong: false)
             }
@@ -44,7 +50,7 @@ struct PlayerSheetView: View {
 #endif
 
             if let song = manager.currentlyPlaying {
-                Slider(value: $manager.timeIntoSong, in: 0...Double(song.duration)) {
+                Slider(value: $manager.timeIntoSong, in: 0...Double(max(song.duration, 1))) {
                     Text("Seek")
                 } minimumValueLabel: {
                     Text(numberToTime(number: manager.timeIntoSong))
@@ -72,18 +78,28 @@ struct PlayerControlsView: View {
     var body: some View {
         HStack {
             if !compact {
-                Button(action: {
-                    manager.shouldShuffle.toggle()
-                    manager.applySuffle()
-                }) {
-                    Image(systemName: "shuffle")
-                        .badge(1)
+                if manager.currentStation == nil {
+                    Button(action: {
+                        manager.shouldShuffle.toggle()
+                        manager.applySuffle()
+                    }) {
+                        Image(systemName: "shuffle")
+                            .badge(1)
+                            .font(Font.system(size: 24))
+                    }
+                    .frame(width: 32, height: 32)
+                    .clipShape(Circle())
+                    .foregroundStyle(manager.shouldShuffle ? tint : Color.secondary)
+                    .clipShape(Circle())
+                } else {
+                    // The station curates its own order, so shuffle is
+                    // meaningless — a static radio glyph keeps the other
+                    // controls from shifting.
+                    Image(systemName: "dot.radiowaves.left.and.right")
                         .font(Font.system(size: 24))
+                        .frame(width: 32, height: 32)
+                        .foregroundStyle(tint)
                 }
-                .frame(width: 32, height: 32)
-                .clipShape(Circle())
-                .foregroundStyle(manager.shouldShuffle ? tint : Color.secondary)
-                .clipShape(Circle())
             }
 
             Button(action: { manager.playPreviousSong() }) {

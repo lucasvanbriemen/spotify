@@ -1,14 +1,17 @@
 import SwiftUI
 
 struct NavigationView: View {
-    /// What the macOS sidebar can select: a fixed library entry or a playlist.
+    /// What the macOS sidebar can select: a fixed library entry, a radio
+    /// station, or a playlist.
     enum SidebarItem: Hashable {
         case search
         case stats
+        case station(String)
         case playlist(String)
     }
 
     @State var playlists: [Playlist] = []
+    @State var stations: [Station] = []
     @State private var sidebarSelection: SidebarItem?
     @State private var manager = PlayerManager.shared
     #if os(iOS)
@@ -22,6 +25,7 @@ struct NavigationView: View {
         #if os(iOS)
         TabView {
             Tab("Playlists", systemImage: "play.square.stack", content: { PlaylistOverviewView() })
+            Tab("Radio", systemImage: "dot.radiowaves.left.and.right", content: { StationsView() })
             Tab("Stats", systemImage: "chart.bar", content: { StatsView() })
             Tab(role: .search, content: { SearchView() })
         }
@@ -46,6 +50,17 @@ struct NavigationView: View {
                         .tag(SidebarItem.stats)
                 }
 
+                Section("Radio") {
+                    ForEach(stations) { station in
+                        Label {
+                            Text(station.name)
+                        } icon: {
+                            SidebarArtworkView(url: station.image)
+                        }
+                        .tag(SidebarItem.station(station.id))
+                    }
+                }
+
                 Section("Playlists") {
                     ForEach(playlists) { playlist in
                         Label {
@@ -65,6 +80,16 @@ struct NavigationView: View {
                 SearchView()
             case .stats:
                 StatsView()
+            case .station(let id):
+                if let station = stations.first(where: { $0.id == id }) {
+                    StationDetailView(station: station)
+                        .id(id) // rebuild when switching stations
+                } else {
+                    // Selected before the station list finished loading.
+                    ContentUnavailableView {
+                        Label("Loading station", systemImage: "dot.radiowaves.left.and.right")
+                    }
+                }
             case .playlist(let id):
                 PlaylistView(playlistID: id)
                     .id(id) // rebuild (and refetch) when switching playlists
@@ -88,6 +113,7 @@ struct NavigationView: View {
         }
         .task {
             await getPlaylists()
+            await getStations()
         }
         // macOS has no rotation, but its window is wide like a phone held in
         // landscape — so the player opens straight into the full ambient view
@@ -126,6 +152,11 @@ struct NavigationView: View {
 
     func getPlaylists() async {
         playlists = await ServerApi.get(endpoint: "playlists") ?? []
+    }
+
+    func getStations() async {
+        let response: StationsResponse? = await ServerApi.get(endpoint: "stations")
+        stations = response?.stations ?? []
     }
 }
 

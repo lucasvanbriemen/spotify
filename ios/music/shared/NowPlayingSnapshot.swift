@@ -13,6 +13,9 @@ struct NowPlayingSnapshot: Codable {
     var title: String
     var artist: String?
     var isPlaying: Bool
+    // Radio station name when station mode is active. Optional with a default
+    // so snapshots persisted by older builds still decode.
+    var stationName: String? = nil
 
     static func load() -> NowPlayingSnapshot? {
         guard

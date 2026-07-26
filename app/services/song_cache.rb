@@ -52,7 +52,10 @@ class SongCache
         artist: details.dig("artist", "name"),
         image_url: details.dig("album", "cover_medium") || Song::PLACEHOLDER_IMAGE,
         album: details.dig("album", "title"),
-        duration: details["duration"]
+        duration: details["duration"],
+        genre: SongEnrichment.genre_for(details.dig("album", "id")),
+        enriched_at: Time.current,
+        **SongEnrichment.attributes_from_track(details)
       )
     end
 

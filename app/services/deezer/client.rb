@@ -28,6 +28,10 @@ module Deezer
         request("/track/isrc:#{isrc}")
       end
 
+      def album_details(id)
+        request("/album/#{id}")
+      end
+
       def playlist_details(id)
         request("/playlist/#{id}")
       end

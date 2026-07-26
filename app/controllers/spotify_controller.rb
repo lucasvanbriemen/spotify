@@ -22,7 +22,13 @@ class SpotifyController < ApiController
     # audio file path below.
     return head :bad_request unless isrc.match?(/\A[a-zA-Z0-9-]+\z/)
 
-    SongCache.ensure_cached(isrc)
+    if TalkSegment.talk_id?(isrc)
+      # Talk audio is generated, never downloaded: a talk id must not fall
+      # through to the Deezer/yt-dlp path.
+      return head :not_found unless TalkAudio.ensure_rendered(isrc)
+    else
+      SongCache.ensure_cached(isrc)
+    end
     send_mp3(isrc)
   end
 
@@ -31,13 +37,22 @@ class SpotifyController < ApiController
   def prepare
     isrc = params[:isrc]
     return head :bad_request unless isrc.match?(/\A[a-zA-Z0-9-]+\z/)
-    return head :ok if SongCache.cached?(isrc)
 
-    CacheSongJob.perform_later(isrc)
+    if TalkSegment.talk_id?(isrc)
+      return head :ok if TalkAudio.rendered?(isrc)
+
+      GenerateTalkSegmentJob.perform_later(isrc)
+    else
+      return head :ok if SongCache.cached?(isrc)
+
+      CacheSongJob.perform_later(isrc)
+    end
     head :accepted
   end
 
   def lyrics
+    return talk_lyrics(params[:isrc]) if TalkSegment.talk_id?(params[:isrc])
+
     song = Song.find(params[:isrc])
     response = fetch_lyrics(song)
 
@@ -86,6 +101,33 @@ class SpotifyController < ApiController
         songs: []
       }
     end
+  end
+
+  # A talk segment's "lyrics" are its transcript, so the news text shows up in
+  # the player like song lyrics do.
+  def talk_lyrics(id)
+    segment = TalkSegment.find_by(id: id)
+    if segment&.transcript.blank?
+      return render json: { error: "Lyrics not found" }, status: :not_found
+    end
+
+    render json: {
+      "plainLyrics" => segment.transcript,
+      "syncedLyrics" => synced_transcript(segment)
+    }
+  end
+
+  # The ambient/TV view only renders synced lyrics, so spread the transcript's
+  # sentences evenly over the segment's duration as coarse LRC lines.
+  def synced_transcript(segment)
+    sentences = segment.transcript.scan(/[^.!?]+[.!?]*/).map(&:strip).reject(&:empty?)
+    return nil if sentences.empty? || segment.duration.to_i.zero?
+
+    step = segment.duration.to_f / sentences.size
+    sentences.each_with_index.map do |sentence, index|
+      seconds = index * step
+      format("[%02d:%05.2f] %s", (seconds / 60).floor, seconds % 60, sentence)
+    end.join("\n")
   end
 
   def fetch_lyrics(song)

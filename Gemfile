@@ -31,6 +31,10 @@ gem "solid_cable"
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
 
+# RSS parsing for the radio news bulletins (bundled gem since Ruby 3.0, so it
+# must be declared to be usable under Bundler).
+gem "rss"
+
 # Load database credentials and other secrets from a local .env file.
 # Needed in production too: the Plesk-deployed app and its build step read
 # DB_*/SECRET_KEY_BASE from /var/www/vhosts/.../music.ltvb.nl/.env.

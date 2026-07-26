@@ -174,6 +174,11 @@ struct AmbientPlayerView: View {
                         .font(.system(size: titleSize * 0.55))
                         .foregroundStyle(.white.opacity(0.7))
                 }
+                if let station = manager.currentStation {
+                    Text("LTVB Radio — \(station.name)")
+                        .font(.system(size: titleSize * 0.45))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
             }
 
             Spacer(minLength: 0)

@@ -37,7 +37,7 @@ struct SongListingView: View {
             }
         } label: {
             HStack(alignment: .center, spacing: 10) {
-                AsyncImage(url: URL(string: song.imageUrl!)) { image in
+                AsyncImage(url: URL(string: song.imageUrl ?? "")) { image in
                     image.resizable()
                 } placeholder: {
                     ProgressView()
@@ -52,7 +52,7 @@ struct SongListingView: View {
                         .foregroundStyle(isCurrentSong ? Color.accentColor : Color.primary)
                         .lineLimit(1)
                         .truncationMode(.tail)
-                    Text(song.artist!)
+                    Text(song.artist ?? "Unknown Artist")
                         .font(.system(size: 11))
                         .foregroundStyle(Color.secondary)
                         .lineLimit(1)
@@ -64,7 +64,7 @@ struct SongListingView: View {
                         .fontWeight(Font.Weight.bold)
                         .frame(height: 18)
                         .truncationMode(.tail)
-                    Text(song.artist!)
+                    Text(song.artist ?? "Unknown Artist")
                         .font(Font.system(size: 14, weight: .light, design: .default))
                         .frame(height: 18)
                         .truncationMode(.tail)

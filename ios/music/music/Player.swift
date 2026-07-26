@@ -5,13 +5,22 @@ import MediaPlayer
 struct PlayerView: View {
     @State private var manager = PlayerManager.shared
 
+    // Artist line, station-aware: on the radio it also names the station, and
+    // talk segments (which have a generic artist) read as news.
+    private var subtitle: String {
+        guard let song = manager.currentlyPlaying else { return "" }
+        return manager.currentStation.map { station in
+            song.isTalk ? "News — \(station.name)" : "\(song.artist ?? "Unknown Artist") — \(station.name)"
+        } ?? (song.artist ?? "Unknown Artist")
+    }
+
     var body: some View {
         Button(action: {
             manager.hasSheetOpen.toggle()
         }) {
             HStack(alignment: .center) {
                 if let song = manager.currentlyPlaying {
-                    AsyncImage(url: URL(string: song.imageUrl!)) { image in
+                    AsyncImage(url: URL(string: song.imageUrl ?? "")) { image in
                         image.resizable()
                     } placeholder: {
                         ProgressView()
@@ -27,7 +36,7 @@ struct PlayerView: View {
                             .font(.system(size: 13, weight: .medium))
                             .lineLimit(1)
                             .truncationMode(.tail)
-                        Text(song.artist!)
+                        Text(subtitle)
                             .font(.system(size: 11))
                             .lineLimit(1)
                             .truncationMode(.tail)
@@ -40,7 +49,7 @@ struct PlayerView: View {
                             .font(Font.system(size: 14, weight: .medium, design: .default))
                             .frame(height: 5)
                             .truncationMode(.tail)
-                        Text(song.artist!)
+                        Text(subtitle)
                             .font(Font.system(size: 10, weight: .medium, design: .default))
                             .frame(height: 7)
                             .truncationMode(.tail)

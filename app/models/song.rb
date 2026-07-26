@@ -7,4 +7,11 @@ class Song < ApplicationRecord
   has_many :playlist_songs, foreign_key: :song_isrc, inverse_of: :song, dependent: :destroy
   has_many :playlists, through: :playlist_songs
   has_many :plays, foreign_key: :song_isrc, inverse_of: :song, dependent: :destroy
+
+  # Songs the enrichment backfill (EnrichSongsJob) still has to visit.
+  scope :enrichment_pending, -> { where(enriched_at: nil) }
+
+  def decade
+    release_year && release_year / 10 * 10
+  end
 end
