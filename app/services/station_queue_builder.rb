@@ -5,10 +5,7 @@
 # plays through the ordinary get-mp3 path.
 class StationQueueBuilder
   RECENT_WINDOW = 6.hours     # don't repeat anything played recently
-  NEWS_COOLDOWN = 18.minutes  # at most one bulletin per ~15-20 min of listening
   NEWS_MAX_AGE = 55.minutes   # only air the current hour's bulletin
-  WEATHER_COOLDOWN = 45.minutes
-  INTRO_EVERY = 3             # a DJ link roughly every third transition
   ESTIMATED_INTRO_SECONDS = 12
   ESTIMATED_WEATHER_SECONDS = 20
   ESTIMATED_NEWS_SECONDS = 60
@@ -21,10 +18,12 @@ class StationQueueBuilder
     "weather" => { "nl" => "Het weer", "en" => "Weather check" }
   }.freeze
 
-  def initialize(station, count:, base_url:)
+  def initialize(station, count:, base_url:, starts_in: 0)
     @station = station
     @count = count
     @base_url = base_url
+    @starts_at = Time.current + starts_in.seconds
+    @radio_clock = RadioClock.new(station_id: station.id)
   end
 
   def build
@@ -85,14 +84,6 @@ class StationQueueBuilder
     items = []
     elapsed = 0
 
-    if @station.news? && (news = airable_news)
-      items << talk_item(news, ESTIMATED_NEWS_SECONDS)
-      elapsed += items.last[:duration]
-    end
-
-    weather_pending = @station.news? && !Tts::Client.down? && weather_due?
-    intro_countdown = next_intro_countdown
-
     songs.each_with_index do |song, index|
       items << song_item(song)
       elapsed += song.duration.to_i
@@ -100,62 +91,46 @@ class StationQueueBuilder
       next_song = songs[index + 1]
       next unless next_song
 
-      if weather_pending
-        segment = ensure_weather_segment(airs_at(elapsed))
-        if segment
-          items << talk_item(segment, ESTIMATED_WEATHER_SECONDS)
-          elapsed += items.last[:duration]
-          weather_pending = false
-          next # never stack weather and an intro at the same transition
-        end
-      end
+      slot = @radio_clock.due_at(@starts_at + elapsed.seconds)
+      next unless slot
 
-      next unless @station.intros? && !Tts::Client.down?
+      segment, estimated_duration = segment_for_slot(slot, song, next_song)
+      next unless segment
 
-      intro_countdown -= 1
-      next unless intro_countdown <= 0
-
-      intro_countdown = next_intro_countdown
-      segment = ensure_intro_segment(song, next_song)
-      if segment
-        items << talk_item(segment, ESTIMATED_INTRO_SECONDS)
-        elapsed += items.last[:duration]
-      end
+      items << talk_item(segment, estimated_duration)
+      elapsed += items.last[:duration]
+      @radio_clock.claim(slot)
     end
 
     items
   end
 
-  def next_intro_countdown
-    INTRO_EVERY + rand(-1..1)
+  def segment_for_slot(slot, prev_song, next_song)
+    return [ airable_news, ESTIMATED_NEWS_SECONDS ] if slot.kind == "news" && @station.news?
+    return [ nil, nil ] if Tts::Client.down?
+
+    case slot.kind
+    when "weather"
+      return [ nil, nil ] unless @station.news?
+
+      [ ensure_weather_segment(slot.scheduled_at), ESTIMATED_WEATHER_SECONDS ]
+    when "intro"
+      return [ nil, nil ] unless @station.intros?
+
+      [ ensure_intro_segment(prev_song, next_song, duo: slot.duo), ESTIMATED_INTRO_SECONDS ]
+    else
+      [ nil, nil ]
+    end
   end
 
-  # The freshest ready bulletin in the station's language, at most once per
-  # cooldown across all stations of that language.
+  # The freshest ready bulletin in the station's language.
   def airable_news
-    return nil unless Rails.cache.read(news_cooldown_key).nil?
-
-    segment = TalkSegment.ready
+    TalkSegment.ready
       .where(kind: "news", language: @station.language)
       .where(created_at: NEWS_MAX_AGE.ago..)
       .order(created_at: :desc)
-      .first
-    return nil unless segment&.ready? # double-checks the audio file exists
-
-    Rails.cache.write(news_cooldown_key, Time.current.to_i, expires_in: NEWS_COOLDOWN)
-    segment
-  end
-
-  def news_cooldown_key
-    "talk/news/#{@station.language}/queued_at"
-  end
-
-  def weather_due?
-    Rails.cache.read(weather_cooldown_key).nil?
-  end
-
-  def weather_cooldown_key
-    "talk/weather/#{@station.language}/queued_at"
+      .limit(5)
+      .detect(&:ready?)
   end
 
   def ensure_weather_segment(air_time)
@@ -169,7 +144,6 @@ class StationQueueBuilder
     return nil if segment.status == "failed"
 
     GenerateTalkSegmentJob.perform_later(id) unless segment.ready?
-    Rails.cache.write(weather_cooldown_key, Time.current.to_i, expires_in: WEATHER_COOLDOWN)
     segment
   end
 
@@ -177,11 +151,12 @@ class StationQueueBuilder
   # same chunk reuses the segment instead of generating it twice. Include the
   # presenter style version so a voice/delivery upgrade never replays an old
   # cached recording for that transition.
-  def ensure_intro_segment(prev_song, next_song)
+  def ensure_intro_segment(prev_song, next_song, duo:)
     key = [
       prev_song.isrc,
       next_song.isrc,
       @station.language,
+      duo ? "duo" : "solo",
       Tts::Client::STYLE_VERSION
     ].join("|")
     digest = Digest::SHA1.hexdigest(key)[0, 12]
@@ -190,18 +165,16 @@ class StationQueueBuilder
       new_segment.kind = "intro"
       new_segment.language = @station.language
       new_segment.expires_at = 6.hours.from_now
-      new_segment.meta = { "prev_isrc" => prev_song.isrc, "next_isrc" => next_song.isrc }
+      new_segment.meta = {
+        "prev_isrc" => prev_song.isrc,
+        "next_isrc" => next_song.isrc,
+        "duo" => duo
+      }
     end
     return nil if segment.status == "failed"
 
     GenerateTalkSegmentJob.perform_later(id) unless segment.ready?
     segment
-  end
-
-  # Estimated local wall-clock time a slot this far into the chunk will air,
-  # rounded to 5 minutes: stable ids and tolerant of refill-timing drift.
-  def airs_at(elapsed_seconds)
-    Time.at(((Time.current.to_i + elapsed_seconds) / 300.0).round * 300).in_time_zone(TIME_ZONE)
   end
 
   def song_item(song)

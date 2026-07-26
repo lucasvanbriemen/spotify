@@ -48,6 +48,9 @@ class PlayerManager {
     private var stationStalled = false
     private let stationLowWaterMark = 2
     private let stationChunkSize = 10
+    private let radioTalkUpSeconds = 3.0
+    private var radioMixTask: Task<Void, Never>? = nil
+    private var mixedPreloadedSongIsrc: String? = nil
     var hasSheetOpen: Bool = false
     var timeIntoSong: Double = 0
     var isSeeking: Bool = false
@@ -180,7 +183,9 @@ class PlayerManager {
         MPRemoteCommandCenter.shared().changeShuffleModeCommand.isEnabled = false
 
         Task {
-            let response: StationQueueResponse? = await ServerApi.get(endpoint: "station/\(station.id)/queue?count=\(stationChunkSize)")
+            let response: StationQueueResponse? = await ServerApi.get(
+                endpoint: stationQueueEndpoint(station: station, startsIn: 0)
+            )
             await MainActor.run {
                 // The user may have tapped another station while we fetched.
                 guard self.currentStation?.id == station.id else { return }
@@ -213,8 +218,11 @@ class PlayerManager {
               queue.count <= stationLowWaterMark,
               stationRefillTask == nil else { return }
 
+        let startsIn = estimatedStationQueueLeadTime()
         stationRefillTask = Task {
-            let response: StationQueueResponse? = await ServerApi.get(endpoint: "station/\(station.id)/queue?count=\(stationChunkSize)")
+            let response: StationQueueResponse? = await ServerApi.get(
+                endpoint: stationQueueEndpoint(station: station, startsIn: startsIn)
+            )
 
             guard let items = response?.items, !items.isEmpty else {
                 // Back off before retrying so a server outage isn't hammered.
@@ -262,6 +270,17 @@ class PlayerManager {
     func playSong(song: Song) {
         reportPlay()
 
+        let promotesMixedPreload =
+            preloadedSong?.isrc == song.isrc &&
+            mixedPreloadedSongIsrc == song.isrc
+        radioMixTask?.cancel()
+        radioMixTask = nil
+        if mixedPreloadedSongIsrc != nil && !promotesMixedPreload {
+            preloader?.pause()
+            preloader?.volume = 1
+        }
+        mixedPreloadedSongIsrc = nil
+
         let newPlayer: AVPlayer
         if let preloaded = preloader, preloadedSong?.isrc == song.isrc {
             newPlayer = preloaded
@@ -295,6 +314,11 @@ class PlayerManager {
 
         player = newPlayer
         currentlyPlaying = song
+        if promotesMixedPreload {
+            rampVolume(of: newPlayer, to: 1, duration: 1.2)
+        } else {
+            newPlayer.volume = 1
+        }
         togglePlayPause(forceState: true)
 
         // Clear the previous song's detail so stale data never flashes, then fetch fresh.
@@ -311,6 +335,7 @@ class PlayerManager {
             self?.timeIntoSong = CMTimeGetSeconds(time)
             self?.secondsPlayedCurrentSong += 1
             self?.updateNowPlayingProgress()
+            self?.maybeStartRadioTalkUp(at: time, player: newPlayer)
         })
         if let currentItem = newPlayer.currentItem {
             endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: currentItem, queue: .main) { [weak self] _ in
@@ -369,6 +394,7 @@ class PlayerManager {
         preloadedSong = song
         preloadedPlayerItem = item
         preloader = AVPlayer(playerItem: item)
+        preloader?.volume = 1
         preloader?.automaticallyWaitsToMinimizeStalling = false
         // Must match the main player: this AVPlayer gets promoted in playSong.
         preloader?.allowsExternalPlayback = false
@@ -398,6 +424,68 @@ class PlayerManager {
                 self.preloadedArtworkImage = image
             }
         }.resume()
+    }
+
+    private func stationQueueEndpoint(station: Station, startsIn: Int) -> String {
+        "station/\(station.id)/queue?count=\(stationChunkSize)&starts_in=\(startsIn)"
+    }
+
+    // Refill requests happen before the current chunk has finished. Tell the
+    // server when the new chunk will actually reach air so its format clock is
+    // based on playout time rather than request time.
+    private func estimatedStationQueueLeadTime() -> Int {
+        let currentRemaining = max(
+            Double(currentlyPlaying?.duration ?? 0) - timeIntoSong,
+            0
+        )
+        let queuedSeconds = queue.reduce(0) { $0 + max($1.duration, 0) }
+        return min(Int(currentRemaining) + queuedSeconds, 3_600)
+    }
+
+    // Professional music radio "talks up" a song's ramp: the next record
+    // starts quietly beneath the final words, then reaches full level after
+    // the mic closes. Keep this short because the library has no vocal-intro
+    // cue metadata yet; news always gets a clean ending.
+    private func maybeStartRadioTalkUp(at time: CMTime, player observedPlayer: AVPlayer) {
+        guard currentStation != nil,
+              player === observedPlayer,
+              let talk = currentlyPlaying,
+              talk.isTalk,
+              talk.talkKind != "news",
+              mixedPreloadedSongIsrc == nil,
+              let nextSong = queue.first,
+              !nextSong.isTalk,
+              preloadedSong?.isrc == nextSong.isrc,
+              let preloader,
+              let item = observedPlayer.currentItem else { return }
+
+        let duration = CMTimeGetSeconds(item.duration)
+        let position = CMTimeGetSeconds(time)
+        guard duration.isFinite,
+              duration > 0,
+              position.isFinite,
+              duration - position <= radioTalkUpSeconds else { return }
+
+        mixedPreloadedSongIsrc = nextSong.isrc
+        preloader.volume = 0.06
+        preloader.play()
+        rampVolume(of: preloader, to: 0.32, duration: radioTalkUpSeconds)
+    }
+
+    private func rampVolume(of target: AVPlayer, to targetVolume: Float, duration: Double) {
+        radioMixTask?.cancel()
+        let startVolume = target.volume
+        let steps = max(Int(duration / 0.1), 1)
+
+        radioMixTask = Task { @MainActor [weak target] in
+            for step in 1...steps {
+                guard !Task.isCancelled, let target else { return }
+                try? await Task.sleep(for: .milliseconds(100))
+                guard !Task.isCancelled else { return }
+                let progress = Float(step) / Float(steps)
+                target.volume = startVolume + (targetVolume - startVolume) * progress
+            }
+        }
     }
     
     func setUpBackgroundPlayback() {

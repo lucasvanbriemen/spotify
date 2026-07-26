@@ -40,43 +40,75 @@ class TalkAudio
     end
 
     def render(segment)
-      script = TalkScripts.build(segment)
-      audio = Tts::Client.synthesize(
-        text: script,
+      lines = TalkScripts.build(segment)
+      clips = Tts::Client.synthesize_lines(
+        lines: lines,
         language: segment.language,
         kind: segment.kind
       )
-      path = write_normalized(segment.id, audio)
-      segment.update!(transcript: script, duration: measure_duration(path, script), status: "ready")
+      transcript = transcript_for(lines)
+      path = write_normalized(segment.id, clips)
+      segment.update!(transcript: transcript, duration: measure_duration(path, transcript), status: "ready")
     end
 
     # TTS speech comes out quieter than mastered music; a single loudnorm pass
     # brings it to streaming loudness so segments don't whisper between songs.
-    # Without a local ffmpeg (dev machines) the raw TTS MP3 is used as-is.
-    def write_normalized(id, mp3_bytes)
+    # Multi-host clips are joined with a short studio pause before that pass.
+    # Without local ffmpeg (dev machines), concatenated MP3 frames are used.
+    def write_normalized(id, clips)
       FileUtils.mkdir_p(SongCache::AUDIO_DIR)
       out = SongCache.path(id)
       ffmpeg = Rails.root.join("bin/ffmpeg")
 
       unless ffmpeg.executable?
-        File.binwrite(out, mp3_bytes)
+        File.binwrite(out, clips.join)
         return out
       end
 
-      tmp = Rails.root.join("tmp", "talk-#{id}.mp3")
-      File.binwrite(tmp, mp3_bytes)
+      tmp_dir = Dir.mktmpdir("talk-#{id}-", Rails.root.join("tmp"))
+      inputs = clips.each_with_index.flat_map do |bytes, index|
+        path = File.join(tmp_dir, "#{index}.mp3")
+        File.binwrite(path, bytes)
+        [ "-i", path ]
+      end
+      filters = clips.each_index.map do |index|
+        "[#{index}:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo[a#{index}]"
+      end
+
+      if clips.one?
+        filters << "[a0]loudnorm=I=-14:TP=-1.5:LRA=11[out]"
+      else
+        pauses = (clips.size - 1).times.map do |index|
+          filters << "anullsrc=r=44100:cl=stereo,atrim=duration=0.22[p#{index}]"
+          "[p#{index}]"
+        end
+        sequence = clips.each_index.flat_map do |index|
+          parts = [ "[a#{index}]" ]
+          parts << pauses[index] if pauses[index]
+          parts
+        end.join
+        filters << "#{sequence}concat=n=#{clips.size * 2 - 1}:v=0:a=1," \
+          "loudnorm=I=-14:TP=-1.5:LRA=11[out]"
+      end
+
       ok = system(
-        ffmpeg.to_s, "-y", "-i", tmp.to_s,
-        "-af", "loudnorm=I=-14:TP=-1.5:LRA=11",
-        "-ar", "44100", "-b:a", "128k",
-        out.to_s,
-        out: File::NULL, err: File::NULL
+        ffmpeg.to_s, "-y", *inputs,
+        "-filter_complex", filters.join(";"),
+        "-map", "[out]", "-ar", "44100", "-b:a", "128k",
+        out.to_s, out: File::NULL, err: File::NULL
       )
       raise Tts::Error, "ffmpeg normalize failed" unless ok && out.file?
 
       out
     ensure
-      FileUtils.rm_f(tmp) if tmp
+      FileUtils.remove_entry(tmp_dir) if tmp_dir && File.directory?(tmp_dir)
+    end
+
+    def transcript_for(lines)
+      return lines.first.fetch(:text) if lines.one?
+
+      labels = { "host" => "Host", "cohost" => "Co-host" }
+      lines.map { |line| "#{labels.fetch(line.fetch(:speaker), 'Host')}: #{line.fetch(:text)}" }.join("\n\n")
     end
 
     # There is no ffprobe on the server: parse "Duration: 00:01:02.34" from

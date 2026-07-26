@@ -13,14 +13,10 @@ production:
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every hour at minute 12
-  generate_news_nl:
-    class: GenerateNewsBulletinJob
-    args: [ "nl" ]
-    schedule: every hour at minute 1
   generate_news_en:
     class: GenerateNewsBulletinJob
     args: [ "en" ]
-    schedule: every hour at minute 3
+    schedule: every hour at minute 1
   enrich_songs:
     class: EnrichSongsJob
     schedule: every 10 minutes

@@ -2,6 +2,9 @@
 # the LLM; weather/time checks are deterministic templates (free, reliable,
 # and impossible to hallucinate).
 class TalkScripts
+  HOST = "host"
+  COHOST = "cohost"
+
   NL_DAYS = %w[zondag maandag dinsdag woensdag donderdag vrijdag zaterdag].freeze
   NL_MONTHS = %w[januari februari maart april mei juni juli augustus september
                  oktober november december].freeze
@@ -19,8 +22,9 @@ class TalkScripts
     "en" => <<~PROMPT
       You write news bulletins for a small internet radio station.
       Write only the spoken text: no formatting, headings, quotation marks or URLs.
-      Tone: brisk and neutral, like a BBC radio news summary.
-      Length: 120 to 200 words (roughly 45 to 75 seconds of speech).
+      Write for the ear, not the page: short sentences, contractions where natural,
+      and varied sentence lengths. Tone: calm, direct, and neutral.
+      Length: 100 to 160 words (roughly 40 to 60 seconds of speech).
       Open with "The news at <time>" and close with a short sign-off.
       Write out numbers and abbreviations so they read aloud naturally.
     PROMPT
@@ -41,19 +45,40 @@ class TalkScripts
       station. Output only what the DJ says, with no formatting or quotation marks.
       Write one flowing link of roughly 15 to 30 words. Mention the previous and
       next artist and title accurately, but do not always use the formula "that was,
-      up next". Use conversational rhythm as if the DJ is speaking live out of the
-      previous record. No clichés, sales language, exclamation marks, forced hype,
-      or invented facts.
+      up next". Prefer short spoken sentences, contractions, and an occasional
+      fragment. It should feel improvised, not written. No clichés, sales language,
+      exclamation marks, forced hype, generic praise, or invented facts.
     PROMPT
   }.freeze
 
+  DUO_INTRO_SYSTEM = <<~PROMPT
+    You write a brief exchange between two experienced hosts on a contemporary
+    English-language music station. Return exactly three lines in this order,
+    using these literal labels:
+    HOST:
+    COHOST:
+    HOST:
+
+    The first host casually comes out of the previous record. The co-host responds
+    naturally and helps turn toward the next record. The first host gives the final
+    clean handoff. Keep the entire exchange between 38 and 60 words. Use short
+    speech-first sentences, contractions, subtle personality, and an occasional
+    fragment. The hosts may react to each other, but must not invent facts about
+    the music or artists. No greetings, names, jokes requiring setup, clichés,
+    sales language, exclamation marks, or forced enthusiasm. The first HOST line
+    must say the exact previous title and artist. The final HOST line must say the
+    exact next title and artist. Output only the three labelled lines.
+  PROMPT
+
   class << self
     def build(segment)
-      case segment.kind
+      text_or_lines = case segment.kind
       when "news" then news(segment)
       when "intro" then intro(segment)
       when "weather" then weather(segment)
       end
+
+      normalize_lines(text_or_lines)
     end
 
     private
@@ -84,6 +109,8 @@ class TalkScripts
       next_song = Song.find_by(isrc: segment.meta&.dig("next_isrc"))
       return station_id_line(segment.language) unless prev_song && next_song
 
+      return duo_intro(prev_song, next_song) if segment.language == "en" && segment.meta&.dig("duo")
+
       user = if segment.language == "nl"
         "Zojuist gedraaid: #{prev_song.title} van #{prev_song.artist}. " \
         "Hierna: #{next_song.title} van #{next_song.artist}. Schrijf het praatje."
@@ -98,6 +125,48 @@ class TalkScripts
         # Intros survive LLM outages on a static template.
         intro_template(segment.language, prev_song, next_song)
       end
+    end
+
+    def duo_intro(prev_song, next_song)
+      user = "Just played: #{prev_song.title} by #{prev_song.artist}. " \
+        "Up next: #{next_song.title} by #{next_song.artist}. Write the exchange."
+      response = Openai::Client.complete(system: DUO_INTRO_SYSTEM, user: user, max_tokens: 400)
+      lines = parse_dialogue(response)
+      unless song_named?(lines.first.fetch(:text), prev_song) &&
+          song_named?(lines.last.fetch(:text), next_song)
+        raise Openai::Client::Error, "two-host script omitted a supplied song"
+      end
+      lines
+    rescue Openai::Client::Error
+      [
+        { speaker: HOST, text: "That was #{prev_song.title} by #{prev_song.artist}." },
+        { speaker: COHOST, text: "A good one to leave hanging for a second." },
+        { speaker: HOST, text: "Now, #{next_song.title} by #{next_song.artist}." }
+      ]
+    end
+
+    def parse_dialogue(text)
+      lines = text.to_s.lines.filter_map do |line|
+        match = line.strip.match(/\A(HOST|COHOST):\s*(.+)\z/i)
+        next unless match
+
+        { speaker: match[1].downcase, text: match[2].strip }
+      end
+      expected_speakers = [ HOST, COHOST, HOST ]
+      return lines if lines.map { |line| line[:speaker] } == expected_speakers
+
+      raise Openai::Client::Error, "invalid two-host script"
+    end
+
+    def song_named?(text, song)
+      spoken = text.downcase
+      spoken.include?(song.title.downcase) && spoken.include?(song.artist.downcase)
+    end
+
+    def normalize_lines(text_or_lines)
+      return text_or_lines if text_or_lines.is_a?(Array)
+
+      [ { speaker: HOST, text: text_or_lines.to_s.strip } ]
     end
 
     def intro_template(language, prev_song, next_song)

@@ -3,38 +3,39 @@
 Radio-style listening for the music app: tap a station in the new **Radio**
 tab and music plays continuously, interrupted now and then by a spoken news
 bulletin, a DJ intro or a weather/time check — generated on the server from
-real headlines (NOS/BBC) with OpenAI (scripts + text-to-speech).
+BBC headlines with OpenAI (scripts) and self-hosted Kokoro (speech).
 
 ## To do before it works
 
-1. **Server `.env`** (`/var/www/vhosts/ltvb.nl/music.ltvb.nl/.env`) — add the
-   new keys from `.env.example`. Only one is required:
-   * `OPENAI_API_KEY` — **required**; without it, stations still play music
-     but no news/intros/weather are generated.
-   * `OPENAI_TEXT_MODEL` (default `gpt-4o-mini`), `TTS_VOICE_NL` /
-     `TTS_VOICE_EN` (default `cedar`; `marin` is a brighter alternative),
-     `STATION_LAT`/`STATION_LON` (default Amsterdam), `RADIO_LOCALE` (default
-     `nl`) — all optional. The OpenAI speech request also receives
-     language- and segment-specific performance direction for DJ links,
-     bulletins, and weather checks.
-2. **Plesk Scheduled Task** (one-time, manual — this is the big one). Nothing
-   starts the Solid Queue worker under Passenger, so recurring jobs (news
-   bulletins, enrichment, cleanup) and async cache warmups never run without
-   it. In Plesk, add a task for the subscription user, **every minute**:
+1. **Server `.env`** (`/var/www/vhosts/ltvb.nl/music.ltvb.nl/.env`):
+   * `OPENAI_API_KEY` writes the English scripts.
+   * `TTS_PROVIDER=kokoro` renders speech locally without an API subscription.
+     `KOKORO_VOICE_HOST` and `KOKORO_VOICE_COHOST` select two English voices.
+   * `STATION_LAT`/`STATION_LON` optionally move the weather away from the
+     Amsterdam default.
+2. **Supervisor** (one-time server setup). Passenger only manages web
+   processes, so Solid Queue and the persistent Kokoro model run as dedicated
+   Supervisor programs. Install the checked-in programs and narrowly scoped
+   deployment sudo rule:
    ```
-   /var/www/vhosts/ltvb.nl/music.ltvb.nl/script/solid_queue_runner.sh >> /var/www/vhosts/ltvb.nl/music.ltvb.nl/log/solid_queue.log 2>&1
+   install -o root -g root -m 0644 config/supervisor/music-solid-queue.conf /etc/supervisor/conf.d/music-solid-queue.conf
+   install -o root -g root -m 0644 config/supervisor/music-kokoro.conf /etc/supervisor/conf.d/music-kokoro.conf
+   install -o root -g root -m 0440 config/supervisor/ltvb-music-solid-queue.sudoers /etc/sudoers.d/ltvb-music-solid-queue
+   visudo -cf /etc/sudoers.d/ltvb-music-solid-queue
+   supervisorctl reread
+   supervisorctl update
    ```
-   (`flock` inside the script makes it a no-op while a worker is already
-   running, and an auto-restart after crashes/deploys.) This also fixes the
-   pre-existing bug that `prepare` warmups silently never ran in production.
+   Supervisor starts the worker at boot, restarts it after crashes, and writes
+   output to `log/solid_queue.log`. This also fixes the pre-existing bug that
+   `prepare` warmups silently never ran in production.
 3. **Deploy** — push as usual; `plesk_deploy.sh` runs `bundle install` (new
-   gems: `rss`, a `minitest` pin), `db:prepare` (3 new migrations) and now
-   kills the old worker so cron relaunches it on the new code.
+   gems: `rss`, a `minitest` pin), `db:prepare` (3 new migrations), asset
+   compilation, and then restarts `music-solid-queue`.
 4. **Verify, in order:**
    * `GET /api/stats` → `"queue_healthy": true` (within a minute of the task
      existing).
-   * After the next top of the hour: `storage/audio/talk-news-nl-*.mp3`
-     appears (news job runs at :01 NL, :03 EN).
+   * After the next top of the hour: `storage/audio/talk-news-en-*.mp3`
+     appears (the English news job runs at :01).
    * `GET /api/stations` → smart stations (Morning/Discovery) immediately;
      genre/decade stations appear as enrichment fills in metadata — the
      backfill does ~240 songs/hour, so the full library takes a few hours.
@@ -45,9 +46,9 @@ real headlines (NOS/BBC) with OpenAI (scripts + text-to-speech).
    devtunnels URL + a `print`) and `config/environments/development.rb`
    (devtunnels host entry).
 
-Later / optional: if OpenAI's Dutch accent annoys you, the TTS call sits
-behind `TTS_PROVIDER` (`app/services/tts/client.rb`) — an ElevenLabs or
-Google provider is a ~30-line class, no pipeline changes.
+OpenAI speech remains available as a fallback by setting
+`TTS_PROVIDER=openai`; ElevenLabs support also remains available but is not
+required.
 
 ## How it works
 
@@ -66,35 +67,54 @@ no stations table:
 | `smart-discovery` | songs you've played at most once; intros announce the tracks |
 
 Genre/decade metadata comes from Deezer: new songs get it on creation, the
-existing library is backfilled by `EnrichSongsJob` (every 10 min, rate-limit
-friendly). Spoken language is `RADIO_LOCALE` with per-station overrides in
-`Station::LANGUAGE_OVERRIDES` (e.g. `"genre-rock" => "en"`).
+existing library is backfilled by `EnrichSongsJob` (every 10 min,
+rate-limit-friendly). The station output is English-only.
 
 ### The queue loop
 
-The app fetches `GET /api/station/{id}/queue?count=10`;
+The app fetches
+`GET /api/station/{id}/queue?count=10&starts_in={estimated-seconds}`;
 `StationQueueBuilder` samples songs (never twice in a chunk, nothing you
 played in the last 6 hours, weighted for smart stations), interleaves talk
 items, and returns everything in the same JSON shape as songs plus
 `kind: "song" | "talk"`. The app plays items through the normal
 `get-mp3/{id}` path (talk files live in `storage/audio/` too, so Apache
 X-Sendfile serving is unchanged) and silently refills when ≤ 2 items remain —
-the radio never ends. Play reporting now carries `station_id`; talk items are
-never counted in stats.
+the radio never ends. `starts_in` lets the server schedule by the time a queued
+chunk will actually air rather than the time it was requested. Play reporting
+now carries `station_id`; talk items are never counted in stats.
 
-### Talk segments
+### Format clock and talk segments
+
+Talk is scheduled by a fixed hourly format clock rather than random
+interruptions:
+
+| Clock time | Element |
+|---|---|
+| `:02` | current English news bulletin |
+| `:17` | solo presenter link |
+| `:32` | time and weather |
+| `:47` | two-host link |
+
+Each element has a ten-minute grace window and airs at the first suitable song
+transition. A per-station clock claim prevents refilled queue chunks from
+scheduling the same element twice. Focus stations retain their no-talk policy.
 
 `TalkSegment` rows + MP3s under `storage/audio/talk-*.mp3`:
 
-* **News** — hourly per language: RSS headlines → OpenAI writes a 120–200
-  word bulletin (NOS-journaal style) → OpenAI TTS → `bin/ffmpeg` loudness
-  normalization (TTS is quieter than mastered music). A station airs the
-  current hour's bulletin at most once per ~18 minutes of listening.
-* **DJ intros** — "Dat was X… hierna Y" every ~3rd transition, generated in
-  the background per transition (deterministic id, so chunks reuse them). If
-  the LLM is down, a static template fills in.
-* **Weather/time** — every ~45 min, pure template (no LLM): open-meteo
-  conditions + colloquial Dutch clock ("Het is ongeveer kwart over negen").
+* **News** — hourly: BBC RSS headlines → OpenAI writes a concise,
+  speech-first English bulletin → Kokoro → `bin/ffmpeg` loudness
+  normalization. News gets a clean ending rather than music underneath it.
+* **DJ links** — short, speech-first scripts tied to the outgoing and incoming
+  songs. The `:47` link is a three-turn exchange rendered with two distinct
+  local voices. If the LLM is down, a static handoff fills in.
+* **Weather/time** — a deterministic open-meteo template, delivered at `:32`.
+* **Talk-up transition** — for presenter and weather links, the app starts the
+  next song quietly beneath the final three seconds of speech, then raises it
+  smoothly to full volume. The same preloaded player continues, so the record
+  never restarts. News remains dry. This is deliberately conservative until
+  the music library has cue metadata marking the end of each instrumental
+  intro and the start of vocals.
 * **Transcripts as lyrics** — `song/{talk-id}/lyrics` returns the transcript
   (with coarse timestamps), so the news text scrolls in the player and on the
   ambient/TV view.
@@ -117,5 +137,20 @@ The lock screen shows "LTVB Radio — {station}".
 
 ### Costs
 
-Hourly bulletins in two languages plus intros ≈ **€1–2/month** on OpenAI
-(the TTS is the main cost; scripts are pennies).
+There are four spoken elements per talk-enabled station hour, but transition
+scripts are cached by song pair and clock claims avoid duplicates. Kokoro runs
+locally, so there is no per-character speech cost.
+
+### Programming references
+
+The clock and transition design follows broadcast practice:
+
+* DINFOS/AFN: ride instrumental song ramps and fades, using intro/outro cue
+  metadata to keep speech off vocals.
+* PRX: use a repeatable hourly broadcast clock, with limited floating breaks
+  when exact placement must follow the program flow.
+* MusicMaster: schedule voice tracks, liners and jingles as clock elements,
+  with rotation and separation rules.
+
+Kokoro is an Apache-2.0 licensed, 82-million-parameter open-weight model with
+American and British English voices.

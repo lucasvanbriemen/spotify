@@ -15,7 +15,8 @@ export SECRET_KEY_BASE_DUMMY=1
 "$BIN/bundle" install
 "$BIN/bundle" exec rails db:prepare
 "$BIN/bundle" exec rails assets:precompile
-# Stop the Solid Queue worker so the cron watchdog (script/solid_queue_runner.sh)
-# relaunches it on the new code within a minute.
-pkill -f solid-queue || true
+# Load newly deployed job code. The narrowly scoped sudo rule lives at
+# config/supervisor/ltvb-music-solid-queue.sudoers.
+sudo /usr/bin/supervisorctl restart music-solid-queue
+sudo /usr/bin/supervisorctl restart music-kokoro
 echo "DEPLOY_OK ($("$BIN/ruby" -v))"
