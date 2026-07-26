@@ -12,10 +12,6 @@ class Station
   MIN_SMART_SONGS = 5
   LIST_CACHE_TTL = 5.minutes
 
-  # Per-station language overrides for the spoken segments, e.g.
-  # "genre-rock" => "en". Everything else speaks RADIO_LOCALE (default "nl").
-  LANGUAGE_OVERRIDES = {}.freeze
-
   class << self
     def all
       Rails.cache.fetch("stations/all", expires_in: LIST_CACHE_TTL) do
@@ -83,8 +79,7 @@ class Station
   end
 
   def language
-    return "en"
-    LANGUAGE_OVERRIDES.fetch(id) { ENV.fetch("RADIO_LOCALE", "nl") }
+    "en"
   end
 
   # Talk policy: Focus stays quiet, Discovery only gets track intros.
