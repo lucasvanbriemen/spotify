@@ -4,6 +4,9 @@ Rails 8 backend for the music app (Deezer-powered search, playlists, MP3
 fetching via yt-dlp, play tracking). Serves the JSON API used by the iOS app
 in `ios/`.
 
+Radio stations with an AI newsreader are documented in [RADIO.md](RADIO.md)
+(including the one-time server setup they need).
+
 ## Setup
 
 * Ruby 3.3.8 (see `.ruby-version`)

@@ -38,6 +38,16 @@ class PlayerManager {
     }
     var isPlaying: Bool = false
     var playingPlaylistId: String? = nil
+    // Station ("radio") mode: the server curates an endless queue that we top
+    // up in chunks whenever it runs low. nil means normal playlist mode.
+    var currentStation: Station? = nil
+    private var stationRefillTask: Task<Void, Never>? = nil
+    private var stationRefillFailures = 0
+    // Set when the queue ran dry before a refill landed; the next successful
+    // refill auto-resumes playback.
+    private var stationStalled = false
+    private let stationLowWaterMark = 2
+    private let stationChunkSize = 10
     var hasSheetOpen: Bool = false
     var timeIntoSong: Double = 0
     var isSeeking: Bool = false
@@ -63,6 +73,8 @@ class PlayerManager {
 
     private var timeObserverToken: Any? = nil
     private var endObserver: NSObjectProtocol?
+    private var failObserver: NSObjectProtocol?
+    private var itemStatusObservation: NSKeyValueObservation?
     private var secondsPlayedCurrentSong: Int = 0
     var queue: [Song] = []
     var pastQueue: [Song] = []
@@ -86,7 +98,11 @@ class PlayerManager {
 
         return self.isPlaying && self.playingPlaylistId == playlistIDNoPrefix
     }
-    
+
+    func isCurrentlyPlayingStation(_ id: String) -> Bool {
+        isPlaying && currentStation?.id == id
+    }
+
     func togglePlayPause(forceState: Bool? = nil) {        
         if forceState == nil {
             isPlaying.toggle()
@@ -109,7 +125,7 @@ class PlayerManager {
     func syncWidgetSnapshot() {
         #if os(iOS)
         if let song = currentlyPlaying {
-            NowPlayingSnapshot(title: song.title, artist: song.artist, isPlaying: isPlaying).save()
+            NowPlayingSnapshot(title: song.title, artist: song.artist, isPlaying: isPlaying, stationName: currentStation?.name).save()
         } else {
             NowPlayingSnapshot.clear()
         }
@@ -118,6 +134,7 @@ class PlayerManager {
     }
 
     func playPlaylist(playlist: Playlist, atIndex: Int? = nil) {
+        exitStationMode()
         playingPlaylistId = playlist.id
 
         queue = []
@@ -148,7 +165,100 @@ class PlayerManager {
             playSong(song: queue.removeFirst())
         }
     }
-    
+
+    func playStation(station: Station) {
+        exitStationMode()
+
+        currentStation = station
+        playingPlaylistId = nil
+        // Also empty nonShuffledQueue so applySuffle can never resurrect an
+        // old playlist into the station queue.
+        queue = []
+        pastQueue = []
+        nonShuffledQueue = []
+        // The station curates its own order — shuffling it makes no sense.
+        MPRemoteCommandCenter.shared().changeShuffleModeCommand.isEnabled = false
+
+        Task {
+            let response: StationQueueResponse? = await ServerApi.get(endpoint: "station/\(station.id)/queue?count=\(stationChunkSize)")
+            await MainActor.run {
+                // The user may have tapped another station while we fetched.
+                guard self.currentStation?.id == station.id else { return }
+                guard let items = response?.items, !items.isEmpty else {
+                    // The station couldn't start — revert cleanly to normal mode.
+                    self.exitStationMode()
+                    return
+                }
+                self.queue = items
+                self.playSong(song: self.queue.removeFirst())
+            }
+        }
+    }
+
+    private func exitStationMode() {
+        stationRefillTask?.cancel()
+        stationRefillTask = nil
+        stationRefillFailures = 0
+        stationStalled = false
+        if currentStation != nil {
+            currentStation = nil
+            MPRemoteCommandCenter.shared().changeShuffleModeCommand.isEnabled = true
+        }
+    }
+
+    // Tops the station queue up with the next server-curated chunk once it
+    // runs low. Called from playSong, so every queue advance funnels through.
+    private func maybeRefillStationQueue() {
+        guard let station = currentStation,
+              queue.count <= stationLowWaterMark,
+              stationRefillTask == nil else { return }
+
+        stationRefillTask = Task {
+            let response: StationQueueResponse? = await ServerApi.get(endpoint: "station/\(station.id)/queue?count=\(stationChunkSize)")
+
+            guard let items = response?.items, !items.isEmpty else {
+                // Back off before retrying so a server outage isn't hammered.
+                // The in-flight flag stays held for the whole wait so playSong
+                // can't spawn a parallel refill.
+                let delay: Double = await MainActor.run {
+                    self.stationRefillFailures += 1
+                    return min(pow(2, Double(self.stationRefillFailures)), 30)
+                }
+                try? await Task.sleep(for: .seconds(delay))
+                await MainActor.run {
+                    // A cancelled task may have been superseded by a newer one
+                    // whose flag we must not clobber.
+                    guard !Task.isCancelled else { return }
+                    self.stationRefillTask = nil
+                    guard self.currentStation?.id == station.id else { return }
+                    self.maybeRefillStationQueue()
+                }
+                return
+            }
+
+            await MainActor.run {
+                guard !Task.isCancelled else { return }
+                self.stationRefillTask = nil
+                guard self.currentStation?.id == station.id else { return }
+
+                self.stationRefillFailures = 0
+                var newItems = items
+                // The server bases the chunk on what it thinks is playing; drop
+                // a leading repeat of the current song.
+                if newItems.first?.isrc == self.currentlyPlaying?.isrc {
+                    newItems.removeFirst()
+                }
+                self.queue.append(contentsOf: newItems)
+                self.prefetchNextSong()
+
+                if self.stationStalled {
+                    self.stationStalled = false
+                    self.playNextSong()
+                }
+            }
+        }
+    }
+
     func playSong(song: Song) {
         reportPlay()
 
@@ -175,6 +285,11 @@ class PlayerManager {
         if let observer = endObserver {
             NotificationCenter.default.removeObserver(observer)
         }
+        if let observer = failObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        itemStatusObservation?.invalidate()
+        itemStatusObservation = nil
         player?.pause()
         player?.replaceCurrentItem(with: nil)
 
@@ -201,9 +316,27 @@ class PlayerManager {
             endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: currentItem, queue: .main) { [weak self] _ in
                 self?.playNextSong()
             }
+            // Radio must never stall on a broken item (e.g. a talk segment
+            // whose render 404s) — skip ahead instead. Playlists keep the old
+            // behavior of just stopping.
+            failObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemFailedToPlayToEndTime, object: currentItem, queue: .main) { [weak self] _ in
+                guard let self, self.currentStation != nil else { return }
+                self.playNextSong()
+            }
+            // Items that 404 fail before playback ever starts, which never
+            // posts FailedToPlayToEndTime — catch those through the status.
+            itemStatusObservation = currentItem.observe(\.status) { [weak self] item, _ in
+                guard item.status == .failed else { return }
+                DispatchQueue.main.async {
+                    guard let self, self.currentStation != nil,
+                          self.player?.currentItem === item else { return }
+                    self.playNextSong()
+                }
+            }
         }
 
         prefetchNextSong()
+        maybeRefillStationQueue()
     }
 
     private func prefetchNextSong() {
@@ -353,6 +486,10 @@ class PlayerManager {
         commandCenter.changeShuffleModeCommand.isEnabled = true
         commandCenter.changeShuffleModeCommand.currentShuffleType = shouldShuffle ? .items : .off
         commandCenter.changeShuffleModeCommand.addTarget { event in
+            // Stations play in server order; shuffling would be meaningless.
+            guard self.currentStation == nil else {
+                return .commandFailed
+            }
             guard let event = event as? MPChangeShuffleModeCommandEvent else {
                 return .commandFailed
             }
@@ -370,13 +507,18 @@ class PlayerManager {
             return
         }
 
-        let info: [String: Any] = [
+        var info: [String: Any] = [
             MPMediaItemPropertyTitle: song.title,
             MPMediaItemPropertyArtist: song.artist ?? "Unknown Artist",
             MPNowPlayingInfoPropertyPlaybackRate: self.isPlaying ? 1.0 : 0.0,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: self.timeIntoSong,
             MPMediaItemPropertyPlaybackDuration: CMTimeGetSeconds(player?.currentItem?.duration ?? .indefinite)
         ]
+        if let station = currentStation {
+            info[MPMediaItemPropertyAlbumTitle] = "LTVB Radio — \(station.name)"
+        } else if let album = song.album {
+            info[MPMediaItemPropertyAlbumTitle] = album
+        }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
 
         if preloadedArtworkSongIsrc == song.isrc, let image = preloadedArtworkImage {
@@ -439,11 +581,15 @@ class PlayerManager {
             }
         }
 
-        Task {
-            let stats: SongStats? = await ServerApi.get(endpoint: "song/\(song.isrc)/stats")
-            await MainActor.run {
-                guard self.currentlyPlaying?.isrc == song.isrc else { return }
-                self.currentSongStats = stats
+        // Talk segments have no play stats (the lyrics fetch stays — the
+        // server returns the transcript for talk IDs).
+        if !song.isTalk {
+            Task {
+                let stats: SongStats? = await ServerApi.get(endpoint: "song/\(song.isrc)/stats")
+                await MainActor.run {
+                    guard self.currentlyPlaying?.isrc == song.isrc else { return }
+                    self.currentSongStats = stats
+                }
             }
         }
 
@@ -487,8 +633,9 @@ class PlayerManager {
         let seconds = secondsPlayedCurrentSong
         secondsPlayedCurrentSong = 0
 
-        // Skipping a song right after it started shouldn't count as a play
-        guard seconds >= 5, let song = currentlyPlaying else { return }
+        // Skipping a song right after it started shouldn't count as a play.
+        // Talk segments (news etc.) are radio filler, not listening habits.
+        guard seconds >= 5, let song = currentlyPlaying, !song.isTalk else { return }
 
         Task {
             let _: RecordedPlay? = await ServerApi.post(endpoint: "plays", body: [
@@ -518,6 +665,12 @@ class PlayerManager {
             // We are just playing a single song, so just restart it when it ends
             player?.seek(to: .zero)
         } else {
+            if currentStation != nil {
+                // The refill couldn't keep up (server outage / slow network).
+                // Pause for now; a successful refill auto-resumes playback.
+                stationStalled = true
+                maybeRefillStationQueue()
+            }
             togglePlayPause(forceState: false)
         }
     }
@@ -546,6 +699,9 @@ class PlayerManager {
     }
     
     func applySuffle() {
+        // Never reorder (or resurrect a playlist into) a station queue.
+        if currentStation != nil { return }
+
         if shouldShuffle {
             queue.shuffle()
         } else if let current = currentlyPlaying {

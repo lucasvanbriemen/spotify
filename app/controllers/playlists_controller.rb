@@ -42,7 +42,10 @@ class PlaylistsController < ApiController
       artist: details.dig("artist", "name") || "",
       album: details.dig("album", "title") || "",
       image_url: details.dig("album", "cover_medium") || "",
-      duration: details["duration"] || 0
+      duration: details["duration"] || 0,
+      genre: SongEnrichment.genre_for(details.dig("album", "id")),
+      enriched_at: Time.current,
+      **SongEnrichment.attributes_from_track(details)
     )
 
     playlist = Playlist.find(params[:id])

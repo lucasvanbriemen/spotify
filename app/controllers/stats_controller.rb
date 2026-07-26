@@ -1,7 +1,16 @@
 # Play tracking and listening stats (port of the Laravel StatsController).
 class StatsController < ApiController
   def store_play
-    play = Play.new(song_isrc: params[:isrc], seconds_played: params[:seconds_played])
+    # Talk segments are not songs: recording them would pollute the stats (and
+    # fail the songs FK anyway). Ack without persisting so the client path
+    # stays uniform.
+    return head :no_content if TalkSegment.talk_id?(params[:isrc])
+
+    play = Play.new(
+      song_isrc: params[:isrc],
+      seconds_played: params[:seconds_played],
+      station_id: params[:station_id].presence
+    )
 
     if play.save
       render json: play, status: :created
@@ -35,7 +44,19 @@ class StatsController < ApiController
       total_plays: Play.count,
       unique_songs: Play.distinct.count(:song_isrc),
       total_seconds_played: Play.sum(:seconds_played).to_i,
-      top_songs: top_songs
+      top_songs: top_songs,
+      # Everything radio (news bulletins, warmups, enrichment) depends on the
+      # Solid Queue worker, which Passenger doesn't supervise — surface its
+      # health where it's easy to spot from the app.
+      queue_healthy: queue_healthy?
     }
+  end
+
+  private
+
+  def queue_healthy?
+    SolidQueue::Process.where(last_heartbeat_at: 5.minutes.ago..).exists?
+  rescue StandardError
+    false
   end
 end

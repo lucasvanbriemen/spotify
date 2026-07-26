@@ -18,6 +18,9 @@ Rails.application.routes.draw do
     post "playlist/:id/prepare", to: "playlists#prepare", as: :playlist_prepare
     post "playlist/:id/songs", to: "playlists#add_song", as: :playlist_songs
 
+    get "stations", to: "stations#index", as: :stations
+    get "station/:id/queue", to: "stations#queue", as: :station_queue, constraints: { id: /[a-z0-9-]+/ }
+
     post "plays", to: "stats#store_play", as: :plays
     get "stats", to: "stats#index", as: :stats
   end

@@ -18,10 +18,15 @@ class Song: Codable, Identifiable {
     var imageUrl: String?
     var artist: String?
     var album: String?
+    // "song" (or nil, for older payloads/caches) for music, "talk" for radio
+    // talk segments (news bulletins etc.) served by the stations feature.
+    var kind: String?
     var isInPlaylistMap: [String: PlaylistEntry]?
 
+    var isTalk: Bool { kind == "talk" }
+
     enum CodingKeys: String, CodingKey {
-        case isrc, title, artist, album, duration
+        case isrc, title, artist, album, duration, kind
         case imageUrl = "image_url"
         case isInPlaylistMap = "is_in_playlist_map"
     }
