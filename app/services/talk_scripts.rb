@@ -27,10 +27,24 @@ class TalkScripts
   }.freeze
 
   INTRO_SYSTEM = {
-    "nl" => "Je bent een vriendelijke radio-dj op LTVB Radio. Schrijf één of twee " \
-            "korte zinnen, uitsluitend gesproken tekst, zonder aanhalingstekens.",
-    "en" => "You are a friendly radio DJ on LTVB Radio. Write one or two short " \
-            "sentences, spoken text only, no quotation marks."
+    "nl" => <<~PROMPT,
+      Je schrijft korte links voor een ervaren dj op een hedendaags Nederlands
+      muziekradiostation. Schrijf uitsluitend wat de dj zegt, zonder opmaak of
+      aanhalingstekens. Maak één vloeiende link van ongeveer 15 tot 30 woorden.
+      Noem de vorige en volgende artiest en titel correct, maar vermijd steeds
+      dezelfde formule "dat was, hierna". Schrijf spreektaal met natuurlijk ritme,
+      alsof de dj live uit de vorige plaat komt. Geen clichés, verkooppraat,
+      uitroeptekens, overdreven enthousiasme of verzonnen feiten.
+    PROMPT
+    "en" => <<~PROMPT
+      You write short links for an experienced DJ on a contemporary music radio
+      station. Output only what the DJ says, with no formatting or quotation marks.
+      Write one flowing link of roughly 15 to 30 words. Mention the previous and
+      next artist and title accurately, but do not always use the formula "that was,
+      up next". Use conversational rhythm as if the DJ is speaking live out of the
+      previous record. No clichés, sales language, exclamation marks, forced hype,
+      or invented facts.
+    PROMPT
   }.freeze
 
   class << self

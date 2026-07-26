@@ -41,7 +41,11 @@ class TalkAudio
 
     def render(segment)
       script = TalkScripts.build(segment)
-      audio = Tts::Client.synthesize(text: script, language: segment.language)
+      audio = Tts::Client.synthesize(
+        text: script,
+        language: segment.language,
+        kind: segment.kind
+      )
       path = write_normalized(segment.id, audio)
       segment.update!(transcript: script, duration: measure_duration(path, script), status: "ready")
     end

@@ -12,9 +12,11 @@ real headlines (NOS/BBC) with OpenAI (scripts + text-to-speech).
    * `OPENAI_API_KEY` — **required**; without it, stations still play music
      but no news/intros/weather are generated.
    * `OPENAI_TEXT_MODEL` (default `gpt-4o-mini`), `TTS_VOICE_NL` /
-     `TTS_VOICE_EN` (default `alloy` — pick by listening; other OpenAI voices:
-     nova, onyx, shimmer, echo, …), `STATION_LAT`/`STATION_LON` (default
-     Amsterdam), `RADIO_LOCALE` (default `nl`) — all optional.
+     `TTS_VOICE_EN` (default `cedar`; `marin` is a brighter alternative),
+     `STATION_LAT`/`STATION_LON` (default Amsterdam), `RADIO_LOCALE` (default
+     `nl`) — all optional. The OpenAI speech request also receives
+     language- and segment-specific performance direction for DJ links,
+     bulletins, and weather checks.
 2. **Plesk Scheduled Task** (one-time, manual — this is the big one). Nothing
    starts the Solid Queue worker under Passenger, so recurring jobs (news
    bulletins, enrichment, cleanup) and async cache warmups never run without

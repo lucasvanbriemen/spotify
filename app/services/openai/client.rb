@@ -32,11 +32,12 @@ module Openai
       end
 
       # -> String (raw MP3 bytes)
-      def speech(text:, voice:)
+      def speech(text:, voice:, instructions:)
         response = post("/audio/speech", {
           model: TTS_MODEL,
           voice: voice,
           input: text,
+          instructions: instructions,
           response_format: "mp3"
         }, timeout: SPEECH_TIMEOUT_SECONDS)
         raise Error, "speech request failed (#{response.code})" unless response.is_a?(Net::HTTPOK)

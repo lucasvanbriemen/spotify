@@ -83,6 +83,7 @@ class Station
   end
 
   def language
+    return "en"
     LANGUAGE_OVERRIDES.fetch(id) { ENV.fetch("RADIO_LOCALE", "nl") }
   end
 

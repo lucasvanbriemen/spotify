@@ -174,9 +174,17 @@ class StationQueueBuilder
   end
 
   # Intros are keyed by the transition they announce, so re-requesting the
-  # same chunk reuses the segment instead of generating it twice.
+  # same chunk reuses the segment instead of generating it twice. Include the
+  # presenter style version so a voice/delivery upgrade never replays an old
+  # cached recording for that transition.
   def ensure_intro_segment(prev_song, next_song)
-    digest = Digest::SHA1.hexdigest("#{prev_song.isrc}|#{next_song.isrc}|#{@station.language}")[0, 12]
+    key = [
+      prev_song.isrc,
+      next_song.isrc,
+      @station.language,
+      Tts::Client::STYLE_VERSION
+    ].join("|")
+    digest = Digest::SHA1.hexdigest(key)[0, 12]
     id = "talk-intro-#{digest}"
     segment = TalkSegment.find_or_create_by!(id: id) do |new_segment|
       new_segment.kind = "intro"
