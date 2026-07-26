@@ -4,7 +4,6 @@ class CreateTalkSegments < ActiveRecord::Migration[8.0]
     # songs.isrc: the id doubles as the audio filename in storage/audio.
     create_table :talk_segments, id: { type: :string, limit: 64 } do |t|
       t.string :kind, null: false                # news | intro | weather
-      t.string :language, null: false, limit: 5  # nl | en
       t.text :transcript                         # served by the lyrics endpoint
       t.integer :duration                        # seconds, measured after render
       t.string :status, null: false, default: "pending" # pending | ready | failed

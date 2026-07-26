@@ -135,7 +135,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_26_000003) do
 
   create_table "talk_segments", id: { type: :string, limit: 64 }, charset: "utf8mb4", collation: "utf8mb4_general_ci", force: :cascade do |t|
     t.string "kind", null: false
-    t.string "language", limit: 5, null: false
     t.text "transcript"
     t.integer "duration"
     t.string "status", default: "pending", null: false
@@ -144,7 +143,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_26_000003) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["expires_at"], name: "index_talk_segments_on_expires_at"
-    t.index ["kind", "language", "status", "created_at"], name: "idx_on_kind_language_status_created_at_4f4243b56e"
+    t.index ["kind", "status", "created_at"], name: "idx_on_kind_language_status_created_at_4f4243b56e"
     t.check_constraint "json_valid(`meta`)", name: "meta"
   end
 
