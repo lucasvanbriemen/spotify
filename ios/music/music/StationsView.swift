@@ -46,9 +46,7 @@ struct StationCardView: View {
 
     var body: some View {
         Button {
-            if manager.currentStation?.id == station.id {
-                manager.togglePlayPause()
-            } else {
+            if manager.currentStation?.id != station.id {
                 manager.playStation(station: station)
             }
         } label: {

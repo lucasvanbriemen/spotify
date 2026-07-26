@@ -29,20 +29,19 @@ struct StationDetailView: View {
                             .foregroundStyle(.secondary)
 
                         Button(action: {
-                            if isCurrent {
-                                manager.togglePlayPause()
-                            } else {
+                            if !isCurrent {
                                 manager.playStation(station: station)
                             }
                         }) {
                             Label(
-                                manager.isCurrentlyPlayingStation(station.id) ? "Pause" : "Play",
-                                systemImage: manager.isCurrentlyPlayingStation(station.id) ? "pause.fill" : "play.fill"
+                                isCurrent ? "On Air" : "Listen Live",
+                                systemImage: isCurrent ? "dot.radiowaves.left.and.right" : "play.fill"
                             )
                             .padding(.horizontal, 8)
                             .padding(.vertical, 2)
                         }
                         .buttonStyle(.borderedProminent)
+                        .disabled(isCurrent)
                         .controlSize(.large)
                         .padding(.top, 10)
                     }

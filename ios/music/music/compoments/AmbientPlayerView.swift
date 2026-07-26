@@ -194,7 +194,7 @@ struct AmbientPlayerView: View {
             }
 
             if let song = manager.currentlyPlaying {
-                if onExternalDisplay {
+                if onExternalDisplay || manager.currentStation != nil {
                     progressBar(duration: song.duration)
                 } else {
                     seekBar(duration: song.duration)

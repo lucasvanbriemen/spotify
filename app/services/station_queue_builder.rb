@@ -11,6 +11,8 @@ class StationQueueBuilder
   ESTIMATED_NEWS_SECONDS = 60
   WARMUP_SONGS = 3
   TIME_ZONE = "Europe/Amsterdam"
+  INTRO_GAP = (2..7)
+  INITIAL_INTRO_GAP = (2..5)
 
   TALK_TITLES = {
     "news" => { "nl" => "Het nieuws", "en" => "The News" },
@@ -83,26 +85,50 @@ class StationQueueBuilder
   def with_talk(songs)
     items = []
     elapsed = 0
+    songs_until_intro = rand(INITIAL_INTRO_GAP)
+    songs_since_intro = 0
 
     songs.each_with_index do |song, index|
       items << song_item(song)
       elapsed += song.duration.to_i
+      songs_until_intro -= 1
+      songs_since_intro += 1
 
       next_song = songs[index + 1]
       next unless next_song
 
       slot = @radio_clock.due_at(@starts_at + elapsed.seconds)
-      next unless slot
+      if slot
+        segment, estimated_duration = segment_for_slot(slot, song, next_song)
+        if segment
+          items << talk_item(segment, estimated_duration)
+          elapsed += items.last[:duration]
+          @radio_clock.claim(slot)
+          next
+        end
+      end
 
-      segment, estimated_duration = segment_for_slot(slot, song, next_song)
+      final_transition = index == songs.size - 2
+      intro_due = songs_until_intro <= 0 || (final_transition && songs_since_intro >= INTRO_GAP.begin)
+      next unless intro_due
+      next unless @station.intros? && !Tts::Client.down?
+
+      segment = ensure_intro_segment(song, next_song, duo: regular_duo?(song, next_song))
       next unless segment
 
-      items << talk_item(segment, estimated_duration)
+      items << talk_item(segment, ESTIMATED_INTRO_SECONDS)
       elapsed += items.last[:duration]
-      @radio_clock.claim(slot)
+      songs_until_intro = rand(INTRO_GAP)
+      songs_since_intro = 0
     end
 
     items
+  end
+
+  # A stable one-in-four chance gives recurring song pairs the same presenters
+  # while still letting the fixed :47 clock link guarantee a co-host exchange.
+  def regular_duo?(prev_song, next_song)
+    Digest::SHA1.hexdigest("#{prev_song.isrc}|#{next_song.isrc}").to_i(16) % 4 == 0
   end
 
   def segment_for_slot(slot, prev_song, next_song)

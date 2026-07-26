@@ -9,7 +9,7 @@ module Tts
   class Client
     BREAKER_KEY = "talk/tts_down"
     BREAKER_TTL = 10.minutes
-    STYLE_VERSION = "radio-v5"
+    STYLE_VERSION = "radio-v6"
     # OpenAI recommends marin and cedar for its highest-quality built-in
     # speech. Give them stable on-air roles so occasional conversations sound
     # like two people rather than one voice changing character.

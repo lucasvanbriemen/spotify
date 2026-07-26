@@ -60,17 +60,24 @@ struct PlayerView: View {
 
                     Spacer()
 
-                    Button(action: { manager.togglePlayPause() }) {
-                        Image(systemName: manager.isPlaying ? "pause" : "play")
+                    if manager.currentStation != nil {
+                        Image(systemName: "dot.radiowaves.left.and.right")
                             .font(.system(size: 24, weight: .bold, design: .default))
                             .foregroundStyle(Color.secondary)
                             .padding(16)
-                    }
+                    } else {
+                        Button(action: { manager.togglePlayPause() }) {
+                            Image(systemName: manager.isPlaying ? "pause" : "play")
+                                .font(.system(size: 24, weight: .bold, design: .default))
+                                .foregroundStyle(Color.secondary)
+                                .padding(16)
+                        }
                     #if os(macOS)
-                    // Without this the play control renders as a bezeled AppKit
-                    // push button and breaks the glass pill look.
-                    .buttonStyle(.plain)
+                        // Without this the play control renders as a bezeled
+                        // AppKit push button and breaks the glass pill look.
+                        .buttonStyle(.plain)
                     #endif
+                    }
                 }
             }
             .padding(8)

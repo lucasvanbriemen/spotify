@@ -107,6 +107,10 @@ class PlayerManager {
     }
 
     func togglePlayPause(forceState: Bool? = nil) {        
+        // A tuned radio station is a live feed, not an editable playlist.
+        // Internal automatic transitions use an explicit forceState.
+        if currentStation != nil && forceState == nil { return }
+
         if forceState == nil {
             isPlaying.toggle()
         } else {
@@ -174,13 +178,13 @@ class PlayerManager {
 
         currentStation = station
         playingPlaylistId = nil
+        shouldRepeat = false
         // Also empty nonShuffledQueue so applySuffle can never resurrect an
         // old playlist into the station queue.
         queue = []
         pastQueue = []
         nonShuffledQueue = []
-        // The station curates its own order — shuffling it makes no sense.
-        MPRemoteCommandCenter.shared().changeShuffleModeCommand.isEnabled = false
+        updateTransportAvailability()
 
         Task {
             let response: StationQueueResponse? = await ServerApi.get(
@@ -195,7 +199,17 @@ class PlayerManager {
                     return
                 }
                 self.queue = items
-                self.playSong(song: self.queue.removeFirst())
+                let first = self.queue.removeFirst()
+                self.playSong(song: first)
+
+                let offset = min(response?.startOffset ?? 0, max(first.duration - 30, 0))
+                guard offset > 0, !first.isTalk else { return }
+                self.timeIntoSong = Double(offset)
+                self.player?.seek(
+                    to: CMTime(seconds: Double(offset), preferredTimescale: 600),
+                    toleranceBefore: .zero,
+                    toleranceAfter: .zero
+                )
             }
         }
     }
@@ -207,7 +221,7 @@ class PlayerManager {
         stationStalled = false
         if currentStation != nil {
             currentStation = nil
-            MPRemoteCommandCenter.shared().changeShuffleModeCommand.isEnabled = true
+            updateTransportAvailability()
         }
     }
 
@@ -261,7 +275,7 @@ class PlayerManager {
 
                 if self.stationStalled {
                     self.stationStalled = false
-                    self.playNextSong()
+                    self.playNextSong(automatically: true)
                 }
             }
         }
@@ -339,14 +353,14 @@ class PlayerManager {
         })
         if let currentItem = newPlayer.currentItem {
             endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: currentItem, queue: .main) { [weak self] _ in
-                self?.playNextSong()
+                self?.playNextSong(automatically: true)
             }
             // Radio must never stall on a broken item (e.g. a talk segment
             // whose render 404s) — skip ahead instead. Playlists keep the old
             // behavior of just stopping.
             failObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemFailedToPlayToEndTime, object: currentItem, queue: .main) { [weak self] _ in
                 guard let self, self.currentStation != nil else { return }
-                self.playNextSong()
+                self.playNextSong(automatically: true)
             }
             // Items that 404 fail before playback ever starts, which never
             // posts FailedToPlayToEndTime — catch those through the status.
@@ -355,7 +369,7 @@ class PlayerManager {
                 DispatchQueue.main.async {
                     guard let self, self.currentStation != nil,
                           self.player?.currentItem === item else { return }
-                    self.playNextSong()
+                    self.playNextSong(automatically: true)
                 }
             }
         }
@@ -588,6 +602,19 @@ class PlayerManager {
         
 
     }
+
+    private func updateTransportAvailability() {
+        let enabled = currentStation == nil
+        let commandCenter = MPRemoteCommandCenter.shared()
+        commandCenter.playCommand.isEnabled = enabled
+        commandCenter.pauseCommand.isEnabled = enabled
+        commandCenter.togglePlayPauseCommand.isEnabled = enabled
+        commandCenter.changePlaybackPositionCommand.isEnabled = enabled
+        commandCenter.nextTrackCommand.isEnabled = enabled
+        commandCenter.previousTrackCommand.isEnabled = enabled
+        commandCenter.changeRepeatModeCommand.isEnabled = enabled
+        commandCenter.changeShuffleModeCommand.isEnabled = enabled
+    }
     
     func sncyNowPlayingInfo() {
         guard let song = self.currentlyPlaying else {
@@ -733,7 +760,9 @@ class PlayerManager {
         }
     }
 
-    func playNextSong() {
+    func playNextSong(automatically: Bool = false) {
+        if currentStation != nil && !automatically { return }
+
         reportPlay()
 
         if shouldRepeat {
@@ -764,6 +793,8 @@ class PlayerManager {
     }
     
     func playPreviousSong() {
+        if currentStation != nil { return }
+
         reportPlay()
 
         if shouldRepeat {

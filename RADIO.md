@@ -3,14 +3,14 @@
 Radio-style listening for the music app: tap a station in the new **Radio**
 tab and music plays continuously, interrupted now and then by a spoken news
 bulletin, a DJ intro or a weather/time check — generated on the server from
-BBC headlines with OpenAI (scripts) and self-hosted Kokoro (speech).
+BBC headlines with OpenAI for both scripts and speech.
 
 ## To do before it works
 
 1. **Server `.env`** (`/var/www/vhosts/ltvb.nl/music.ltvb.nl/.env`):
    * `OPENAI_API_KEY` writes the English scripts.
-   * `TTS_PROVIDER=kokoro` renders speech locally without an API subscription.
-     `KOKORO_VOICE_HOST` and `KOKORO_VOICE_COHOST` select two English voices.
+   * `TTS_PROVIDER=openai` uses `marin` for the main host and `cedar` for the
+     co-host. Kokoro remains installed as an optional local fallback.
    * `STATION_LAT`/`STATION_LON` optionally move the weather away from the
      Amsterdam default.
 2. **Supervisor** (one-time server setup). Passenger only manages web
@@ -46,9 +46,8 @@ BBC headlines with OpenAI (scripts) and self-hosted Kokoro (speech).
    devtunnels URL + a `print`) and `config/environments/development.rb`
    (devtunnels host entry).
 
-OpenAI speech remains available as a fallback by setting
-`TTS_PROVIDER=openai`; ElevenLabs support also remains available but is not
-required.
+Kokoro remains available by setting `TTS_PROVIDER=kokoro`; ElevenLabs support
+also remains in the provider layer but is not required.
 
 ## How it works
 
@@ -86,8 +85,7 @@ now carries `station_id`; talk items are never counted in stats.
 
 ### Format clock and talk segments
 
-Talk is scheduled by a fixed hourly format clock rather than random
-interruptions:
+News, weather, and two anchor links follow a fixed hourly format clock:
 
 | Clock time | Element |
 |---|---|
@@ -98,12 +96,16 @@ interruptions:
 
 Each element has a ten-minute grace window and airs at the first suitable song
 transition. A per-station clock claim prevents refilled queue chunks from
-scheduling the same element twice. Focus stations retain their no-talk policy.
+scheduling the same element twice. In addition, a variable presenter link airs
+after every 2–7 songs. Clock elements keep their own schedule and do not reset
+that music-link interval; if both are due on one transition, the presenter link
+moves to the following transition rather than stacking speech. Focus stations
+retain their no-talk policy.
 
 `TalkSegment` rows + MP3s under `storage/audio/talk-*.mp3`:
 
 * **News** — hourly: BBC RSS headlines → OpenAI writes a concise,
-  speech-first English bulletin → Kokoro → `bin/ffmpeg` loudness
+  speech-first English bulletin → OpenAI speech → `bin/ffmpeg` loudness
   normalization. News gets a clean ending rather than music underneath it.
 * **DJ links** — short, speech-first scripts tied to the outgoing and incoming
   songs. The `:47` link is a three-turn exchange rendered with two distinct
@@ -131,15 +133,15 @@ in `/api/stats` tells you.
 
 Radio tab (iOS) / Radio sidebar section (macOS). Station mode lives in
 `PlayerManager`: shuffle is disabled (the server orders the queue), previous
-still works, starting a playlist leaves radio mode, and playing a single song
-from search behaves like a song request — the station continues afterwards.
-The lock screen shows "LTVB Radio — {station}".
+and next, pause, repeat, and seeking are disabled, and the first tune-in joins
+the current record in progress. Starting a playlist leaves radio mode. The
+lock screen shows "LTVB Radio — {station}" without transport controls.
 
 ### Costs
 
-There are four spoken elements per talk-enabled station hour, but transition
-scripts are cached by song pair and clock claims avoid duplicates. Kokoro runs
-locally, so there is no per-character speech cost.
+There are four fixed spoken elements per talk-enabled station hour plus the
+variable links. Transition scripts are cached by song pair and clock claims
+avoid duplicates. OpenAI speech is billed by generated audio usage.
 
 ### Programming references
 
@@ -152,5 +154,5 @@ The clock and transition design follows broadcast practice:
 * MusicMaster: schedule voice tracks, liners and jingles as clock elements,
   with rotation and separation rules.
 
-Kokoro is an Apache-2.0 licensed, 82-million-parameter open-weight model with
-American and British English voices.
+The optional fallback is Kokoro, an Apache-2.0 licensed,
+82-million-parameter open-weight model with American and British voices.

@@ -21,4 +21,10 @@ struct StationsResponse: Codable {
 
 struct StationQueueResponse: Codable {
     var items: [Song]
+    var startOffset: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case items
+        case startOffset = "start_offset"
+    }
 }

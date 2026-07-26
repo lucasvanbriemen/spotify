@@ -49,7 +49,7 @@ struct PlayerSheetView: View {
             }
 #endif
 
-            if let song = manager.currentlyPlaying {
+            if let song = manager.currentlyPlaying, manager.currentStation == nil {
                 Slider(value: $manager.timeIntoSong, in: 0...Double(max(song.duration, 1))) {
                     Text("Seek")
                 } minimumValueLabel: {
@@ -76,7 +76,19 @@ struct PlayerControlsView: View {
     var playIconColor: Color = .white
 
     var body: some View {
-        HStack {
+        if manager.currentStation != nil {
+            HStack(spacing: 12) {
+                Label("LIVE", systemImage: "dot.radiowaves.left.and.right")
+                    .font(.headline)
+                    .foregroundStyle(tint)
+
+                if !compact {
+                    RoutePickerView(tint: tint)
+                        .frame(width: 32, height: 32)
+                }
+            }
+        } else {
+          HStack {
             if !compact {
                 if manager.currentStation == nil {
                     Button(action: {
@@ -148,6 +160,7 @@ struct PlayerControlsView: View {
                 RoutePickerView(tint: tint)
                     .frame(width: 32, height: 32)
             }
+        }
         }
     }
 }
