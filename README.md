@@ -22,3 +22,13 @@ in `ios/`.
 * `bin/yt-dlp` and `bin/ffmpeg` must be present on the server for MP3
   downloads; they are gitignored. Downloaded audio is cached under
   `storage/audio/`.
+* Karaoke mode (vocal-free instrumentals + a sung-melody reference for
+  scoring) needs a Python venv at `vendor/karaoke/` — gitignored, set up once:
+  ```
+  python -m venv vendor/karaoke
+  vendor/karaoke/bin/pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+  vendor/karaoke/bin/pip install demucs librosa soundfile
+  ```
+  (Windows: `vendor\karaoke\Scripts\pip.exe` instead of `vendor/karaoke/bin/pip`.
+  Drop the CPU-only `--index-url` if the machine has an NVIDIA GPU set up for
+  CUDA — Demucs runs much faster on one.) Used by `script/karaoke_separate.py`.

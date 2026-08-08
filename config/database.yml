@@ -1,9 +1,10 @@
-# Primary database: the music app's MySQL/MariaDB database,
-# accessed through the trilogy adapter. Connection details come from the
-# environment (see .env for local development); they mirror the old Laravel
-# project's DB_* variables.
+# Primary database: the music app's MySQL/MariaDB database, accessed
+# through trilogy (no Windows support) or mysql2 (Windows dev machines) —
+# see the Gemfile. Connection details come from the environment (see .env
+# for local development); they mirror the old Laravel project's DB_*
+# variables.
 default: &default
-  adapter: trilogy
+  adapter: <%= Gem.win_platform? ? "mysql2" : "trilogy" %>
   encoding: utf8mb4
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   host: <%= ENV.fetch("DB_HOST", "127.0.0.1") %>

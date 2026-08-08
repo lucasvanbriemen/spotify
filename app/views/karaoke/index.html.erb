@@ -1,0 +1,64 @@
+<% content_for :title, "Karaoke" %>
+
+<div class="karaoke" data-controller="karaoke" data-karaoke-worklet-url-value="<%= asset_path('karaoke_pitch_worklet.js') %>">
+  <header class="karaoke-search" data-karaoke-target="searchPanel">
+    <h1 class="karaoke-search__title">Karaoke</h1>
+    <p class="karaoke-search__hint">Search for a song — only tracks with time-synced lyrics show up here.</p>
+
+    <input
+      type="search"
+      class="karaoke-search__input"
+      placeholder="Search for a song or artist…"
+      autofocus
+      data-karaoke-target="query"
+      data-action="input->karaoke#search"
+    >
+
+    <p class="karaoke-search__status" data-karaoke-target="searchStatus"></p>
+    <ul class="karaoke-results" data-karaoke-target="results"></ul>
+  </header>
+
+  <section class="karaoke-stage" data-karaoke-target="stage" hidden>
+    <button type="button" class="karaoke-stage__back" data-action="karaoke#back" aria-label="Back to search">←</button>
+
+    <div class="karaoke-stage__header">
+      <img class="karaoke-stage__art" data-karaoke-target="art" alt="">
+      <div class="karaoke-stage__meta">
+        <h2 data-karaoke-target="title"></h2>
+        <p data-karaoke-target="artist"></p>
+      </div>
+    </div>
+
+    <p class="karaoke-stage__status" data-karaoke-target="playerStatus"></p>
+
+    <button type="button" class="karaoke-start" data-karaoke-target="startButton" data-action="karaoke#beginPlayback" hidden>
+      Start singing
+    </button>
+
+    <div class="karaoke-lyrics" data-karaoke-target="lyrics"></div>
+
+    <div class="karaoke-score" data-karaoke-target="score" hidden>
+      <div class="karaoke-score__meter">
+        <div class="karaoke-score__meter-fill" data-karaoke-target="scoreMeterFill"></div>
+      </div>
+      <span class="karaoke-score__value" data-karaoke-target="scoreValue"></span>
+    </div>
+    <p class="karaoke-score__status" data-karaoke-target="scoreStatus"></p>
+
+    <div class="karaoke-controls">
+      <button type="button" class="karaoke-controls__play" data-karaoke-target="playButton" data-action="karaoke#togglePlay" aria-label="Play">▶</button>
+
+      <span class="karaoke-controls__time" data-karaoke-target="currentTime">0:00</span>
+      <input
+        type="range"
+        class="karaoke-controls__seek"
+        min="0" max="1000" value="0"
+        data-karaoke-target="seek"
+        data-action="input->karaoke#seek"
+      >
+      <span class="karaoke-controls__time" data-karaoke-target="duration">0:00</span>
+    </div>
+
+    <audio data-karaoke-target="audio"></audio>
+  </section>
+</div>

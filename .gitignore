@@ -41,10 +41,16 @@
 # Auto-generated Sass manifest (rebuilt at boot by config/application.rb).
 /app/assets/stylesheets/_manifest.scss
 
-# yt-dlp + ffmpeg binaries live in bin/ on the server but are not tracked.
+# yt-dlp + ffmpeg binaries live in bin/ (as .exe on Windows) but are not tracked.
 /bin/yt-dlp
+/bin/yt-dlp.exe
 /bin/ffmpeg
+/bin/ffmpeg.exe
+/bin/ffprobe.exe
 
 # Downloaded MP3 cache.
 /storage/audio/
 /ios/music/shared/Secerts.swift
+
+# Python venv for karaoke vocal separation/pitch extraction (script/karaoke_separate.py).
+/vendor/karaoke/

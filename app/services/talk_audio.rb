@@ -58,7 +58,7 @@ class TalkAudio
     def write_normalized(id, clips)
       FileUtils.mkdir_p(SongCache::AUDIO_DIR)
       out = SongCache.path(id)
-      ffmpeg = Rails.root.join("bin/ffmpeg")
+      ffmpeg = ExecutablePath.resolve("ffmpeg")
 
       unless ffmpeg.executable?
         File.binwrite(out, clips.join)
@@ -114,7 +114,7 @@ class TalkAudio
     # There is no ffprobe on the server: parse "Duration: 00:01:02.34" from
     # `ffmpeg -i` stderr, falling back to a speech-rate estimate.
     def measure_duration(path, script)
-      ffmpeg = Rails.root.join("bin/ffmpeg")
+      ffmpeg = ExecutablePath.resolve("ffmpeg")
       if ffmpeg.executable?
         output = `#{Shellwords.escape(ffmpeg.to_s)} -i #{Shellwords.escape(path.to_s)} 2>&1`
         if output =~ /Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/

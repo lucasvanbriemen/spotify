@@ -1,7 +1,7 @@
 # Search, MP3 fetching/serving and lyrics (port of the Laravel
 # SpotifyController).
 class SpotifyController < ApiController
-  LYRICS_URL = "https://lrclib.net/api/get"
+  include ServesAudio
 
   def search
     query = params[:q].to_s.strip
@@ -14,6 +14,16 @@ class SpotifyController < ApiController
       songs: format_tracks(results[:tracks]),
       playlists: format_playlists(results[:playlists])
     }
+  end
+
+  # Same as #search, but only for tracks LRCLIB confirms have synced
+  # (line-timed) lyrics — the karaoke UI has nothing to highlight otherwise.
+  def karaoke_search
+    query = params[:q].to_s.strip
+
+    return render json: { songs: [] } if query.empty?
+
+    render json: { songs: format_tracks(KaraokeSearch.search(query)) }
   end
 
   def get_mp3
@@ -53,8 +63,10 @@ class SpotifyController < ApiController
   def lyrics
     return talk_lyrics(params[:isrc]) if TalkSegment.talk_id?(params[:isrc])
 
-    song = Song.find(params[:isrc])
-    response = fetch_lyrics(song)
+    attrs = lyrics_lookup_attrs(params[:isrc])
+    return render json: { error: "Lyrics not found" }, status: :not_found unless attrs
+
+    response = Lrclib::Client.fetch(**attrs)
 
     if response["plainLyrics"].nil? && response["syncedLyrics"].nil?
       render json: { error: "Lyrics not found" }, status: :not_found
@@ -130,44 +142,28 @@ class SpotifyController < ApiController
     end.join("\n")
   end
 
-  def fetch_lyrics(song)
-    uri = URI(LYRICS_URL)
-    # "durration" [sic] mirrors the query the Laravel app sent.
-    uri.query = URI.encode_www_form(
-      artist_name: song.artist,
-      track_name: song.title,
-      album_name: song.album,
-      durration: song.duration
-    )
+  # A Song row only exists once the track has been played (or added to a
+  # playlist) at least once — see SongCache.ensure_cached. The karaoke UI
+  # fetches lyrics and starts playback in parallel, so lyrics can't assume
+  # that row is there yet; fall back to a live Deezer lookup for the same
+  # artist/title/album/duration LRCLIB needs.
+  def lyrics_lookup_attrs(isrc)
+    if (song = Song.find_by(isrc: isrc))
+      { artist: song.artist, title: song.title, album: song.album, duration: song.duration }
+    else
+      details = Deezer::Client.track_details(isrc)
+      # An unknown ISRC comes back as 200 OK with an error body, not a
+      # non-OK response Deezer::Client would raise on — so check for the
+      # track data itself before treating this as a hit.
+      return nil if details["title"].blank?
 
-    JSON.parse(Net::HTTP.get_response(uri).body)
-  rescue JSON::ParserError
-    {}
+      { artist: details.dig("artist", "name"), title: details["title"], album: details.dig("album", "title"), duration: details["duration"] }
+    end
+  rescue Deezer::Client::Error
+    nil
   end
 
   def send_mp3(isrc)
-    path = SongCache.path(isrc)
-
-    return head :not_found unless path.file?
-
-    # In production, X-Sendfile is configured so send_file only emits the
-    # X-Sendfile header and an empty body: Apache (mod_xsendfile) serves the
-    # bytes and handles Range requests itself, freeing the app process at once.
-    if Rails.application.config.action_dispatch.x_sendfile_header.present?
-      return send_file path, type: "audio/mpeg", disposition: "inline"
-    end
-
-    # Dev fallback (no X-Sendfile): serve single-range requests ourselves so
-    # clients (AVPlayer) can still seek.
-    response.headers["Accept-Ranges"] = "bytes"
-    ranges = Rack::Utils.get_byte_ranges(request.headers["Range"], path.size)
-    if ranges&.one?
-      range = ranges.first
-      response.headers["Content-Range"] = "bytes #{range.begin}-#{range.end}/#{path.size}"
-      send_data File.binread(path, range.size, range.begin),
-        type: "audio/mpeg", disposition: "inline", status: :partial_content
-    else
-      send_file path, type: "audio/mpeg", disposition: "inline"
-    end
+    send_audio_file(SongCache.path(isrc))
   end
 end

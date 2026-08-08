@@ -66,7 +66,7 @@ class SongCache
 
       env = { "TMP" => tmp_dir.to_s, "TEMP" => tmp_dir.to_s, "TMPDIR" => tmp_dir.to_s }
       command = [
-        Rails.root.join("bin/yt-dlp").to_s,
+        ExecutablePath.resolve("yt-dlp").to_s,
         "--no-playlist",
         # Audio-only formats and parallel fragment downloads: never pull the
         # video track, and sidestep YouTube's per-connection throttling.
@@ -86,11 +86,7 @@ class SongCache
 
       # The exit status is ignored, like in the Laravel app: callers respond
       # with 404 when no file was produced.
-      pid = Process.spawn(env, *command, out: File::NULL, err: File::NULL)
-      Timeout.timeout(DOWNLOAD_TIMEOUT_SECONDS) { Process.wait(pid) }
-    rescue Timeout::Error
-      Process.kill("KILL", pid)
-      Process.wait(pid)
+      TimedProcess.run(*command, env: env, timeout_seconds: DOWNLOAD_TIMEOUT_SECONDS)
     end
   end
 end

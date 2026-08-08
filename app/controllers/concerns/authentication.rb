@@ -18,6 +18,8 @@ module Authentication
   attr_reader :current_account
 
   def require_login
+    return @current_account = dev_account if dev_bypass?
+
     token = auth_token
     @current_account = fetch_account(token) if token.present?
 
@@ -30,6 +32,17 @@ module Authentication
       store_auth_cookie(token)
       redirect_to clean_url
     end
+  end
+
+  # The login service (login.ltvb.nl) is server-side infrastructure not
+  # reachable from a local dev machine, so development skips it entirely
+  # rather than requiring a tunnel just to load the app locally.
+  def dev_bypass?
+    Rails.env.development?
+  end
+
+  def dev_account
+    { "id" => 0, "name" => "Dev" }
   end
 
   def auth_token

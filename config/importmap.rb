@@ -26,6 +26,10 @@ if shared_ui && Dir.exist?(File.join(shared_ui, "assets/js/objects"))
     name = File.basename(file, ".js")
     pin "objects/#{name}", to: "js/objects/#{name}.js"
   end
+else
+  # No shared UI checkout (e.g. local dev) — stub the one module
+  # application.js imports unconditionally, so Turbo/Stimulus still boot.
+  pin "objects/theme", to: "theme_fallback.js"
 end
 
 # Shared UI Stimulus controllers live at <shared>/assets/js/controllers/*.js
