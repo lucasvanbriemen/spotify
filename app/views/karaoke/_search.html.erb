@@ -1,24 +1,22 @@
 <section class="karaoke-screen karaoke-screen--search">
-  <div class="karaoke-search">
-    <h1 class="karaoke-search__title">Karaoke</h1>
-    <p class="karaoke-search__hint">Search for a song — only tracks with time-synced lyrics show up here.</p>
+  <h1>Karaoke</h1>
+  <p>Search for a song — only tracks with time-synced lyrics show up here.</p>
 
-    <%= form_with url: root_path, method: :get, data: { turbo_frame: "karaoke" }, builder: CustomFormBuilder do |form| %>
-      <%= form.text_field :query, value: params[:query], data: { karaoke_target: "query", action: "input->karaoke#search" }, label: "Search for a song" %>
-    <% end %>
+  <%= form_with url: root_path, method: :get, data: { turbo_frame: "karaoke" }, builder: CustomFormBuilder do |form| %>
+    <%= form.text_field :query, value: params[:query], data: { karaoke_target: "query", action: "input->karaoke#search" }, label: "Search for a song" %>
+  <% end %>
 
-    <p class="karaoke-search__status" data-karaoke-target="searchStatus"></p>
-    <ul class="karaoke-results" data-karaoke-target="results"></ul>
+  <p class="karaoke-search__status" data-karaoke-target="searchStatus"></p>
+  <ul class="karaoke-results" data-karaoke-target="results"></ul>
 
-    <%# Filled from /api/karaoke-history, and hidden until there is a history. %>
-    <div class="karaoke-search__section" data-karaoke-target="recentSection" hidden>
-      <h2 class="karaoke-search__section-title">Recently sung</h2>
-      <ul class="karaoke-results" data-karaoke-target="recentList"></ul>
-    </div>
+  <%# Filled from /api/karaoke-history, and hidden until there is a history. %>
+  <div class="karaoke-search__section" data-karaoke-target="recentSection" hidden>
+    <h2 class="karaoke-search__section-title">Recently sung</h2>
+    <ul class="karaoke-results" data-karaoke-target="recentList"></ul>
+  </div>
 
-    <div class="karaoke-search__section" data-karaoke-target="popularSection" hidden>
-      <h2 class="karaoke-search__section-title">Most sung</h2>
-      <ul class="karaoke-results" data-karaoke-target="popularList"></ul>
-    </div>
+  <div class="karaoke-search__section" data-karaoke-target="popularSection" hidden>
+    <h2 class="karaoke-search__section-title">Most sung</h2>
+    <ul class="karaoke-results" data-karaoke-target="popularList"></ul>
   </div>
 </section>
