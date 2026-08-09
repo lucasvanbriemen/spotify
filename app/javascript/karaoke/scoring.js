@@ -144,11 +144,42 @@ export class SingerScore {
       this.rawScore += line.credit * 1000 * multiplier
       this.combo = COMBO_VERDICTS.has(verdict) ? this.combo + 1 : 0
       this.bestCombo = Math.max(this.bestCombo, this.combo)
-      this.lineResults.push({ lineIndex, accuracy, verdict })
+      this.lineResults.push({ lineIndex, accuracy, verdict, combo: this.combo, points: line.credit * 1000 * multiplier, credit: line.credit })
       verdicts.push({ lineIndex, accuracy, verdict, combo: this.combo })
     }
 
     return verdicts
+  }
+
+  // Seeking backwards replays music the scorer has already closed the books
+  // on. Without re-opening those notes, everything before the play head stays
+  // finalized and the replayed stretch silently scores nothing.
+  rewindTo(songTime) {
+    const notes = this.melody.notes
+
+    for (let index = 0; index < notes.length; index++) {
+      if (notes[index].end + GRACE_SECONDS <= songTime) continue
+
+      this.notes[index] = { frames: 0, credit: 0, done: false, accuracy: 0, scored: true }
+    }
+
+    // Lines wholly after the play head are unscored again, and their points
+    // come back off the total.
+    this.lines.clear()
+    const kept = []
+    for (const line of this.lineResults) {
+      const notesInLine = this.melody.notesForLine(line.lineIndex)
+      const endsAfter = notesInLine.some((note) => note.end + GRACE_SECONDS > songTime)
+      if (endsAfter) continue
+
+      kept.push(line)
+    }
+
+    this.lineResults = kept
+    this.rawScore = kept.reduce((sum, line) => sum + line.points, 0)
+    this.finalizedLine = kept.length > 0 ? Math.max(...kept.map((line) => line.lineIndex)) : -1
+    this.combo = kept.length > 0 ? kept[kept.length - 1].combo : 0
+    this.cursor = 0
   }
 
   // Notes from here on aren't the singer's responsibility.

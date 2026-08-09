@@ -171,7 +171,8 @@ export class PitchLane {
       if (!trail) return
 
       if (singer.voiced && Number.isFinite(singer.midi)) {
-        trail.push({ time: now, midi: this.foldToLane(singer.midi) })
+        const previous = trail.length > 0 ? trail[trail.length - 1].midi : null
+        trail.push({ time: now, midi: this.foldToLane(singer.midi, previous) })
       } else if (trail.length > 0 && trail[trail.length - 1].midi !== null) {
         trail.push({ time: now, midi: null }) // break the line while they're silent
       }
@@ -185,16 +186,25 @@ export class PitchLane {
       context.lineCap = "round"
       context.globalAlpha = 0.85
 
+      // Curves through the midpoints between samples: a polyline of 60-odd
+      // points per second shows every corner, which reads as jitter even once
+      // the values themselves are smooth.
       context.beginPath()
-      let drawing = false
+      let previous = null
       for (const point of trail) {
-        if (point.midi === null) { drawing = false; continue }
+        if (point.midi === null) { previous = null; continue }
 
         const x = this.xFor(point.time, now)
         const y = this.yFor(point.midi)
-        if (drawing) context.lineTo(x, y)
-        else { context.moveTo(x, y); drawing = true }
+
+        if (!previous) {
+          context.moveTo(x, y)
+        } else {
+          context.quadraticCurveTo(previous.x, previous.y, (previous.x + x) / 2, (previous.y + y) / 2)
+        }
+        previous = { x, y }
       }
+      if (previous) context.lineTo(previous.x, previous.y)
       context.stroke()
 
       const latest = trail[trail.length - 1]
@@ -213,11 +223,20 @@ export class PitchLane {
   // A singer an octave below the original still belongs on the same line as
   // the note they're matching — that's how they're scored, so that's how they
   // are drawn.
-  foldToLane(midi) {
+  foldToLane(midi, previous = null) {
     const { midiMin, midiMax } = this.melody
     let folded = midi
     while (folded < midiMin && folded + 12 <= midiMax) folded += 12
     while (folded > midiMax && folded - 12 >= midiMin) folded -= 12
+
+    // Prefer the octave nearest where the line already is, so a voice sitting
+    // on the edge of the lane's range doesn't flip up and down between frames.
+    if (previous !== null) {
+      for (const candidate of [ folded - 12, folded + 12 ]) {
+        if (candidate < midiMin || candidate > midiMax) continue
+        if (Math.abs(candidate - previous) < Math.abs(folded - previous)) folded = candidate
+      }
+    }
     return folded
   }
 

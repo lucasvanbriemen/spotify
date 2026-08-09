@@ -49,10 +49,16 @@ export const settings = {
     return value
   },
 
-  // Total seconds to subtract from a mic frame's timestamp before scoring it:
-  // how long playback takes to reach the singer's ears, plus how long their
-  // voice takes to come back. outputLatency covers the browser and OS but not
-  // the TV, which is what the trim is for.
+  // How far behind the scheduling clock the sound actually is. Lines the
+  // visuals up with what reaches the room. outputLatency covers the browser
+  // and the OS but not the TV, which is what the trim is for.
+  displayOffsetSeconds(context) {
+    const output = context?.outputLatency || context?.baseLatency || 0.02
+    return output + this.get("latencyTrimMs") / 1000
+  },
+
+  // The same delay, plus how long the singer's voice takes to come back in
+  // through the mic. Subtracted from a frame's timestamp before scoring it.
   scoringOffsetSeconds(context) {
     const output = context?.outputLatency || context?.baseLatency || 0.02
     return output + CAPTURE_LATENCY_SECONDS + this.get("latencyTrimMs") / 1000

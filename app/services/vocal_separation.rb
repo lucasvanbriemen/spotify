@@ -23,9 +23,12 @@ class VocalSeparation
   # Recomputing notes/words from an existing pitch curve is pure arithmetic.
   REANALYZE_TIMEOUT_SECONDS = 120
   ALIGNMENT_CHECK_TIMEOUT_SECONDS = 60
-  # A YouTube upload starting even a second off from the original would
-  # desync lyrics and scoring for the rest of the song.
-  ALIGNMENT_TOLERANCE_SECONDS = 0.75
+  # How far a YouTube instrumental may start from the original before it is
+  # rejected. This is a straight lyric-sync budget: the lyrics are timed to the
+  # original, so whatever offset is accepted here is heard as the words landing
+  # early or late for the whole song. A quarter of a second is around the
+  # threshold where a sung line starts to feel wrong.
+  ALIGNMENT_TOLERANCE_SECONDS = 0.25
   # Bump when an artifact's format changes or a new required one is added:
   # caches written by an older version are upgraded on their next prepare
   # instead of being served half-ready.
@@ -74,6 +77,14 @@ class VocalSeparation
 
     def failed?(isrc)
       failed_marker(isrc).file?
+    end
+
+    # Called when a retry is enqueued. The marker is otherwise only cleared
+    # once the job reaches the lock, and until then #status keeps reporting
+    # "failed" — which stops the client polling, so the song never comes back
+    # even though it is being prepared right then.
+    def clear_failure(isrc)
+      FileUtils.rm_f(failed_marker(isrc))
     end
 
     # Which optional artifacts this song actually got, so the client can hide

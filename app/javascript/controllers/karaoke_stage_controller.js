@@ -159,7 +159,9 @@ export default class extends Controller {
   // A song with no usable melody keeps its lane — the row has to stay, or the
   // lyric block would stop being anchored to the bottom — it just draws
   // nothing.
-  setNotes(melody, scores) {
+  // scores defaults to keeping whatever the lane already has: a caller that
+  // omits it must not be able to silently strip the lane of its scorers.
+  setNotes(melody, scores = this.lane?.scores) {
     // Without a melody the lane would sit there as a large empty band with the
     // lyrics stranded under it, so the layout gives its space back instead.
     this.element.dataset.lane = !melody || melody.isEmpty ? "off" : "on"
@@ -331,6 +333,9 @@ export default class extends Controller {
 
   onKeydown(event) {
     if (this.element.offsetParent === null) return // stage isn't the visible screen
+    // The scoreboard is over the stage; replaying from under it would run the
+    // song to its end again and post a second score.
+    if (this.element.closest(".karaoke")?.classList.contains("karaoke--results")) return
     if (event.code !== "Space") return
 
     const tag = document.activeElement?.tagName

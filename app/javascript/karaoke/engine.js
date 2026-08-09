@@ -14,6 +14,7 @@ import { LyricsTimeline } from "karaoke/lyrics_timing"
 import { Melody } from "karaoke/melody"
 import { SingerScore } from "karaoke/scoring"
 import { GuideMelody } from "karaoke/guide_melody"
+import { PitchSmoother } from "karaoke/pitch_smoother"
 
 // How long the count-in runs, and how much silence has to precede a line
 // before the singer needs one.
@@ -34,6 +35,8 @@ export class KaraokeEngine extends EventTarget {
     this.mics = []
     this.singers = []
     this.scores = []
+    this.smoothers = []
+    this.micListeners = []
     this.frameHandle = null
     this.guide = new GuideMelody(transport.context, transport.output)
 
@@ -42,6 +45,9 @@ export class KaraokeEngine extends EventTarget {
     for (const event of [ "seeked", "pause", "play" ]) {
       transport.addEventListener(event, () => this.guide.reset())
     }
+    transport.addEventListener("seeked", (event) => {
+      this.scores.forEach((score) => score.rewindTo(event.detail.time))
+    })
 
     // Reused every frame: the view reads it and returns, so there is no need
     // to allocate a fresh object sixty times a second.
@@ -61,6 +67,7 @@ export class KaraokeEngine extends EventTarget {
     this.melody = melody || Melody.empty()
     this.singers = singers
     this.scores = singers.map((singer) => new SingerScore(this.melody, singer))
+    this.smoothers = singers.map(() => new PitchSmoother())
     this.frameState.singers = singers.map(() => ({ midi: null, voiced: false, level: 0, score: 0, combo: 0 }))
 
     this.guide.setMelody(this.melody)
@@ -69,10 +76,31 @@ export class KaraokeEngine extends EventTarget {
   }
 
   setMics(mics) {
+    // Listeners are torn down first: mics outlive a song, so re-attaching on
+    // every performance would stack a new handler on the same MicInput each
+    // time.
+    this.#releaseMicListeners()
     this.mics = mics || []
-    this.mics.forEach((mic, index) => {
-      mic?.addEventListener("ended", () => this.scores[index]?.markMicLost(this.transport.currentTime))
+    this.micListeners = this.mics.map((mic, index) => {
+      if (!mic) return null
+
+      const handler = () => this.scores[index]?.markMicLost(this.transport.currentTime)
+      mic.addEventListener("ended", handler)
+      return { mic, handler }
     })
+  }
+
+  // Wipes every singer's accumulated notes, lines and combo so the same song
+  // can be sung again from a clean slate.
+  resetScores() {
+    this.scores.forEach((score) => score.reset())
+    this.frameState.singers.forEach((singer) => { singer.score = 0; singer.combo = 0 })
+    this.view?.setNotes?.(this.melody, this.scores)
+  }
+
+  #releaseMicListeners() {
+    this.micListeners?.forEach((entry) => entry?.mic.removeEventListener("ended", entry.handler))
+    this.micListeners = []
   }
 
   get hasScoring() {
@@ -103,6 +131,7 @@ export class KaraokeEngine extends EventTarget {
   destroy() {
     this.stop()
     this.guide.destroy()
+    this.#releaseMicListeners()
     this.view = null
     this.mics = []
   }
@@ -113,7 +142,10 @@ export class KaraokeEngine extends EventTarget {
   }
 
   #frame() {
-    const time = this.transport.currentTime
+    // The transport clock is the scheduling clock; sound reaches the room a
+    // little later. Drawing on the scheduling clock makes every word light up
+    // before it is heard, which reads as the whole stage running early.
+    const time = this.transport.currentTime - this.settings.displayOffsetSeconds(this.transport.context)
     const state = this.timeline.stateAt(time)
     const frame = this.frameState
 
@@ -178,23 +210,26 @@ export class KaraokeEngine extends EventTarget {
 
       const singer = this.frameState.singers[index]
       const score = this.scores[index]
+      const smoother = this.smoothers[index]
       const frames = mic.drainFrames()
+      let drawn
 
       for (const sample of frames) {
         const songTime = this.transport.songTimeAt(sample.t)
         if (songTime === null) continue
 
         const at = songTime - offset
-        if (at < 0) continue // still counting in
+        // Scoring gets the raw estimate: smoothing would only make it late.
+        if (at >= 0) score?.addFrame(at, sample.hz)
 
-        score?.addFrame(at, sample.hz)
+        const midi = sample.hz ? 69 + 12 * Math.log2(sample.hz / 440) : null
+        drawn = smoother?.push(midi, songTime) ?? midi
       }
 
       if (singer) {
-        const latest = frames[frames.length - 1]
-        if (latest) {
-          singer.voiced = Boolean(latest.hz)
-          singer.midi = latest.hz ? 69 + 12 * Math.log2(latest.hz / 440) : null
+        if (frames.length > 0) {
+          singer.midi = drawn ?? null
+          singer.voiced = drawn !== null && drawn !== undefined
         }
         singer.level = mic.level
       }

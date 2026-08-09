@@ -13,6 +13,9 @@ class KaraokeTracksController < ApiController
   def prepare
     return head :ok if VocalSeparation.ready?(isrc)
 
+    # A previous attempt's failure marker would otherwise make #status answer
+    # "failed" for this fresh attempt, and the client stops polling on that.
+    VocalSeparation.clear_failure(isrc)
     PrepareKaraokeJob.perform_later(isrc)
     head :accepted
   end

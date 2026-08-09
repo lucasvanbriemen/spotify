@@ -239,7 +239,8 @@ export default class extends Controller {
       this.setStep("separate", "done")
       this.setStep("analyse", "done")
       this.playerStatusTarget.textContent = "Ready!"
-      this.startButtonTarget.disabled = false
+      // Start stays disabled until the audio is decoded and playable — see
+      // #loadTrack. Separation being finished is not the same as ready to sing.
       // The melody and word timings only exist once separation has finished,
       // so the copies fetched when the song was picked were 404s. Fetch them
       // again now, or this song would play with no pitch lane and no scoring.
@@ -277,17 +278,37 @@ export default class extends Controller {
 
   // The setup screen needs the same context the music will play on, so its
   // mic pitch estimates share one clock with playback.
+  // The promise is cached, not its result: the setup screen and the preloader
+  // both ask for this, and caching only the resolved value lets a second
+  // caller arriving mid-await build a whole second AudioContext — which would
+  // put the mics on a different clock from the music and quietly break every
+  // score.
   async audioSession() {
-    this.session ||= await getAudioSession(this.workletUrlValue).catch(() => null)
+    this.sessionPromise ||= getAudioSession(this.workletUrlValue).catch(() => null)
+    this.session = await this.sessionPromise
     return this.session
   }
 
-  async preload(isrc) {
-    if (this.transport || this.loadingIsrc === isrc) return
+  // Returns a promise that resolves only once the audio is actually decoded
+  // and playable. Callers await the same promise rather than short-circuiting
+  // on a "load has started" flag — otherwise pressing Start mid-load returns
+  // instantly and play() no-ops against an empty buffer, leaving a full-screen
+  // stage frozen at 0:00 with no error.
+  preload(isrc) {
+    if (this.loadingIsrc === isrc && this.loadPromise) return this.loadPromise
 
     this.loadingIsrc = isrc
+    this.loadPromise = this.#loadTrack(isrc)
+    return this.loadPromise
+  }
+
+  async #loadTrack(isrc) {
     await this.audioSession()
-    if (!this.session || this.currentTrack?.isrc !== isrc) return
+    if (!this.session || this.currentTrack?.isrc !== isrc) {
+      // Leaving loadingIsrc set here would wedge this song forever.
+      this.loadingIsrc = null
+      return false
+    }
 
     const transport = new Transport(this.session.context)
     transport.addEventListener("progress", (event) => {
@@ -309,10 +330,13 @@ export default class extends Controller {
     this.transport = transport
     transport.setVocalGain(this.artifacts.vocals ? settings.get("vocalGuidePercent") / 100 : 0)
 
-    await transport.load({
+    const loaded = await transport.load({
       instrumentalUrl: `/api/karaoke/${encodeURIComponent(isrc)}/instrumental`,
       vocalsUrl: this.artifacts.vocals ? `/api/karaoke/${encodeURIComponent(isrc)}/vocals` : null
     })
+
+    if (loaded && this.currentTrack?.isrc === isrc) this.startButtonTarget.disabled = false
+    return loaded
   }
 
   // Bound to "Start singing" rather than fired automatically: preparation can
@@ -345,8 +369,9 @@ export default class extends Controller {
     this.engine = new KaraokeEngine({ transport: this.transport, settings, view: this.stage })
     this.engine.loadSong({ timeline: this.timeline, melody: this.melody, singers })
     this.engine.setMics(this.setup?.micInputs?.() || [])
-    this.stage?.setLines?.(this.timeline.lines)
-    this.stage?.setNotes?.(this.melody)
+    // loadSong already handed the stage its lines and notes — including the
+    // scorers the pitch lane needs to fill hit notes in. Repeating setNotes
+    // here without them would leave the lane unable to show anything but grey.
     this.engine.setGuideMelody(settings.get("guideMelody"))
     this.engine.start()
 
@@ -362,9 +387,11 @@ export default class extends Controller {
     this.stopPlayTimer()
 
     const results = this.engine?.results() || []
-    // Nothing to show for a song sung without a working mic or without a
-    // melody to score against.
-    if (results.length === 0 || this.melody.isEmpty) return
+    // No mic means every note reads as silence, which would post a legitimate
+    // -looking zero and show a scoreboard full of misses for someone who was
+    // only listening.
+    const scored = (this.setup?.micInputs?.() || []).some(Boolean)
+    if (results.length === 0 || this.melody.isEmpty || !scored) return
 
     const singers = await Promise.all(results.map((result) => this.saveScore(result)))
     this.scoreboard?.show?.({ track: this.currentTrack, singers })
@@ -446,8 +473,14 @@ export default class extends Controller {
 
   resultsSingAgain() {
     this.element.classList.remove("karaoke--results")
+    // Without this the second run reuses scorers whose notes are all already
+    // finalized: nothing accumulates, and the results screen re-posts the
+    // first run's score a second time.
+    this.engine?.resetScores()
     this.transport?.seek(0)
-    this.transport?.play()
+
+    const firstStart = this.timeline.firstStart ?? 0
+    this.transport?.play({ preRollSeconds: firstStart >= 3.5 ? 0 : Math.max(0, 3 - firstStart) })
   }
 
   resultsBack() {
@@ -476,8 +509,6 @@ export default class extends Controller {
     if (this.transport?.playing) return
 
     this.engine?.loadSong({ timeline: this.timeline, melody: this.melody, singers: this.currentSingers || [] })
-    this.stage?.setLines?.(this.timeline.lines)
-    this.stage?.setNotes?.(this.melody)
   }
 
   // --- Play reporting ------------------------------------------------------
