@@ -1,0 +1,17 @@
+<% content_for :title, "Karaoke" %>
+
+<%# Every screen renders up front; the coordinator flips data-screen between
+    them. Keeping them all inside this element means its targets and outlets
+    resolve no matter which screen a given control lives on. %>
+<div class="karaoke"
+     data-controller="karaoke"
+     data-screen="search"
+     data-karaoke-worklet-url-value="<%= asset_path('karaoke_pitch_worklet.js') %>"
+     data-karaoke-karaoke-stage-outlet=".karaoke-screen--stage"
+     data-karaoke-karaoke-setup-outlet=".karaoke-screen--setup"
+     data-karaoke-karaoke-results-outlet=".karaoke-scoreboard">
+  <%= render "karaoke/search" %>
+  <%= render "karaoke/setup" %>
+  <%= render "karaoke/stage" %>
+  <%= render "karaoke/results" %>
+</div>

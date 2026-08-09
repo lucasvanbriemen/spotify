@@ -1,0 +1,21 @@
+<%# Overlays the stage rather than replacing it, so the song you just sang is
+    still behind the score. Populated by karaoke_results_controller. %>
+<section class="karaoke-scoreboard" data-controller="karaoke-results">
+  <div class="karaoke-scoreboard__panel">
+    <h2 class="karaoke-scoreboard__heading" data-karaoke-results-target="heading">Nice one!</h2>
+    <p class="karaoke-scoreboard__song" data-karaoke-results-target="song"></p>
+
+    <div class="karaoke-scoreboard__singers" data-karaoke-results-target="singers"></div>
+
+    <svg class="karaoke-scoreboard__spark" data-karaoke-results-target="spark"
+         viewBox="0 0 100 28" preserveAspectRatio="none" role="img"
+         aria-label="Accuracy line by line">
+      <line class="spark-base" x1="0" y1="27" x2="100" y2="27"></line>
+    </svg>
+
+    <div class="karaoke-scoreboard__actions">
+      <%= button(text: "Sing again", type: "button", data: { action: "karaoke-results#singAgain" }) %>
+      <%= button(text: "Back to search", type: "button", variant: :outline, data: { action: "karaoke-results#back" }) %>
+    </div>
+  </div>
+</section>

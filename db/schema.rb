@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_26_000003) do
+ActiveRecord::Schema[8.0].define(version: 2026_08_09_000001) do
   create_table "cache", primary_key: "key", id: :string, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.text "value", size: :medium, null: false
     t.integer "expiration", null: false
@@ -53,6 +53,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_26_000003) do
     t.integer "available_at", null: false, unsigned: true
     t.integer "created_at", null: false, unsigned: true
     t.index ["queue"], name: "jobs_queue_index"
+  end
+
+  create_table "karaoke_scores", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.string "singer_name", null: false
+    t.string "song_isrc", null: false
+    t.integer "score", null: false
+    t.float "accuracy"
+    t.text "meta", size: :long, collation: "utf8mb4_bin"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_karaoke_scores_on_created_at"
+    t.index ["song_isrc", "singer_name", "score"], name: "index_karaoke_scores_on_song_isrc_and_singer_name_and_score"
+    t.check_constraint "json_valid(`meta`)", name: "meta"
   end
 
   create_table "migrations", id: { type: :integer, unsigned: true }, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -135,6 +148,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_26_000003) do
 
   create_table "talk_segments", id: { type: :string, limit: 64 }, charset: "utf8mb4", collation: "utf8mb4_general_ci", force: :cascade do |t|
     t.string "kind", null: false
+    t.string "language", limit: 5, null: false
     t.text "transcript"
     t.integer "duration"
     t.string "status", default: "pending", null: false
@@ -143,7 +157,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_26_000003) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["expires_at"], name: "index_talk_segments_on_expires_at"
-    t.index ["kind", "status", "created_at"], name: "idx_on_kind_language_status_created_at_4f4243b56e"
+    t.index ["kind", "language", "status", "created_at"], name: "idx_on_kind_language_status_created_at_4f4243b56e"
     t.check_constraint "json_valid(`meta`)", name: "meta"
   end
 
@@ -158,6 +172,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_26_000003) do
     t.index ["email"], name: "users_email_unique", unique: true
   end
 
+  add_foreign_key "karaoke_scores", "songs", column: "song_isrc", primary_key: "isrc", on_delete: :cascade
   add_foreign_key "playlist_songs", "playlists", name: "playlist_songs_playlist_id_foreign", on_delete: :cascade
   add_foreign_key "playlist_songs", "songs", column: "song_isrc", primary_key: "isrc", name: "playlist_songs_song_isrc_foreign", on_delete: :cascade
   add_foreign_key "plays", "songs", column: "song_isrc", primary_key: "isrc", name: "plays_song_isrc_foreign", on_delete: :cascade

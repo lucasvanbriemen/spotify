@@ -5,6 +5,10 @@ pin "@hotwired/turbo-rails", to: "turbo.min.js"
 pin "@hotwired/stimulus", to: "stimulus.min.js"
 pin "@hotwired/stimulus-loading", to: "stimulus-loading.js"
 pin_all_from "app/javascript/controllers", under: "controllers"
+# The karaoke stage's engine: playback transport, mic capture, timing and
+# scoring. These are plain modules rather than Stimulus controllers, so they
+# need their own pin — pin_all_from above only covers controllers/.
+pin_all_from "app/javascript/karaoke", under: "karaoke"
 
 # Shared UI Stimulus controllers (same directory auto-discovered in
 # config/application.rb). Pinned under "controllers" so eagerLoadControllersFrom
@@ -26,6 +30,10 @@ if shared_ui && Dir.exist?(File.join(shared_ui, "assets/js/objects"))
     name = File.basename(file, ".js")
     pin "objects/#{name}", to: "js/objects/#{name}.js"
   end
+else
+  # No shared UI checkout (e.g. local dev) — stub the one module
+  # application.js imports unconditionally, so Turbo/Stimulus still boot.
+  pin "objects/theme", to: "theme_fallback.js"
 end
 
 # Shared UI Stimulus controllers live at <shared>/assets/js/controllers/*.js

@@ -1,0 +1,84 @@
+<%# Picking a song jumps straight here, so the separation runs while the
+    singers sort themselves out rather than after. %>
+<section class="karaoke-screen karaoke-screen--setup" data-controller="karaoke-setup">
+  <div class="karaoke-setup">
+    <div class="karaoke-setup__header">
+      <img class="karaoke-setup__art" data-karaoke-target="art" alt="">
+      <div class="karaoke-setup__meta">
+        <h2 data-karaoke-target="title"></h2>
+        <p data-karaoke-target="artist"></p>
+      </div>
+    </div>
+
+    <ol class="karaoke-steps">
+      <li class="karaoke-steps__step" data-karaoke-target="stepDownload">1. Download</li>
+      <li class="karaoke-steps__step" data-karaoke-target="stepSeparate">2. Remove vocals</li>
+      <li class="karaoke-steps__step" data-karaoke-target="stepAnalyse">3. Analyse</li>
+    </ol>
+    <p class="karaoke-setup__status" data-karaoke-target="playerStatus"></p>
+
+    <div>
+      <div class="karaoke-segmented" role="group" aria-label="Number of singers">
+        <button type="button" class="karaoke-segmented__option" aria-pressed="true"
+                data-karaoke-setup-target="countOption" data-count="1"
+                data-action="karaoke-setup#chooseCount">1 singer</button>
+        <button type="button" class="karaoke-segmented__option" aria-pressed="false"
+                data-karaoke-setup-target="countOption" data-count="2"
+                data-action="karaoke-setup#chooseCount">2 singers</button>
+      </div>
+    </div>
+
+    <div class="karaoke-singers">
+      <% [ 1, 2 ].each do |number| %>
+        <div class="karaoke-singer" data-karaoke-setup-target="singerCard" data-singer="<%= number %>" <%= "hidden" if number == 2 %>>
+          <span class="karaoke-singer__label">Singer <%= number %></span>
+
+          <label class="karaoke-field">
+            Name
+            <input type="text" class="karaoke-input" maxlength="50" placeholder="Singer <%= number %>"
+                   data-karaoke-setup-target="name" data-singer="<%= number %>"
+                   data-action="input->karaoke-setup#renameSinger">
+          </label>
+
+          <div class="karaoke-field">
+            Colour
+            <div class="karaoke-swatches" role="group" aria-label="Singer <%= number %> colour">
+              <% %w[#22d3ee #a78bfa #fb923c #f472b6].each do |colour| %>
+                <button type="button" class="karaoke-swatch" style="--swatch: <%= colour %>"
+                        aria-label="<%= colour %>" data-colour="<%= colour %>"
+                        data-karaoke-setup-target="swatch" data-singer="<%= number %>"
+                        data-action="karaoke-setup#chooseColour"></button>
+              <% end %>
+            </div>
+          </div>
+
+          <label class="karaoke-field">
+            Microphone
+            <select class="karaoke-select" data-karaoke-setup-target="device" data-singer="<%= number %>"
+                    data-action="change->karaoke-setup#chooseDevice">
+              <option value="">Enable microphones to choose…</option>
+            </select>
+          </label>
+
+          <div class="karaoke-level"><div class="karaoke-level__fill" data-karaoke-setup-target="level" data-singer="<%= number %>"></div></div>
+          <p class="karaoke-singer__check" data-karaoke-setup-target="check" data-singer="<%= number %>"></p>
+        </div>
+      <% end %>
+    </div>
+
+    <%# A TV adds 30-150ms of audio delay the browser cannot measure. This
+        shifts both the lyrics and the scoring: negative if the words land late
+        against what you hear, positive if they run ahead of it. %>
+    <label class="karaoke-field karaoke-setup__latency">
+      Audio delay <span data-karaoke-setup-target="latencyValue">0 ms</span>
+      <input type="range" min="-300" max="300" step="10" value="0"
+             data-karaoke-setup-target="latency" data-action="input->karaoke-setup#changeLatency">
+    </label>
+
+    <div class="karaoke-setup__actions">
+      <%= button(text: "Enable microphones", type: "button", variant: :outline, data: { karaoke_setup_target: "enableMics", action: "karaoke-setup#enableMics" }) %>
+      <%= button(text: "Start singing", type: "button", disabled: true, data: { karaoke_target: "startButton", action: "karaoke#beginPlayback" }) %>
+      <%= button(text: "Back", type: "button", variant: :outline, data: { action: "karaoke#back" }) %>
+    </div>
+  </div>
+</section>

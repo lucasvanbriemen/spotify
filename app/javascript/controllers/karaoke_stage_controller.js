@@ -1,0 +1,424 @@
+import { Controller } from "@hotwired/stimulus"
+import { PitchLane } from "karaoke/pitch_lane"
+
+// The karaoke stage: what the engine's animation-frame loop renders into.
+//
+// THE FRAME CONTRACT — the engine calls, once per frame, with a REUSED object
+// (do not retain it):
+//
+//   frame({
+//     time, duration,
+//     line: { index, sweep /* 0..1 */, wordIndex, next },
+//     held,                                    // hold this note
+//     countIn: null | { kind: "initial"|"gap", secondsRemaining, digit },
+//     singers: [ { midi, voiced, level, score, combo } ]
+//   })
+//
+// and out of band:
+//
+//   setLines(lines)                 // [{ text, singer, words }]
+//   setNotes(melody, scores)        // forwarded to the pitch lane
+//   lineVerdict(singerIndex, verdict)
+//
+// Everything in frame() is dirty-checked, and the only things written per
+// frame are CSS custom properties, canvas draws, and text that actually
+// changed. There are no layout reads in the frame path: the one measurement
+// this controller makes (fitting a long line) happens on a line swap, roughly
+// every few seconds.
+export default class extends Controller {
+  static targets = [
+    "backdrop", "time", "song",
+    "chip", "chipName", "chipScore", "chipCombo",
+    "lane", "canvas",
+    "verdict",
+    "dots", "activeLine", "activeBase", "activeFill", "nextLine",
+    "countIn", "countRing", "countDigit",
+    "controlbar", "playButton", "currentTime", "duration", "seek",
+    "fader", "faderInput", "melodyToggle", "fullscreenButton"
+  ]
+
+  // How long the control bar stays up after the mouse stops moving.
+  static CONTROLS_IDLE_MS = 3000
+  // A line shrunk below this is unreadable from a sofa; let it wrap instead.
+  static MIN_FIT = 0.55
+
+  connect() {
+    this.lines = []
+    this.renderedLine = -1
+    this.renderedSweep = -1
+    this.renderedSecond = -1
+    this.renderedDigit = null
+    this.renderedCountKind = null
+    this.renderedHeld = false
+    this.renderedScores = [ null, null ]
+    this.renderedCombos = [ null, null ]
+    this.controlsTimer = null
+    this.lane = null
+    this.singerColors = [ "#22d3ee", "#a78bfa" ]
+    this.pointerDown = false
+    this.wakeLock = null
+    this.delegate = null
+
+    this.boundPointerMove = () => this.showControls()
+    this.boundKeydown = (event) => this.onKeydown(event)
+    this.boundFullscreenChange = () => this.syncFullscreenButton()
+    this.boundVisibility = () => this.reacquireWakeLock()
+
+    this.element.addEventListener("pointermove", this.boundPointerMove)
+    this.element.addEventListener("pointerdown", () => { this.pointerDown = true })
+    this.element.addEventListener("pointerup", () => { this.pointerDown = false; this.showControls() })
+    document.addEventListener("keydown", this.boundKeydown)
+    document.addEventListener("fullscreenchange", this.boundFullscreenChange)
+    document.addEventListener("visibilitychange", this.boundVisibility)
+  }
+
+  disconnect() {
+    this.element.removeEventListener("pointermove", this.boundPointerMove)
+    document.removeEventListener("keydown", this.boundKeydown)
+    document.removeEventListener("fullscreenchange", this.boundFullscreenChange)
+    document.removeEventListener("visibilitychange", this.boundVisibility)
+    clearTimeout(this.controlsTimer)
+    this.lane?.dispose()
+    this.lane = null
+    this.releaseWakeLock()
+  }
+
+  // --- Entering and leaving ------------------------------------------------
+
+  // Called from inside the Start click. requestFullscreen has to run in that
+  // gesture's own turn of the event loop, so this must not be awaited on
+  // anything beforehand.
+  enter({ track, singers, hasVocals, vocalPercent, guideMelody }) {
+    this.requestFullscreen()
+
+    this.songTarget.textContent = `${track.title} — ${track.artist}`
+    this.backdropTarget.src = track.image_url || ""
+    this.element.dataset.singers = String(singers.length)
+    this.singerColors = singers.map((singer) => singer.color)
+    this.lane?.setColors({ singers: this.singerColors })
+
+    singers.forEach((singer, index) => {
+      const number = index + 1
+      this.element.style.setProperty(`--p${number}`, singer.color)
+      const chip = this.chipFor(number)
+      if (chip) {
+        chip.hidden = false
+        chip.style.setProperty("--chip-color", singer.color)
+      }
+      this.targetFor("chipName", number).textContent = singer.name
+      this.targetFor("chipScore", number).textContent = "0"
+      this.targetFor("chipCombo", number).textContent = ""
+    })
+    for (let number = singers.length + 1; number <= 2; number++) {
+      const chip = this.chipFor(number)
+      if (chip) chip.hidden = true
+    }
+
+    this.faderTarget.hidden = !hasVocals
+    this.faderInputTarget.value = vocalPercent
+    this.melodyToggleTarget.setAttribute("aria-pressed", String(Boolean(guideMelody)))
+
+    this.resetRenderState()
+    this.acquireWakeLock()
+    this.showControls()
+  }
+
+  leave() {
+    this.releaseWakeLock()
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
+    this.resetRenderState()
+  }
+
+  resetRenderState() {
+    this.renderedLine = -1
+    this.renderedSweep = -1
+    this.renderedSecond = -1
+    this.renderedDigit = null
+    this.renderedCountKind = null
+    this.renderedHeld = false
+    this.renderedScores = [ null, null ]
+    this.renderedCombos = [ null, null ]
+    this.activeBaseTarget.textContent = ""
+    this.activeFillTarget.textContent = ""
+    this.nextLineTarget.textContent = ""
+    this.countInTarget.hidden = true
+    this.dotsTarget.hidden = true
+  }
+
+  // --- The engine's view ---------------------------------------------------
+
+  setLines(lines) {
+    this.lines = lines || []
+    this.renderedLine = -1
+    if (this.lines.length === 0) {
+      this.activeBaseTarget.textContent = "No synced lyrics for this song."
+      this.activeFillTarget.textContent = ""
+    }
+  }
+
+  // A song with no usable melody keeps its lane — the row has to stay, or the
+  // lyric block would stop being anchored to the bottom — it just draws
+  // nothing.
+  // scores defaults to keeping whatever the lane already has: a caller that
+  // omits it must not be able to silently strip the lane of its scorers.
+  setNotes(melody, scores = this.lane?.scores) {
+    // Without a melody the lane would sit there as a large empty band with the
+    // lyrics stranded under it, so the layout gives its space back instead.
+    this.element.dataset.lane = !melody || melody.isEmpty ? "off" : "on"
+
+    this.lane ||= new PitchLane(this.canvasTarget, this.laneTarget)
+    this.lane.setColors({ singers: this.singerColors })
+    this.lane.resize()
+    this.lane.setMelody(melody)
+    this.lane.setScores(scores)
+  }
+
+  frame(state) {
+    if (state.line.index !== this.renderedLine) this.swapLines(state.line.index)
+
+    // The wipe. One custom property, resolved by clip-path — no layout, no
+    // paint outside the line's own containing block.
+    const sweep = Math.round(state.line.sweep * 1000) / 10
+    if (sweep !== this.renderedSweep) {
+      this.activeLineTarget.style.setProperty("--sweep", `${sweep}%`)
+      this.renderedSweep = sweep
+    }
+
+    if (state.held !== this.renderedHeld) {
+      this.activeLineTarget.classList.toggle("karaoke-lyric--held", state.held)
+      this.renderedHeld = state.held
+    }
+
+    this.renderCountIn(state.countIn)
+    this.renderClock(state)
+    this.renderScores(state.singers)
+    this.lane?.frame(state.time, state.singers)
+  }
+
+  swapLines(index) {
+    const line = this.lines[index]
+    const next = this.lines[index + 1]
+
+    this.activeBaseTarget.textContent = line ? line.text : ""
+    this.activeFillTarget.textContent = line ? line.text : ""
+    this.nextLineTarget.textContent = next ? next.text : ""
+
+    this.activeLineTarget.classList.toggle("karaoke-lyric--p1", line?.singer === 1)
+    this.activeLineTarget.classList.toggle("karaoke-lyric--p2", line?.singer === 2)
+
+    this.activeLineTarget.style.setProperty("--sweep", "0%")
+    this.renderedSweep = 0
+
+    this.fitLine()
+    this.retrigger(this.activeLineTarget, "is-in")
+
+    this.renderedLine = index
+  }
+
+  // Long lines shrink rather than wrap: a wrapped line would put two rows of
+  // text under one horizontal wipe. Costs one layout read per line.
+  fitLine() {
+    const needed = this.activeBaseTarget.scrollWidth
+    const available = this.activeLineTarget.parentElement.clientWidth
+    if (!needed || !available) return
+
+    const fit = Math.min(1, available / needed)
+    this.activeLineTarget.style.setProperty("--fit", Math.max(this.constructor.MIN_FIT, fit).toFixed(3))
+    this.activeLineTarget.style.whiteSpace = fit < this.constructor.MIN_FIT ? "normal" : "nowrap"
+  }
+
+  renderCountIn(countIn) {
+    const kind = countIn?.kind ?? null
+
+    if (kind !== this.renderedCountKind) {
+      this.countInTarget.hidden = kind !== "initial"
+      this.dotsTarget.hidden = kind !== "gap"
+      this.renderedCountKind = kind
+      this.renderedDigit = null
+    }
+
+    if (!countIn) return
+
+    if (countIn.digit !== this.renderedDigit) {
+      this.renderedDigit = countIn.digit
+      if (kind === "initial") {
+        this.countDigitTarget.textContent = String(countIn.digit)
+        this.retrigger(this.countRingTarget, "is-ticking")
+      } else {
+        this.dotsTarget.dataset.remaining = String(countIn.digit)
+      }
+    }
+  }
+
+  renderClock(state) {
+    const second = Math.floor(Math.max(0, state.time))
+    if (second !== this.renderedSecond) {
+      const formatted = this.formatTime(state.time)
+      this.timeTarget.textContent = formatted
+      this.currentTimeTarget.textContent = formatted
+      this.durationTarget.textContent = this.formatTime(state.duration)
+      this.renderedSecond = second
+    }
+
+    if (state.duration > 0) {
+      const progress = Math.max(0, state.time) / state.duration
+      this.element.style.setProperty("--progress", progress.toFixed(4))
+      if (document.activeElement !== this.seekTarget && !this.pointerDown) {
+        this.seekTarget.value = progress * 1000
+      }
+    }
+  }
+
+  renderScores(singers) {
+    singers?.forEach((singer, index) => {
+      const number = index + 1
+
+      const score = Math.round(singer.score || 0)
+      if (score !== this.renderedScores[index]) {
+        const element = this.targetFor("chipScore", number)
+        if (element) element.textContent = score.toLocaleString()
+        this.renderedScores[index] = score
+      }
+
+      const combo = singer.combo || 0
+      if (combo !== this.renderedCombos[index]) {
+        const element = this.targetFor("chipCombo", number)
+        if (element) {
+          element.textContent = combo >= 2 ? `×${combo}` : ""
+          if (combo >= 2) this.retrigger(element, "is-bumped")
+        }
+        this.renderedCombos[index] = combo
+      }
+    })
+  }
+
+  // Perfect / Great / Good / Miss, popped above the singer's side of the
+  // screen. One persistent element each, so they can never collide.
+  lineVerdict(singerIndex, verdict) {
+    const element = this.targetFor("verdict", singerIndex + 1)
+    if (!element) return
+
+    element.textContent = verdict.charAt(0).toUpperCase() + verdict.slice(1)
+    element.className = `karaoke-verdict karaoke-verdict--p${singerIndex + 1} karaoke-verdict--${verdict}`
+    this.retrigger(element, "is-shown")
+  }
+
+  // --- Controls ------------------------------------------------------------
+
+  togglePlay() {
+    this.delegate?.stageTogglePlay?.()
+  }
+
+  seek() {
+    this.delegate?.stageSeek?.(this.seekTarget.value / 1000)
+  }
+
+  changeVocalGuide() {
+    this.delegate?.stageVocalGuide?.(Number(this.faderInputTarget.value))
+  }
+
+  toggleMelody() {
+    const on = this.melodyToggleTarget.getAttribute("aria-pressed") !== "true"
+    this.melodyToggleTarget.setAttribute("aria-pressed", String(on))
+    this.delegate?.stageGuideMelody?.(on)
+  }
+
+  exit() {
+    this.delegate?.stageExit?.()
+  }
+
+  setPlaying(playing) {
+    this.playButtonTarget.textContent = playing ? "⏸" : "▶"
+  }
+
+  onKeydown(event) {
+    if (this.element.offsetParent === null) return // stage isn't the visible screen
+    // The scoreboard is over the stage; replaying from under it would run the
+    // song to its end again and post a second score.
+    if (this.element.closest(".karaoke")?.classList.contains("karaoke--results")) return
+    if (event.code !== "Space") return
+
+    const tag = document.activeElement?.tagName
+    if (tag === "INPUT" || tag === "BUTTON" || tag === "SELECT") return
+
+    event.preventDefault()
+    this.togglePlay()
+  }
+
+  showControls() {
+    this.element.classList.add("is-controls-visible")
+    this.element.classList.remove("is-idle")
+    clearTimeout(this.controlsTimer)
+
+    this.controlsTimer = setTimeout(() => {
+      // Never yank the bar away mid-drag, or while a control has focus.
+      if (this.pointerDown || this.controlbarTarget.matches(":focus-within")) return this.showControls()
+
+      this.element.classList.remove("is-controls-visible")
+      this.element.classList.add("is-idle")
+    }, this.constructor.CONTROLS_IDLE_MS)
+  }
+
+  // --- Full screen and wake lock -------------------------------------------
+
+  requestFullscreen() {
+    const root = this.element.closest(".karaoke") || this.element
+    root.requestFullscreen?.({ navigationUI: "hide" }).catch(() => {})
+  }
+
+  toggleFullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
+    else this.requestFullscreen()
+  }
+
+  // The user can always escape out; show a way back in rather than fighting it.
+  syncFullscreenButton() {
+    this.fullscreenButtonTarget.hidden = Boolean(document.fullscreenElement)
+  }
+
+  async acquireWakeLock() {
+    try {
+      this.wakeLock = await navigator.wakeLock?.request("screen")
+    } catch {
+      this.wakeLock = null // denied or unsupported; the screen may dim
+    }
+  }
+
+  releaseWakeLock() {
+    this.wakeLock?.release().catch(() => {})
+    this.wakeLock = null
+  }
+
+  // A wake lock is dropped whenever the page is hidden, so it has to be taken
+  // again on the way back.
+  reacquireWakeLock() {
+    if (document.visibilityState === "visible" && !this.wakeLock && this.element.offsetParent !== null) {
+      this.acquireWakeLock()
+    }
+  }
+
+  // --- Helpers -------------------------------------------------------------
+
+  chipFor(number) {
+    return this.chipTargets.find((element) => element.dataset.singer === String(number))
+  }
+
+  targetFor(name, number) {
+    return this[`${name}Targets`].find((element) => element.dataset.singer === String(number))
+  }
+
+  // Restarting a CSS animation needs the class removed, a reflow, then the
+  // class back. Happens on line swaps and verdicts, about once a second at
+  // most — nowhere near the per-frame path.
+  retrigger(element, className) {
+    element.classList.remove(className)
+    void element.offsetWidth
+    element.classList.add(className)
+  }
+
+  formatTime(seconds) {
+    if (!Number.isFinite(seconds)) return "0:00"
+    const total = Math.max(0, Math.floor(seconds))
+    return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`
+  }
+}

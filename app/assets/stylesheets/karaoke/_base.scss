@@ -1,0 +1,95 @@
+@use "tokens" as *;
+
+// The shell, the screen routing, and the two things that would otherwise ruin
+// a 60fps stage: inherited transitions and inherited motion.
+
+.karaoke {
+  --p1: #{$singer-1};
+  --p2: #{$singer-2};
+  // Written by the engine every frame. Declared here so they always resolve,
+  // even before the first frame.
+  --sweep: 0%;
+  --progress: 0;
+  --beat: 0;
+  --fit: 1;
+
+  --lyric-size: clamp(2.6rem, 6vw, 4.6rem);
+  --lyric-next-size: clamp(1.7rem, 3.4vw, 2.8rem);
+  --hud-score-size: clamp(1.4rem, 2.4vw, 2.2rem);
+  --hud-label-size: clamp(1rem, 1.6vw, 1.4rem);
+  --verdict-size: clamp(2rem, 4vw, 3.4rem);
+  --countin-size: clamp(4rem, 10vw, 8rem);
+
+  --karaoke-good: #{$good};
+  --karaoke-ok: #{$ok};
+  --karaoke-bad: #{$bad};
+
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+// The shared UI stylesheet (ui-components/assets/scss/global.scss) applies
+// `* { transition: all 0.3s ease-in-out; color: var(--on-surface) }` to the
+// whole document, and it loads after this one. Two problems, both fixed here
+// because a universal selector beats inheritance but loses to any class.
+//
+// The transition would make every value the engine writes per frame — the
+// lyric wipe, the progress bar, a score counter — arrive 300ms late and
+// smeared. The colour silently repaints anything that hasn't named its own,
+// in a theme this screen deliberately doesn't follow.
+//
+// Both are reset for the whole feature; individual properties are opted back
+// in where they're actually wanted, carrying an extra class so they win
+// regardless of the order the manifest emits files.
+.karaoke,
+.karaoke *:not(.input-wrapper label),
+.karaoke *::before,
+.karaoke *::after {
+  transition: none;
+}
+
+// Descendants only. The root deliberately keeps the colour it sets above — put
+// `.karaoke` in here too and the whole tree inherits the shared theme's ink,
+// which in light mode is near-black text on this very dark stage.
+.karaoke *,
+.karaoke *::before,
+.karaoke *::after {
+  color: inherit;
+}
+
+// --- Screen routing ------------------------------------------------------
+// All four screens render into the page; only the current one is displayed, so
+// the coordinator can flip between them without re-rendering anything.
+
+.karaoke-screen {
+  display: none;
+  height: 100%;
+}
+
+.karaoke[data-screen="search"] .karaoke-screen--search,
+.karaoke[data-screen="setup"] .karaoke-screen--setup,
+.karaoke[data-screen="stage"] .karaoke-screen--stage {
+  display: flex;
+}
+
+.karaoke-screen--stage {
+  display: none;
+}
+
+.karaoke[data-screen="stage"] .karaoke-screen--stage {
+  display: grid;
+}
+
+.karaoke:fullscreen {
+  background: $bg;
+}
+
+// Hidden until a song finishes; overlays the stage rather than replacing it.
+.karaoke-scoreboard {
+  display: none;
+}
+
+.karaoke--results .karaoke-scoreboard {
+  display: flex;
+}

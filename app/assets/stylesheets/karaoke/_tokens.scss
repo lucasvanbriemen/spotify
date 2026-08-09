@@ -1,0 +1,51 @@
+// Karaoke design tokens. Variables and mixins only — this file emits no CSS,
+// so the auto-generated manifest can @use it alongside everything else.
+//
+// The karaoke views deliberately don't follow the shared UI theme: this is a
+// lean-back screen read from across a room, always dark, never light.
+
+$bg: #0b0b12;
+$bg-raised: #16161f;
+$bg-sunken: #06060c;
+
+$fg: #f4f4f8;
+$fg-dim: rgba(244, 244, 248, 0.62);
+// The unsung half of a lyric line sits over album art, so it needs more
+// presence than a normal muted colour would have.
+$fg-faint: rgba(244, 244, 248, 0.45);
+
+$accent: #22d3ee;
+$good: #34d399;
+$ok: #fbbf24;
+$bad: #f87171;
+// Golden notes and a Perfect line. Reserved — never offered as a singer colour.
+$gold: #fcd34d;
+
+// Singer colours. Cyan and violet stay distinguishable under the common forms
+// of colour blindness and both clear 3:1 against the stage background. Orange
+// and pink are offered as alternates; green/amber/red/gold are not, because
+// they already mean something on this screen.
+$singer-1: #22d3ee;
+$singer-2: #a78bfa;
+$singer-alt-1: #fb923c;
+$singer-alt-2: #f472b6;
+
+$radius: 12px;
+$radius-pill: 999px;
+
+$z-backdrop: 0;
+$z-lane: 1;
+$z-lyrics: 2;
+$z-verdicts: 3;
+$z-hud: 4;
+$z-countin: 5;
+$z-controls: 6;
+$z-results: 7;
+
+// Anything the engine rewrites every frame must never be transitioned: the
+// shared UI stylesheet sets `* { transition: all .3s }`, which would turn a
+// per-frame value into a smear. Applied wholesale in _base.scss; this mixin is
+// for the handful of places that opt a property back in.
+@mixin instant {
+  transition: none;
+}

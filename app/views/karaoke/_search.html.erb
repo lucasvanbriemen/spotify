@@ -1,0 +1,21 @@
+<section class="karaoke-screen karaoke-screen--search">
+  <h1>Karaoke</h1>
+  <p>Search for a song — only tracks with time-synced lyrics show up here.</p>
+
+  <%= form_with url: root_path, method: :get, data: { turbo_frame: "karaoke" }, builder: CustomFormBuilder do |form| %>
+    <%= form.text_field :query, value: params[:query], data: { karaoke_target: "query", action: "input->karaoke#search" }, label: "Search for a song" %>
+  <% end %>
+
+  <div class="karaoke-results" data-karaoke-target="results"></div>
+
+  <%# Filled from /api/karaoke-history, and hidden until there is a history. %>
+  <div class="karaoke-search__section" data-karaoke-target="recentSection" hidden>
+    <p class="karaoke-search__section-title">Recently sung</p>
+    <div class="karaoke-results" data-karaoke-target="recentList"></div>
+  </div>
+
+  <div class="karaoke-search__section" data-karaoke-target="popularSection" hidden>
+    <p class="karaoke-search__section-title">Most sung</p>
+    <div class="karaoke-results" data-karaoke-target="popularList"></div>
+  </div>
+</section>

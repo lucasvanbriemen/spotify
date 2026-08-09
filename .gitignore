@@ -48,3 +48,6 @@
 # Downloaded MP3 cache.
 /storage/audio/
 /ios/music/shared/Secerts.swift
+
+# Python venv for karaoke vocal separation/pitch extraction (script/karaoke_separate.py).
+/vendor/karaoke/

@@ -4,6 +4,13 @@
 class SongCache
   AUDIO_DIR = Rails.root.join("storage/audio")
   DOWNLOAD_TIMEOUT_SECONDS = 180
+  # YouTube carries single edits, radio edits, live takes and remasters under
+  # the same title, and picking the wrong one puts the audio out of step with
+  # everything timed against the real recording — most visibly the karaoke
+  # lyrics, which come from LRCLIB timed to the released master. (Observed: a
+  # 271s song whose search result was a 241s edit, drifting half a minute by
+  # the end.) Prefer a result whose length matches what Deezer reports.
+  DURATION_TOLERANCE = 0.07
 
   class << self
     def path(isrc)
@@ -26,6 +33,9 @@ class SongCache
 
         details = Deezer::Client.track_details(isrc)
         download(isrc, details)
+        # Nothing on YouTube matched the expected length. Better a
+        # possibly-mismatched recording than no song at all.
+        download(isrc, details, match_duration: false) unless cached?(isrc)
         next false unless cached?(isrc)
 
         create_song(isrc, details)
@@ -59,14 +69,14 @@ class SongCache
       )
     end
 
-    def download(isrc, details)
+    def download(isrc, details, match_duration: true)
       tmp_dir = Rails.root.join("tmp/yt-dlp")
       FileUtils.mkdir_p(tmp_dir)
       FileUtils.mkdir_p(AUDIO_DIR)
 
       env = { "TMP" => tmp_dir.to_s, "TEMP" => tmp_dir.to_s, "TMPDIR" => tmp_dir.to_s }
       command = [
-        Rails.root.join("bin/yt-dlp").to_s,
+        ExecutablePath.resolve("yt-dlp").to_s,
         "--no-playlist",
         # Audio-only formats and parallel fragment downloads: never pull the
         # video track, and sidestep YouTube's per-connection throttling.
@@ -77,7 +87,10 @@ class SongCache
         "--audio-quality", "0",
         "--restrict-filenames",
         "--no-progress",
-        "--match-filter", "age_limit<18",
+        # yt-dlp walks the search results in order and --max-downloads stops at
+        # the first that passes, so the length window here is what keeps a
+        # different edit from being taken.
+        "--match-filter", match_filter(match_duration ? details["duration"] : nil),
         "--max-downloads", "1",
         "--ffmpeg-location", Rails.root.join("bin").to_s,
         "--output", AUDIO_DIR.join(isrc).to_s,
@@ -86,11 +99,15 @@ class SongCache
 
       # The exit status is ignored, like in the Laravel app: callers respond
       # with 404 when no file was produced.
-      pid = Process.spawn(env, *command, out: File::NULL, err: File::NULL)
-      Timeout.timeout(DOWNLOAD_TIMEOUT_SECONDS) { Process.wait(pid) }
-    rescue Timeout::Error
-      Process.kill("KILL", pid)
-      Process.wait(pid)
+      TimedProcess.run(*command, env: env, timeout_seconds: DOWNLOAD_TIMEOUT_SECONDS)
+    end
+
+    def match_filter(expected_duration)
+      seconds = expected_duration.to_f
+      return "age_limit<18" unless seconds.positive?
+
+      window = seconds * DURATION_TOLERANCE
+      "age_limit<18 & duration>#{(seconds - window).round} & duration<#{(seconds + window).round}"
     end
   end
 end
