@@ -137,15 +137,15 @@ export default class extends Controller {
 
     for (const song of songs) {
       const item = document.createElement("li")
-      item.className = "karaoke-results__item"
+      item.className = "results-item"
       item.tabIndex = 0
       item.innerHTML = `
-        <img src="${this.escapeAttribute(song.image_url)}" alt="" class="karaoke-results__art">
-        <div class="karaoke-results__meta">
+        <img src="${this.escapeAttribute(song.image_url)}">
+        <div class="meta">
           <h2>${this.escapeText(song.title)}</h2>
           <p>${this.escapeText(song.artist)}</p>
         </div>
-        <span class="karaoke-results__badges">${this.badgeMarkup(song)}</span>
+        <span class="k_badges">${this.badgeMarkup(song)}</span>
       `
       item.addEventListener("click", () => this.selectSong(song))
       item.addEventListener("keydown", (event) => {

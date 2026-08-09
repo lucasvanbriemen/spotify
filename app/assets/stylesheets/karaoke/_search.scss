@@ -39,43 +39,37 @@
   cursor: pointer;
   background: var(--surface-at-1);
 
-  &:hover, &:focus-visible { background: var(--surface-at-3); }
-}
+  &:hover { background: var(--surface-at-3); }
 
-.karaoke .karaoke-results__item {
-  transition: background 0.15s ease;
-}
-
-.karaoke-results__art {
-  width: 56px;
-  height: 56px;
-  border-radius: 8px;
-  object-fit: cover;
-  background: $bg-raised;
-  flex-shrink: 0;
-}
-
-.karaoke-results__meta {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1;
-
-  h2 {
-    font-size: 1.2rem;
+  img {
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+    object-fit: cover;
   }
 
-  p {
-    font-size: 1rem;
-    color: var(--on-surface-variant)
-  }
-}
+  .meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
 
-.karaoke-results__badges {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex-shrink: 0;
+    h2 {
+      font-size: 1.2rem;
+    }
+
+    p {
+      font-size: 1rem;
+      color: var(--on-surface-variant)
+    }
+  }
+
+  .badges {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+  }
 }
 
 // "Ready" means the separation already ran and the song starts immediately;
