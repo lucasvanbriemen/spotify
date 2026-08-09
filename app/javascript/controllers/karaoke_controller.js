@@ -145,7 +145,7 @@ export default class extends Controller {
           <h2>${this.escapeText(song.title)}</h2>
           <p>${this.escapeText(song.artist)}</p>
         </div>
-        <span class="k_badges">${this.badgeMarkup(song)}</span>
+        <span class="badges">${this.badgeMarkup(song)}</span>
       `
       item.addEventListener("click", () => this.selectSong(song))
       item.addEventListener("keydown", (event) => {
