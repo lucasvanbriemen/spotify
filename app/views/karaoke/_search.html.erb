@@ -6,7 +6,7 @@
     <%= form.text_field :query, value: params[:query], data: { karaoke_target: "query", action: "input->karaoke#search" }, label: "Search for a song" %>
   <% end %>
 
-  <p class="karaoke-search__status" data-karaoke-target="searchStatus"></p>
+  <p class="karaoke-search__status"></p>
   <ul class="karaoke-results" data-karaoke-target="results"></ul>
 
   <%# Filled from /api/karaoke-history, and hidden until there is a history. %>

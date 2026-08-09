@@ -1,9 +1,9 @@
 import { Controller } from "@hotwired/stimulus"
-import { getAudioSession } from "karaoke/audio_session"
-import { Transport } from "karaoke/transport"
 import { KaraokeEngine } from "karaoke/engine"
 import { LyricsTimeline } from "karaoke/lyrics_timing"
 import { Melody } from "karaoke/melody"
+import { Transport } from "karaoke/transport"
+import { getAudioSession } from "karaoke/audio_session"
 import { settings } from "karaoke/settings"
 
 // Coordinates the karaoke flow: search -> setup -> stage -> results.
@@ -14,7 +14,7 @@ import { settings } from "karaoke/settings"
 // controller never touches it per frame.
 export default class extends Controller {
   static targets = [
-    "query", "searchStatus", "results",
+    "query", "results",
     "recentSection", "recentList", "popularSection", "popularList",
     "art", "title", "artist", "playerStatus", "startButton",
     "stepDownload", "stepSeparate", "stepAnalyse"
@@ -102,11 +102,9 @@ export default class extends Controller {
 
     if (query.length < this.constructor.MIN_QUERY_LENGTH) {
       this.resultsTarget.innerHTML = ""
-      this.searchStatusTarget.textContent = ""
       return
     }
 
-    this.searchStatusTarget.textContent = "Searching…"
     this.searchDebounce = setTimeout(() => this.runSearch(query), this.constructor.SEARCH_DEBOUNCE_MS)
   }
 
@@ -117,14 +115,10 @@ export default class extends Controller {
     if (token !== this.searchToken) return // a newer keystroke already superseded this request
 
     if (!payload) {
-      this.searchStatusTarget.textContent = "Search failed — check your connection and try again."
       this.resultsTarget.innerHTML = ""
       return
     }
 
-    this.searchStatusTarget.textContent = payload.songs.length === 0
-      ? "No karaoke-ready songs found — try a more popular title."
-      : ""
     this.renderInto(this.resultsTarget, payload.songs)
   }
 
