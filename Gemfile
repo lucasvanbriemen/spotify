@@ -5,11 +5,8 @@ gem "rails", "~> 8.0.5"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"
 gem "dartsass-rails"
-# Primary database: MySQL/MariaDB via the trilogy adapter. Trilogy has no
-# Windows support (its C extension needs POSIX poll()), so Windows dev
-# machines use mysql2's native extension against the same MariaDB server.
-gem "trilogy", ">= 2.7", platforms: %i[ mri jruby ]
-gem "mysql2", "~> 0.5", platforms: %i[ windows ]
+# Primary database: MySQL/MariaDB via the trilogy adapter
+gem "trilogy", ">= 2.7"
 # Still used by Solid Cache/Queue/Cable for their local production stores
 gem "sqlite3", ">= 2.1"
 # Use the Puma web server [https://github.com/puma/puma]
