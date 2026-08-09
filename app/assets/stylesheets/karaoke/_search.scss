@@ -6,82 +6,81 @@
   width: 30vw;
   padding: 1rem;
   margin: 1rem auto;
-}
 
-.karaoke-search__section-title {
-  font-size: 0.85rem;
-  color: var(--on-surface-variant);
-  margin: 0 0 0.5rem;
-}
-
-.karaoke-results {
-  margin: 0.5rem 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.result-item {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  border-radius: 1rem;
-  cursor: pointer;
-  background: var(--surface-at-1);
-
-  &:hover { background: var(--surface-at-3); }
-
-  img {
-    width: 56px;
-    height: 56px;
-    border-radius: 1rem;
-    object-fit: cover;
+  .karaoke-search__section-title {
+    font-size: 0.85rem;
+    color: var(--on-surface-variant);
+    margin: 0 0 0.5rem;
   }
 
-  .meta {
+  .karaoke-results {
+    margin: 0.5rem 0 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
-    min-width: 0;
-    flex: 1;
+    gap: 0.25rem;
 
-    h2 {
-      font-size: 1.2rem;
-    }
-
-    p {
-      font-size: 1rem;
-      color: var(--on-surface-variant)
-    }
-  }
-
-  .badges {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-shrink: 0;
-
-    .karaoke-badge {
-      font-size: 0.7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      padding: 0.22rem 0.55rem;
+    .result-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
       border-radius: 1rem;
-      color: var(--on-success-container);
-      background-color: var(--success-container);
-    }
-  
-    .karaoke-badge--medium {
-      color: var(--on-warning-container);
-      background-color: var(--warning-container);
-    }
-  
-    .karaoke-badge--hard {
-      color: var(--on-error-container);
-      background-color: var(--error-container);
+      cursor: pointer;
+      background: var(--surface-at-1);
+
+      &:hover { background: var(--surface-at-3); }
+
+      img {
+        width: 56px;
+        height: 56px;
+        border-radius: 1rem;
+        object-fit: cover;
+      }
+
+      .meta {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        flex: 1;
+
+        h2 {
+          font-size: 1.2rem;
+        }
+
+        p {
+          font-size: 1rem;
+          color: var(--on-surface-variant)
+        }
+      }
+
+      .badges {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-shrink: 0;
+
+        .karaoke-badge {
+          font-size: 0.7rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          padding: 0.22rem 0.55rem;
+          border-radius: 1rem;
+          color: var(--on-success-container);
+          background-color: var(--success-container);
+        }
+      
+        .karaoke-badge--medium {
+          color: var(--on-warning-container);
+          background-color: var(--warning-container);
+        }
+      
+        .karaoke-badge--hard {
+          color: var(--on-error-container);
+          background-color: var(--error-container);
+        }
+      }
     }
   }
 }
-
