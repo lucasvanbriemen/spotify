@@ -41,6 +41,7 @@
 # Auto-generated Sass manifest (rebuilt at boot by config/application.rb).
 /app/assets/stylesheets/_manifest.scss
 
+# yt-dlp + ffmpeg binaries live in bin/ on the server but are not tracked.
 /bin/yt-dlp
 /bin/ffmpeg
 
