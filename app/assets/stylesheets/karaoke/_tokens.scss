@@ -42,8 +42,6 @@ $z-countin: 5;
 $z-controls: 6;
 $z-results: 7;
 
-$font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-
 // Anything the engine rewrites every frame must never be transitioned: the
 // shared UI stylesheet sets `* { transition: all .3s }`, which would turn a
 // per-frame value into a smear. Applied wholesale in _base.scss; this mixin is
