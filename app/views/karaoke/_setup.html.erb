@@ -76,11 +76,9 @@
     </label>
 
     <div class="karaoke-setup__actions">
-      <button type="button" class="karaoke-button karaoke-button--ghost"
-              data-karaoke-setup-target="enableMics" data-action="karaoke-setup#enableMics">Enable microphones</button>
-      <button type="button" class="karaoke-button" data-karaoke-target="startButton"
-              data-action="karaoke#beginPlayback" disabled>Start singing</button>
-      <button type="button" class="karaoke-button karaoke-button--ghost" data-action="karaoke#back">Back</button>
+      <%= button(text: "Enable microphones", type: "button", variant: :outline, data: { karaoke_setup_target: "enableMics", action: "karaoke-setup#enableMics" }) %>
+      <%= button(text: "Start singing", type: "button", disabled: true, data: { karaoke_target: "startButton", action: "karaoke#beginPlayback" }) %>
+      <%= button(text: "Back", type: "button", variant: :outline, data: { karaoke_setup_target: "back", action: "karaoke-setup#back" }) %>
     </div>
 
     <%# The mics hear the TV as well as the singer; distance is what decides
