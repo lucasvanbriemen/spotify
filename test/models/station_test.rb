@@ -26,12 +26,14 @@ class StationTest < ActiveSupport::TestCase
 
   test "genre station candidates are scoped to the genre" do
     station = Station.find("genre-rock")
+
     assert_equal 16, station.candidate_songs.count
     assert station.candidate_songs.all? { |song| song.genre == "Rock" }
   end
 
   test "decade station candidates are scoped to the decade" do
     station = Station.find("decade-80s")
+
     assert station.candidate_songs.all? { |song| (1980..1989).cover?(song.release_year) }
   end
 
