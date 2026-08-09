@@ -136,9 +136,8 @@ export default class extends Controller {
     list.innerHTML = ""
 
     for (const song of songs) {
-      const item = document.createElement("li")
-      item.className = "results-item"
-      item.tabIndex = 0
+      const item = document.createElement("div")
+      item.className = "result-item"
       item.innerHTML = `
         <img src="${this.escapeAttribute(song.image_url)}">
         <div class="meta">
