@@ -141,10 +141,10 @@ export default class extends Controller {
       item.tabIndex = 0
       item.innerHTML = `
         <img src="${this.escapeAttribute(song.image_url)}" alt="" class="karaoke-results__art">
-        <span class="karaoke-results__meta">
-          <span class="karaoke-results__title">${this.escapeText(song.title)}</span>
-          <span class="karaoke-results__artist">${this.escapeText(song.artist)}</span>
-        </span>
+        <div class="karaoke-results__meta">
+          <h2>${this.escapeText(song.title)}</h2>
+          <p>${this.escapeText(song.artist)}</p>
+        </div>
         <span class="karaoke-results__badges">${this.badgeMarkup(song)}</span>
       `
       item.addEventListener("click", () => this.selectSong(song))
