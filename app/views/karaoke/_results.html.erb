@@ -14,8 +14,8 @@
     </svg>
 
     <div class="karaoke-scoreboard__actions">
-      <button type="button" class="karaoke-button" data-action="karaoke-results#singAgain">Sing again</button>
-      <button type="button" class="karaoke-button karaoke-button--ghost" data-action="karaoke-results#back">Back to search</button>
+      <%= button(text: "Sing again", type: "button", data: { action: "karaoke-results#singAgain" }) %>
+      <%= button(text: "Back to search", type: "button", variant: :outline, data: { action: "karaoke-results#back" }) %>
     </div>
   </div>
 </section>

@@ -117,14 +117,6 @@
   &:focus-visible { outline: 3px solid $fg; outline-offset: 3px; }
 }
 
-.karaoke-button--ghost {
-  background: transparent;
-  color: $fg;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-
-  &:not(:disabled):hover { background: rgba(255, 255, 255, 0.1); filter: none; }
-}
-
 .karaoke-visually-hidden {
   position: absolute;
   width: 1px;
