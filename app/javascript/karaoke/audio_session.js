@@ -15,9 +15,13 @@ export async function getAudioSession(workletUrl) {
     return session
   }
 
-  // "playback" trades a little latency for buffer headroom: we care that the
-  // audio never glitches, not that a keypress responds instantly.
-  const context = new AudioContext({ latencyHint: "playback" })
+  // "interactive", not "playback". The playback hint buys glitch headroom by
+  // making the output buffer as large as it likes — a couple of hundred
+  // milliseconds on some machines — and that delay sits between every visual
+  // and the sound it belongs to, as well as in the mic round trip. This app
+  // has a microphone in the loop and words that must land on the beat, so the
+  // low, predictable buffer is worth more than the headroom.
+  const context = new AudioContext({ latencyHint: "interactive" })
   await context.audioWorklet.addModule(workletUrl)
 
   session = {

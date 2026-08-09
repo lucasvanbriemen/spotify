@@ -66,9 +66,9 @@
       <% end %>
     </div>
 
-    <%# A TV adds 30-150ms of audio delay that the browser cannot measure, and
-        scoring is only as honest as this number. Adjust until the scoring
-        feels like it lands on the beat you sang. %>
+    <%# A TV adds 30-150ms of audio delay the browser cannot measure. This
+        shifts both the lyrics and the scoring: negative if the words land late
+        against what you hear, positive if they run ahead of it. %>
     <label class="karaoke-field karaoke-setup__latency">
       Audio delay <span data-karaoke-setup-target="latencyValue">0 ms</span>
       <input type="range" min="-300" max="300" step="10" value="0"

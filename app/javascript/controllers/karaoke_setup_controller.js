@@ -58,7 +58,17 @@ export default class extends Controller {
 
     const trim = settings.get("latencyTrimMs")
     this.latencyTarget.value = trim
-    this.latencyValueTarget.textContent = `${trim > 0 ? "+" : ""}${trim} ms`
+
+    // Show what is actually being applied, not just the slider's own number:
+    // the browser contributes its own output latency, and an unexplained
+    // total is the hardest kind of sync problem to chase.
+    const context = this.delegate?.session?.context
+    const total = context ? Math.round(settings.displayOffsetSeconds(context) * 1000) : null
+    const sign = (ms) => `${ms > 0 ? "+" : ""}${ms} ms`
+
+    this.latencyValueTarget.textContent = total === null
+      ? sign(trim)
+      : `${sign(trim)} — lyrics shown ${total} ms behind the audio clock`
   }
 
   // --- Singer choices -------------------------------------------------------
@@ -118,6 +128,7 @@ export default class extends Controller {
     this.enableMicsTarget.hidden = true
     this.assignDefaultDevices()
     this.render()
+    this.renderLatency() // the session exists now, so the real total can be shown
 
     for (let index = 0; index < this.count; index++) await this.openMic(index)
     this.watchLevels()
