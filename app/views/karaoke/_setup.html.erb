@@ -78,11 +78,7 @@
     <div class="karaoke-setup__actions">
       <%= button(text: "Enable microphones", type: "button", variant: :outline, data: { karaoke_setup_target: "enableMics", action: "karaoke-setup#enableMics" }) %>
       <%= button(text: "Start singing", type: "button", disabled: true, data: { karaoke_target: "startButton", action: "karaoke#beginPlayback" }) %>
-      <%= button(text: "Back", type: "button", variant: :outline, data: { karaoke_setup_target: "back", action: "karaoke-setup#back" }) %>
+      <%= button(text: "Back", type: "button", variant: :outline, data: { action: "karaoke#back" }) %>
     </div>
-
-    <%# The mics hear the TV as well as the singer; distance is what decides
-        whether scoring means anything. %>
-    <p class="karaoke-setup__note">Hold the microphone close to your mouth — the closer it is, the better the scoring works over the music.</p>
   </div>
 </section>
