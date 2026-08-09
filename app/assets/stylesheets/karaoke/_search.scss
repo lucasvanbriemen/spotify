@@ -1,5 +1,3 @@
-@use "tokens" as *;
-
 .karaoke-screen--search {
   flex-direction: column;
   overflow-y: auto;
@@ -69,14 +67,12 @@
 // "Ready" means the separation already ran and the song starts immediately;
 // everything else needs a few minutes of Demucs first.
 .karaoke-badge {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 0.22rem 0.55rem;
-  border-radius: $radius-pill;
-  color: $fg-dim;
-  white-space: nowrap;
+  border-radius: 1rem;
 }
 
 .karaoke-badge--easy, .karaoke-badge--ready { color: var(--on-success-container); background-color: var(--success-container); }
