@@ -15,13 +15,12 @@
 }
 
 .karaoke-search__title {
-  font-size: clamp(2.2rem, 4vw, 3rem);
   font-weight: 800;
   margin: 0 0 0.5rem;
 }
 
 .karaoke-search__hint {
-  font-size: 1.05rem;
+  color: var(--on-surface-variant);
   margin: 0 0 2rem;
 }
 
