@@ -1,7 +1,5 @@
 @use "tokens" as *;
 
-// Song picker. Also read from a couch, so a size up from a normal list.
-
 .karaoke-screen--search {
   flex-direction: column;
   overflow-y: auto;
@@ -77,16 +75,10 @@
   letter-spacing: 0.04em;
   padding: 0.22rem 0.55rem;
   border-radius: $radius-pill;
-  border: 1px solid rgba(255, 255, 255, 0.15);
   color: $fg-dim;
   white-space: nowrap;
 }
 
-.karaoke-badge--ready {
-  color: $good;
-  border-color: rgba(52, 211, 153, 0.5);
-}
-
-.karaoke-badge--easy { color: $good; border-color: rgba(52, 211, 153, 0.4); }
-.karaoke-badge--medium { color: $ok; border-color: rgba(251, 191, 36, 0.4); }
-.karaoke-badge--hard { color: $bad; border-color: rgba(248, 113, 113, 0.4); }
+.karaoke-badge--easy, .karaoke-badge--ready { color: var(--on-success-container); background-color: var(--success-container); }
+.karaoke-badge--medium { color: var(--on-warning-container); background-color: var(--warning-container); }
+.karaoke-badge--hard { color: var(--on-error-container); background-color: var(--error-container); }
