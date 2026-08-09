@@ -1,0 +1,320 @@
+@use "tokens" as *;
+
+// The stage itself: backdrop, HUD, pitch lane and the control bar. The lyric
+// block and its count-in live in _lyrics.scss.
+
+.karaoke-screen--stage {
+  position: relative;
+  // HUD / pitch lane / verdict strip / lyric block. The lane takes whatever is
+  // left, and the lyric block's rows are fixed so a longer line never resizes
+  // anything above it. Rows are assigned explicitly rather than by source
+  // order: if any child ever leaves the flow, the 1fr must stay with the lane
+  // instead of being inherited by whatever follows it.
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  height: 100%;
+  overflow: hidden;
+}
+
+.karaoke-hud { grid-row: 1; }
+.karaoke-lane { grid-row: 2; }
+.karaoke-verdicts { grid-row: 3; }
+.karaoke-lyricblock { grid-row: 4; }
+
+// No melody to draw: collapse the lane and let the lyrics take the room, so
+// the screen doesn't read as a big empty band with the words pushed off the
+// bottom of it.
+.karaoke-screen--stage[data-lane="off"] {
+  grid-template-rows: auto 0 auto minmax(0, 1fr);
+
+  .karaoke-lane { visibility: hidden; }
+
+  .karaoke-lyricblock {
+    align-content: center;
+    padding-bottom: 6rem;
+  }
+}
+
+// --- Backdrop -------------------------------------------------------------
+
+.karaoke-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: $z-backdrop;
+  overflow: hidden;
+  background: $bg;
+}
+
+.karaoke-backdrop__img {
+  width: 116%;
+  height: 116%;
+  object-fit: cover;
+  // A heavy blur on a small source image: cheap to rasterize, and the drift is
+  // a composited transform rather than anything that touches layout.
+  filter: blur(40px) saturate(0.7) brightness(0.5);
+  will-change: transform;
+  animation: karaoke-drift 70s ease-in-out infinite alternate;
+}
+
+@keyframes karaoke-drift {
+  to { transform: translate3d(-3%, -2%, 0) scale(1.06); }
+}
+
+// A fixed scrim rather than a stronger blur: contrast for the lyrics then
+// doesn't depend on how bright a particular album cover happens to be.
+.karaoke-backdrop__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(6, 6, 12, 0.55), rgba(6, 6, 12, 0.8) 70%, rgba(6, 6, 12, 0.94));
+}
+
+.karaoke-backdrop__pulse {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 62%, rgba(34, 211, 238, 0.5), transparent 60%);
+  opacity: calc(var(--beat, 0) * 0.15);
+}
+
+// --- HUD ------------------------------------------------------------------
+
+.karaoke-hud {
+  position: relative;
+  z-index: $z-hud;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.1rem 1.6rem 0.9rem;
+}
+
+.karaoke-hud__progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.karaoke-hud__progress i {
+  display: block;
+  height: 100%;
+  background: $accent;
+  transform: scaleX(var(--progress, 0));
+  transform-origin: left center;
+}
+
+.karaoke-hud__back {
+  background: rgba(255, 255, 255, 0.1);
+  color: $fg;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover { background: rgba(255, 255, 255, 0.2); }
+}
+
+.karaoke-hud__time {
+  font-size: var(--hud-label-size);
+  font-weight: 600;
+  color: $fg-dim;
+  font-variant-numeric: tabular-nums;
+  min-width: 4.5ch;
+}
+
+.karaoke-hud__song {
+  font-size: var(--hud-label-size);
+  font-weight: 600;
+  color: $fg-dim;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.karaoke-hud__scores {
+  display: flex;
+  gap: 1.2rem;
+  flex-shrink: 0;
+}
+
+.karaoke-chip {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  contain: layout;
+
+  &[hidden] { display: none; }
+}
+
+.karaoke-chip__dot {
+  width: 0.7em;
+  height: 0.7em;
+  border-radius: 50%;
+  background: var(--chip-color, #{$accent});
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.karaoke-chip__name {
+  font-size: var(--hud-label-size);
+  font-weight: 600;
+  color: $fg-dim;
+  max-width: 10ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Ink, never the singer's colour — the dot beside it carries identity, so the
+// number stays readable and comparable between the two singers.
+.karaoke-chip__score {
+  font-size: var(--hud-score-size);
+  font-weight: 800;
+  color: $fg;
+  font-variant-numeric: tabular-nums;
+  min-width: 6ch;
+  text-align: right;
+}
+
+.karaoke-chip__combo {
+  font-size: var(--hud-label-size);
+  font-weight: 800;
+  color: $gold;
+  min-width: 3ch;
+
+  &:empty { visibility: hidden; }
+}
+
+.karaoke-chip__combo.is-bumped {
+  animation: karaoke-combo-bump 0.35s ease-out;
+}
+
+@keyframes karaoke-combo-bump {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+// --- Pitch lane -----------------------------------------------------------
+
+.karaoke-lane {
+  position: relative;
+  z-index: $z-lane;
+  margin: 0 1.6rem;
+  min-height: 0;
+  contain: layout paint;
+
+  &[hidden] { display: none; }
+}
+
+.karaoke-lane__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+// --- Control bar ----------------------------------------------------------
+
+.karaoke-controlbar {
+  position: fixed;
+  left: 50%;
+  bottom: 1.2rem;
+  transform: translateX(-50%);
+  z-index: $z-controls;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.7rem 1.2rem;
+  border-radius: $radius-pill;
+  background: rgba(10, 10, 18, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  pointer-events: none;
+  max-width: calc(100vw - 3rem);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+// Opt back in to a transition (see the blanket kill in _base.scss). The extra
+// class keeps this winning regardless of the order the manifest emits files.
+.karaoke .karaoke-controlbar {
+  transition: opacity 0.25s ease;
+}
+
+.karaoke-screen--stage.is-controls-visible .karaoke-controlbar {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.karaoke-screen--stage.is-idle {
+  cursor: none;
+}
+
+.karaoke-controlbar__button {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: $accent;
+  color: $bg;
+  font-size: 1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover { filter: brightness(1.1); }
+}
+
+.karaoke-controlbar__toggle {
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.45rem 0.9rem;
+  border-radius: $radius-pill;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: transparent;
+  color: $fg-dim;
+  cursor: pointer;
+
+  &[aria-pressed="true"] {
+    background: $accent;
+    border-color: $accent;
+    color: $bg;
+  }
+}
+
+.karaoke-controlbar__time {
+  font-size: 0.85rem;
+  color: $fg-dim;
+  font-variant-numeric: tabular-nums;
+  min-width: 3.2em;
+  text-align: center;
+}
+
+.karaoke-controlbar__seek {
+  flex: 1;
+  min-width: 140px;
+  accent-color: $accent;
+}
+
+.karaoke-controlbar__fader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: $fg-dim;
+  white-space: nowrap;
+
+  input {
+    width: 110px;
+    accent-color: $accent;
+  }
+
+  &[hidden] { display: none; }
+}

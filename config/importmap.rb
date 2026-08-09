@@ -5,6 +5,10 @@ pin "@hotwired/turbo-rails", to: "turbo.min.js"
 pin "@hotwired/stimulus", to: "stimulus.min.js"
 pin "@hotwired/stimulus-loading", to: "stimulus-loading.js"
 pin_all_from "app/javascript/controllers", under: "controllers"
+# The karaoke stage's engine: playback transport, mic capture, timing and
+# scoring. These are plain modules rather than Stimulus controllers, so they
+# need their own pin — pin_all_from above only covers controllers/.
+pin_all_from "app/javascript/karaoke", under: "karaoke"
 
 # Shared UI Stimulus controllers (same directory auto-discovered in
 # config/application.rb). Pinned under "controllers" so eagerLoadControllersFrom

@@ -1,0 +1,238 @@
+@use "tokens" as *;
+
+// Between picking a song and singing it: who is singing, on which mic, while
+// the separation finishes in the background.
+
+.karaoke-screen--setup {
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+}
+
+.karaoke-setup {
+  max-width: 760px;
+  width: 100%;
+  padding: 2.5rem 1.5rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.karaoke-setup__header {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+}
+
+.karaoke-setup__art {
+  width: 84px;
+  height: 84px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: $bg-raised;
+  flex-shrink: 0;
+}
+
+.karaoke-setup__meta {
+  min-width: 0;
+
+  h2 {
+    margin: 0;
+    font-size: 1.6rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  p {
+    margin: 0.2rem 0 0;
+    color: $fg-dim;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+// --- Preparation progress -------------------------------------------------
+
+.karaoke-steps {
+  display: flex;
+  gap: 0.6rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.karaoke-steps__step {
+  flex: 1;
+  padding: 0.7rem 0.9rem;
+  border-radius: $radius;
+  background: $bg-raised;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: $fg-faint;
+  font-size: 0.95rem;
+  font-weight: 600;
+
+  &.is-active {
+    color: $fg;
+    border-color: rgba(34, 211, 238, 0.55);
+  }
+
+  &.is-done {
+    color: $good;
+    border-color: rgba(52, 211, 153, 0.4);
+  }
+}
+
+.karaoke-setup__status {
+  color: $accent;
+  min-height: 1.5em;
+  margin: 0;
+}
+
+// --- Singers --------------------------------------------------------------
+
+.karaoke-segmented {
+  display: inline-flex;
+  padding: 4px;
+  border-radius: $radius-pill;
+  background: $bg-raised;
+  gap: 4px;
+}
+
+.karaoke-segmented__option {
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 0.5rem 1.4rem;
+  border: none;
+  border-radius: $radius-pill;
+  background: transparent;
+  color: $fg-dim;
+  cursor: pointer;
+
+  &[aria-pressed="true"] {
+    background: $accent;
+    color: $bg;
+  }
+}
+
+.karaoke-singers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.karaoke-singer {
+  padding: 1.1rem;
+  border-radius: $radius;
+  background: $bg-raised;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 3px solid var(--singer-color, #{$accent});
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+
+  &[hidden] { display: none; }
+}
+
+.karaoke-singer__label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: $fg-faint;
+}
+
+.karaoke-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  color: $fg-dim;
+}
+
+.karaoke-input,
+.karaoke-select {
+  font-family: inherit;
+  font-size: 1rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: $bg;
+  color: $fg;
+  width: 100%;
+  box-sizing: border-box;
+
+  &:focus { outline: 2px solid $accent; outline-offset: 1px; }
+}
+
+.karaoke-swatches {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.karaoke-swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: var(--swatch);
+  cursor: pointer;
+  padding: 0;
+
+  &[aria-pressed="true"] { border-color: $fg; }
+  &:disabled { opacity: 0.25; cursor: not-allowed; }
+}
+
+// Fed by the mic's own level, so a singer can see the meter move before
+// committing to a device.
+.karaoke-level {
+  height: 8px;
+  border-radius: $radius-pill;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.karaoke-level__fill {
+  height: 100%;
+  width: 100%;
+  background: $good;
+  transform: scaleX(var(--level, 0));
+  transform-origin: left center;
+}
+
+.karaoke-singer__check {
+  font-size: 0.9rem;
+  color: $fg-dim;
+  min-height: 1.4em;
+  margin: 0;
+
+  &.is-ok { color: $good; }
+  &.is-warning { color: $ok; }
+}
+
+.karaoke-setup__actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.karaoke-setup__note {
+  color: $fg-faint;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.karaoke-setup__latency {
+  max-width: 380px;
+
+  input { accent-color: $accent; }
+
+  span {
+    color: $fg;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+}

@@ -3,10 +3,19 @@ default: &default
     - polling_interval: 1
       batch_size: 500
   workers:
-    - queues: "*"
+    # Everything except karaoke separation. Named explicitly rather than "*"
+    # so this worker can never pick up a minutes-long Demucs run — which means
+    # any future job on a new queue must be added here or it will never run.
+    - queues: default
       threads: 3
       processes: <%= ENV.fetch("JOB_CONCURRENCY", 1) %>
       polling_interval: 0.1
+    # One process, one thread: at most one separation at a time system-wide,
+    # which the topology now guarantees on top of VocalSeparation's mutex.
+    - queues: karaoke
+      threads: 1
+      processes: 1
+      polling_interval: 1
 
 development:
   <<: *default

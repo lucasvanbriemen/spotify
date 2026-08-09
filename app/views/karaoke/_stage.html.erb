@@ -1,0 +1,83 @@
+<%# The stage the engine renders into once per animation frame. Nothing here
+    is re-rendered during a song: the controller rewrites text in fixed slots
+    and lets CSS custom properties carry everything that moves. %>
+<section class="karaoke-screen karaoke-screen--stage"
+         data-controller="karaoke-stage"
+         data-singers="1">
+  <div class="karaoke-backdrop" aria-hidden="true">
+    <img class="karaoke-backdrop__img" data-karaoke-stage-target="backdrop" alt="" decoding="async">
+    <div class="karaoke-backdrop__pulse"></div>
+    <div class="karaoke-backdrop__scrim"></div>
+  </div>
+
+  <header class="karaoke-hud">
+    <div class="karaoke-hud__progress"><i></i></div>
+    <button type="button" class="karaoke-hud__back" data-action="karaoke-stage#exit" aria-label="Back to search">←</button>
+    <span class="karaoke-hud__time" data-karaoke-stage-target="time">0:00</span>
+    <span class="karaoke-hud__song" data-karaoke-stage-target="song"></span>
+
+    <div class="karaoke-hud__scores">
+      <% [ 1, 2 ].each do |number| %>
+        <div class="karaoke-chip" data-karaoke-stage-target="chip" data-singer="<%= number %>" <%= "hidden" if number == 2 %>>
+          <i class="karaoke-chip__dot"></i>
+          <span class="karaoke-chip__name" data-karaoke-stage-target="chipName" data-singer="<%= number %>"></span>
+          <span class="karaoke-chip__score" data-karaoke-stage-target="chipScore" data-singer="<%= number %>">0</span>
+          <span class="karaoke-chip__combo" data-karaoke-stage-target="chipCombo" data-singer="<%= number %>"></span>
+        </div>
+      <% end %>
+    </div>
+  </header>
+
+  <%# Always in flow, so the lyric block stays anchored to the bottom whether
+      or not this song has a melody to draw. It simply paints nothing when
+      there are no notes. %>
+  <div class="karaoke-lane" data-karaoke-stage-target="lane">
+    <canvas class="karaoke-lane__canvas" data-karaoke-stage-target="canvas"></canvas>
+  </div>
+
+  <div class="karaoke-verdicts">
+    <% [ 1, 2 ].each do |number| %>
+      <p class="karaoke-verdict karaoke-verdict--p<%= number %>" data-karaoke-stage-target="verdict" data-singer="<%= number %>"></p>
+    <% end %>
+  </div>
+
+  <div class="karaoke-lyricblock">
+    <div class="karaoke-dots" data-karaoke-stage-target="dots" hidden><i></i><i></i><i></i></div>
+
+    <%# Two stacked copies of the same text: the dim one underneath, the sung
+        one clipped over it. Both share a grid cell, so they line up exactly. %>
+    <p class="karaoke-lyric karaoke-lyric--active" data-karaoke-stage-target="activeLine">
+      <span class="karaoke-lyric__base" data-karaoke-stage-target="activeBase"></span>
+      <span class="karaoke-lyric__fill" aria-hidden="true" data-karaoke-stage-target="activeFill"></span>
+    </p>
+    <p class="karaoke-lyric karaoke-lyric--next" data-karaoke-stage-target="nextLine"></p>
+  </div>
+
+  <div class="karaoke-countin" data-karaoke-stage-target="countIn" hidden>
+    <svg class="karaoke-countin__ring" data-karaoke-stage-target="countRing" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="50" r="45" pathLength="100"></circle>
+    </svg>
+    <span class="karaoke-countin__digit" data-karaoke-stage-target="countDigit">3</span>
+  </div>
+
+  <footer class="karaoke-controlbar" data-karaoke-stage-target="controlbar">
+    <button type="button" class="karaoke-controlbar__button" data-karaoke-stage-target="playButton"
+            data-action="karaoke-stage#togglePlay" aria-label="Play or pause">⏸</button>
+    <span class="karaoke-controlbar__time" data-karaoke-stage-target="currentTime">0:00</span>
+    <input type="range" class="karaoke-controlbar__seek" min="0" max="1000" value="0"
+           aria-label="Seek" data-karaoke-stage-target="seek" data-action="input->karaoke-stage#seek">
+    <span class="karaoke-controlbar__time" data-karaoke-stage-target="duration">0:00</span>
+
+    <label class="karaoke-controlbar__fader" data-karaoke-stage-target="fader" hidden>
+      Guide vocal
+      <input type="range" min="0" max="100" value="20" aria-label="Guide vocal level"
+             data-karaoke-stage-target="faderInput" data-action="input->karaoke-stage#changeVocalGuide">
+    </label>
+
+    <button type="button" class="karaoke-controlbar__toggle" aria-pressed="false"
+            data-karaoke-stage-target="melodyToggle" data-action="karaoke-stage#toggleMelody">Melody</button>
+    <button type="button" class="karaoke-controlbar__toggle" data-karaoke-stage-target="fullscreenButton"
+            data-action="karaoke-stage#toggleFullscreen" hidden>⛶ Full screen</button>
+    <button type="button" class="karaoke-controlbar__toggle" data-action="karaoke-stage#exit">Exit</button>
+  </footer>
+</section>

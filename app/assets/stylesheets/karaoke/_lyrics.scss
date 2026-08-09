@@ -1,0 +1,228 @@
+@use "tokens" as *;
+
+// The lyric block, the wipe that fills it, the count-in and the verdict pops.
+
+.karaoke-lyricblock {
+  position: relative;
+  z-index: $z-lyrics;
+  display: grid;
+  // Fixed rows: swapping a short line for a long one must never move anything.
+  grid-template-rows: 1.6rem calc(var(--lyric-size) * 1.3) calc(var(--lyric-next-size) * 1.4);
+  align-items: center;
+  justify-items: center;
+  padding: 0 1.5rem 3.5rem;
+  text-align: center;
+}
+
+.karaoke-lyric {
+  display: grid;
+  width: fit-content;
+  max-width: 94vw;
+  margin: 0;
+  // One row, always. A wrapped line would put two visual rows under a single
+  // horizontal wipe, and the fill would sweep both at once.
+  white-space: nowrap;
+  // Measured once per line swap, not per frame.
+  transform: scale(var(--fit, 1));
+  contain: layout paint;
+
+  > * {
+    grid-area: 1 / 1;
+  }
+}
+
+.karaoke-lyric--active {
+  font-size: var(--lyric-size);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+// Deliberately dimmer than the active line's unsung half: what you are singing
+// now has to read as nearer than what comes next.
+.karaoke-lyric--next {
+  font-size: var(--lyric-next-size);
+  font-weight: 700;
+  line-height: 1.2;
+  color: rgba(244, 244, 248, 0.3);
+}
+
+.karaoke-lyric__base {
+  color: $fg-faint;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.85);
+}
+
+// The sung half. Clipping one text layer over an identical one is the CDG
+// colour wipe: both layers share a grid cell, so they are pixel-aligned by
+// construction and only the clip moves.
+.karaoke-lyric__fill {
+  color: var(--line-color, #{$accent});
+  clip-path: inset(0 calc(100% - var(--sweep, 0%)) 0 0);
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.85);
+}
+
+.karaoke-lyric--p1 .karaoke-lyric__fill { --line-color: var(--p1); }
+.karaoke-lyric--p2 .karaoke-lyric__fill { --line-color: var(--p2); }
+
+// Entrance for a freshly swapped line. Transform and opacity only.
+.karaoke-lyric.is-in {
+  animation: karaoke-line-in 0.16s ease-out;
+}
+
+@keyframes karaoke-line-in {
+  from { opacity: 0; transform: scale(var(--fit, 1)) translateY(10px); }
+  to { opacity: 1; transform: scale(var(--fit, 1)) translateY(0); }
+}
+
+// A note held longer than a beat: the word breathes so the singer knows to
+// hold it too. Glow only — moving the fill layer would break its alignment
+// with the base underneath.
+.karaoke-lyric--held .karaoke-lyric__fill {
+  animation: karaoke-breathe 0.9s ease-in-out infinite;
+}
+
+@keyframes karaoke-breathe {
+  50% { filter: brightness(1.4) drop-shadow(0 0 22px currentColor); }
+}
+
+.karaoke-lyric__empty {
+  color: $fg-dim;
+  font-size: var(--lyric-next-size);
+  text-align: center;
+  grid-row: 2;
+}
+
+// --- Gap cue --------------------------------------------------------------
+// Three dots in the block's top gutter, counting the singer back in after an
+// instrumental break. The row is always there, so showing them shifts nothing.
+
+.karaoke-dots {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+
+  &[hidden] { display: none; }
+}
+
+.karaoke-dots i {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: $accent;
+  opacity: 0.18;
+  animation: karaoke-dot-pulse 1s ease-in-out infinite;
+}
+
+.karaoke-dots[data-remaining="3"] i:nth-child(1),
+.karaoke-dots[data-remaining="2"] i:nth-child(1),
+.karaoke-dots[data-remaining="2"] i:nth-child(2),
+.karaoke-dots[data-remaining="1"] i {
+  opacity: 1;
+}
+
+@keyframes karaoke-dot-pulse {
+  50% { transform: scale(1.35); }
+}
+
+// --- Count-in -------------------------------------------------------------
+
+.karaoke-countin {
+  position: absolute;
+  inset: 0;
+  z-index: $z-countin;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+
+  &[hidden] { display: none; }
+}
+
+.karaoke-countin__ring {
+  width: clamp(9rem, 22vw, 16rem);
+  height: clamp(9rem, 22vw, 16rem);
+  transform: rotate(-90deg);
+
+  circle {
+    fill: none;
+    stroke: $accent;
+    stroke-width: 4;
+    stroke-dasharray: 100;
+    stroke-dashoffset: 0;
+    opacity: 0.9;
+  }
+}
+
+.karaoke-countin__ring.is-ticking circle {
+  animation: karaoke-ring 1s linear;
+}
+
+@keyframes karaoke-ring {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: 100; }
+}
+
+.karaoke-countin__digit {
+  position: absolute;
+  font-size: var(--countin-size);
+  font-weight: 900;
+  color: $fg;
+  text-shadow: 0 4px 40px rgba(0, 0, 0, 0.7);
+}
+
+// --- Verdicts -------------------------------------------------------------
+
+.karaoke-verdicts {
+  position: relative;
+  z-index: $z-verdicts;
+  height: calc(var(--verdict-size) * 1.4);
+  pointer-events: none;
+}
+
+.karaoke-verdict {
+  position: absolute;
+  bottom: 0;
+  transform: translateX(-50%);
+  margin: 0;
+  font-size: var(--verdict-size);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  white-space: nowrap;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.8);
+  will-change: transform, opacity;
+  contain: layout paint;
+}
+
+// One persistent element per singer, parked left and right, so two verdicts
+// can never land on top of each other.
+.karaoke-verdict--p1 { left: 25%; }
+.karaoke-verdict--p2 { left: 75%; }
+
+.karaoke-screen--stage[data-singers="1"] .karaoke-verdict--p1 { left: 50%; }
+.karaoke-screen--stage[data-singers="1"] .karaoke-verdict--p2 { display: none; }
+
+// The word carries the meaning; colour only reinforces it.
+.karaoke-verdict--perfect { color: $gold; }
+.karaoke-verdict--great { color: $good; }
+.karaoke-verdict--good { color: $ok; }
+.karaoke-verdict--miss { color: $fg-dim; }
+
+.karaoke-verdict.is-shown {
+  animation: karaoke-verdict-pop 1.1s ease-out forwards;
+}
+
+// Ends at opacity 0 with `forwards`, so nothing has to clean up after it.
+@keyframes karaoke-verdict-pop {
+  0% { opacity: 0; transform: translateX(-50%) translateY(0) scale(0.6); }
+  18% { opacity: 1; transform: translateX(-50%) translateY(-8px) scale(1.08); }
+  30% { transform: translateX(-50%) translateY(-10px) scale(1); }
+  75% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-42px) scale(1); }
+}
+
+@keyframes karaoke-verdict-fade {
+  0% { opacity: 0; }
+  15%, 75% { opacity: 1; }
+  100% { opacity: 0; }
+}

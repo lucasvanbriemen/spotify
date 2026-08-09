@@ -23,7 +23,16 @@ class SpotifyController < ApiController
 
     return render json: { songs: [] } if query.empty?
 
-    render json: { songs: format_tracks(KaraokeSearch.search(query)) }
+    songs = format_tracks(KaraokeSearch.search(query))
+    # Annotated out here rather than inside KaraokeSearch: its results are
+    # cached for ten minutes, and a song that just finished preparing should
+    # get its badge on the next keystroke, not ten minutes later.
+    songs.each do |song|
+      song[:ready] = VocalSeparation.ready?(song[:isrc])
+      song[:difficulty] = VocalSeparation.difficulty(song[:isrc])&.dig("level")
+    end
+
+    render json: { songs: songs }
   end
 
   def get_mp3

@@ -18,8 +18,15 @@ Rails.application.routes.draw do
       post "prepare", to: "karaoke_tracks#prepare", as: :karaoke_prepare
       get "status", to: "karaoke_tracks#status", as: :karaoke_status
       get "instrumental", to: "karaoke_tracks#instrumental", as: :karaoke_instrumental
+      get "vocals", to: "karaoke_tracks#vocals", as: :karaoke_vocals
       get "pitch", to: "karaoke_tracks#pitch", as: :karaoke_pitch
+      get "notes", to: "karaoke_tracks#notes", as: :karaoke_notes
+      get "words", to: "karaoke_tracks#words", as: :karaoke_words
+      get "scores", to: "karaoke_scores#index", as: :karaoke_scores
+      post "scores", to: "karaoke_scores#create", as: :karaoke_score
     end
+
+    get "karaoke-history", to: "karaoke_scores#history", as: :karaoke_history
 
     get "playlists", to: "playlists#index", as: :playlists
     get "playlist/:id", to: "playlists#show", as: :playlist

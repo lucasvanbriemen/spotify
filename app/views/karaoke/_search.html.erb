@@ -1,0 +1,29 @@
+<section class="karaoke-screen karaoke-screen--search">
+  <div class="karaoke-search">
+    <h1 class="karaoke-search__title">Karaoke</h1>
+    <p class="karaoke-search__hint">Search for a song — only tracks with time-synced lyrics show up here.</p>
+
+    <input
+      type="search"
+      class="karaoke-search__input"
+      placeholder="Search for a song or artist…"
+      autofocus
+      data-karaoke-target="query"
+      data-action="input->karaoke#search"
+    >
+
+    <p class="karaoke-search__status" data-karaoke-target="searchStatus"></p>
+    <ul class="karaoke-results" data-karaoke-target="results"></ul>
+
+    <%# Filled from /api/karaoke-history, and hidden until there is a history. %>
+    <div class="karaoke-search__section" data-karaoke-target="recentSection" hidden>
+      <h2 class="karaoke-search__section-title">Recently sung</h2>
+      <ul class="karaoke-results" data-karaoke-target="recentList"></ul>
+    </div>
+
+    <div class="karaoke-search__section" data-karaoke-target="popularSection" hidden>
+      <h2 class="karaoke-search__section-title">Most sung</h2>
+      <ul class="karaoke-results" data-karaoke-target="popularList"></ul>
+    </div>
+  </div>
+</section>
