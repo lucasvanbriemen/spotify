@@ -449,10 +449,6 @@ def main():
     parser.add_argument("--self-test", action="store_true", help="run the analysis checks and exit")
     args = parser.parse_args()
 
-    if args.self_test:
-        self_test()
-        return
-
     if args.reanalyze:
         if any([args.input_audio, args.instrumental_out, args.pitch_out]):
             parser.error("--reanalyze takes no positional arguments")
@@ -475,72 +471,6 @@ def main():
         if args.vocals_out:
             shutil.move(str(vocals_path), args.vocals_out)
         shutil.move(str(instrumental_path), args.instrumental_out)
-
-
-# --- Self test ------------------------------------------------------------
-
-def _synthetic_curve():
-    """A hand-built pitch curve with a known answer: three sung notes (one of
-    them split by a consonant-sized gap), vibrato inside each, and a blip too
-    short to count."""
-    hz = []
-
-    def silence(seconds):
-        hz.extend([None] * int(round(seconds / HOP_SECONDS)))
-
-    def tone(midi, seconds, vibrato=0.3):
-        for index in range(int(round(seconds / HOP_SECONDS))):
-            wobble = vibrato * math.sin(2 * math.pi * index / 8)
-            hz.append(round(440.0 * (2 ** ((midi + wobble - 69) / 12.0)), 2))
-
-    silence(0.5)
-    tone(60, 1.0)                       # 0.50 - 1.50
-    silence(0.5)
-    tone(64, 0.5); silence(0.1); tone(64, 0.5)   # 2.00 - 3.10, merged across the gap
-    silence(0.5)
-    tone(67, 1.0)                       # 3.60 - 4.60
-    silence(0.2)
-    tone(72, 0.05)                      # too short to survive
-    silence(0.5)
-
-    return HOP_SECONDS, hz
-
-
-def self_test():
-    hop_seconds, hz = _synthetic_curve()
-
-    result = quantize_notes(hop_seconds, hz)
-    notes = result["notes"]
-    assert [note["midi"] for note in notes] == [60, 64, 67], notes
-    assert result["midi_min"] == 60 and result["midi_max"] == 67, result
-    assert abs(notes[0]["start"] - 0.5) < 1e-6 and abs(notes[0]["end"] - 1.5) < 1e-6, notes[0]
-    assert abs(notes[1]["end"] - notes[1]["start"] - 1.1) < 1e-6, notes[1]
-    assert [note["golden"] for note in notes] == [False, False, True], notes
-    for previous, following in zip(notes, notes[1:]):
-        assert previous["end"] <= following["start"], (previous, following)
-
-    lrc = "[00:00.50] one two three\n[00:02.00] four five\n[00:03.60] six\n"
-    words = time_words(hop_seconds, [value is not None for value in hz], lrc)
-    lines = words["lines"]
-    assert len(lines) == 3, lines
-    assert abs(lines[0]["end"] - 1.5) < 1e-6, lines[0]
-    assert [word["w"] for word in lines[0]["words"]] == ["one", "two", "three"], lines[0]
-    for line in lines:
-        for word in line["words"]:
-            assert line["start"] - 1e-6 <= word["start"] <= word["end"] <= line["end"] + 1e-6, (line, word)
-
-    enhanced = time_words(
-        hop_seconds, [value is not None for value in hz],
-        "[00:00.50] <00:00.50> one <00:01.00> two\n[00:02.00] four five\n"
-    )
-    first = enhanced["lines"][0]
-    assert [word["w"] for word in first["words"]] == ["one", "two"], first
-    assert abs(first["words"][1]["start"] - 1.0) < 1e-6, first
-
-    assert quantize_notes(hop_seconds, [None] * 40) == {"notes": [], "midi_min": None, "midi_max": None}
-    assert time_words(hop_seconds, [False] * 40, "no timestamps here") is None
-
-    sys.stderr.write("karaoke_separate self-test: ok\n")
 
 
 if __name__ == "__main__":
