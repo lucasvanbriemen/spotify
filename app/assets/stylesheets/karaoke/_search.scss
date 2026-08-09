@@ -21,24 +21,8 @@
 }
 
 .karaoke-search__hint {
-  color: $fg-dim;
   font-size: 1.05rem;
   margin: 0 0 2rem;
-}
-
-.karaoke-search__input {
-  width: 100%;
-  box-sizing: border-box;
-  font-family: inherit;
-  font-size: 1.3rem;
-  padding: 1rem 1.2rem;
-  border-radius: $radius;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: $bg-raised;
-  color: $fg;
-
-  &::placeholder { color: $fg-faint; }
-  &:focus { outline: 2px solid $accent; outline-offset: 2px; }
 }
 
 .karaoke-search__status {

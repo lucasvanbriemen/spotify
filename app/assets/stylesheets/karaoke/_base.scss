@@ -3,13 +3,6 @@
 // The shell, the screen routing, and the two things that would otherwise ruin
 // a 60fps stage: inherited transitions and inherited motion.
 
-// `html` qualifies this past the shared theme's own `body` rule, which sets a
-// light surface and loads after this stylesheet.
-html body {
-  background: $bg;
-  margin: 0;
-}
-
 .karaoke {
   --p1: #{$singer-1};
   --p2: #{$singer-2};
@@ -33,9 +26,6 @@ html body {
 
   height: 100vh;
   height: 100dvh;
-  color: $fg;
-  background: $bg;
-  font-family: $font-stack;
   overflow: hidden;
 }
 
@@ -53,7 +43,7 @@ html body {
 // in where they're actually wanted, carrying an extra class so they win
 // regardless of the order the manifest emits files.
 .karaoke,
-.karaoke *,
+.karaoke *:not(.input-wrapper label),
 .karaoke *::before,
 .karaoke *::after {
   transition: none;
