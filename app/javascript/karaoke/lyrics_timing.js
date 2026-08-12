@@ -27,8 +27,8 @@ const MIN_LINE_SECONDS = 0.6
 // LRCLIB gives no end for the final line; long enough to finish a phrase.
 const LAST_LINE_FALLBACK_SECONDS = 4
 // A words.json line has to start where the LRC line does to be trusted as the
-// same line — the two parsers agree, but a mismatched pair would desync the
-// whole song rather than one phrase.
+// same line — the two parsers agree on timestamps, so a real pair matches
+// almost exactly and anything further off is a different line.
 const WORD_MERGE_TOLERANCE_SECONDS = 0.05
 
 function timestampSeconds(match) {
@@ -110,6 +110,32 @@ function estimatedWords(text, start, end) {
   })
 }
 
+// Server word timings are matched to LRC entries by START TIME, never by
+// array index: the server skips lines it can't time (zero-width windows, no
+// words), and an index pairing silently shifts every line after the first
+// skip onto the wrong timings — the estimate fallback then takes over for the
+// rest of the song. Both lists are sorted, so one forward cursor suffices;
+// each payload line is claimed at most once (LRC compression can put two
+// entries on one timestamp, and only one of them can own the words).
+class PayloadLines {
+  constructor(payload) {
+    this.lines = [ ...(payload?.lines || []) ].sort((a, b) => a.start - b.start)
+    this.cursor = 0
+  }
+
+  claim(time) {
+    while (this.cursor < this.lines.length && this.lines[this.cursor].start < time - WORD_MERGE_TOLERANCE_SECONDS) {
+      this.cursor++
+    }
+
+    const candidate = this.lines[this.cursor]
+    if (!candidate || Math.abs(candidate.start - time) > WORD_MERGE_TOLERANCE_SECONDS) return null
+
+    this.cursor++
+    return candidate
+  }
+}
+
 // Character offsets let the view sweep a highlight in proportion to how much
 // of the line has been sung, rather than how much of its time has passed —
 // which is what keeps the wipe under the word actually being sung.
@@ -141,7 +167,7 @@ export class LyricsTimeline {
     const entries = parseLrc(source || "")
     if (entries.length === 0) return LyricsTimeline.empty()
 
-    const payloadLines = wordsPayload?.lines || null
+    const payloadLines = new PayloadLines(wordsPayload)
 
     const lines = entries.map((entry, index) => {
       const time = entry.time
@@ -152,10 +178,20 @@ export class LyricsTimeline {
       let endTime = nextTime
       let words = null
 
-      const fromPayload = payloadLines?.[index]
-      if (fromPayload && Math.abs(fromPayload.start - time) <= WORD_MERGE_TOLERANCE_SECONDS) {
+      const fromPayload = payloadLines.claim(time)
+      if (fromPayload) {
         words = fromPayload.words.map((word) => ({ text: word.w, start: word.start, end: word.end }))
+        // The displayed text drops the duet marker; timings that still carry
+        // it as a word would count its characters into the sweep and skew the
+        // wipe across the whole line.
+        if (text !== stripped) {
+          const prefixTokens = stripped.slice(0, stripped.length - text.length).trim().split(/\s+/).filter(Boolean)
+          for (const token of prefixTokens) {
+            if (words[0]?.text === token) words.shift()
+          }
+        }
         endTime = fromPayload.end
+        if (words.length === 0) words = null // nothing left to sweep; estimate instead
       }
 
       if (!words) {

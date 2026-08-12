@@ -14,6 +14,17 @@ Rails.application.routes.draw do
     post "get-mp3/:isrc/prepare", to: "spotify#prepare", as: :prepare_mp3, constraints: { isrc: /[^\/]+/ }
     get "song/:isrc/lyrics", to: "spotify#lyrics", as: :song_lyrics, constraints: { isrc: /[^\/]+/ }
 
+    # Before the :isrc scope below, so "queue" is never read as an ISRC.
+    scope "karaoke" do
+      get "queue", to: "karaoke_queue#index", as: :karaoke_queue
+      post "queue", to: "karaoke_queue#create"
+      delete "queue", to: "karaoke_queue#destroy_all"
+      get "queue/search", to: "karaoke_queue#search", as: :karaoke_queue_search
+      patch "queue/:id", to: "karaoke_queue#update", as: :karaoke_queue_item
+      delete "queue/:id", to: "karaoke_queue#destroy"
+      post "queue/:id/promote", to: "karaoke_queue#promote", as: :karaoke_queue_promote
+    end
+
     scope "karaoke/:isrc", constraints: { isrc: /[^\/]+/ } do
       post "prepare", to: "karaoke_tracks#prepare", as: :karaoke_prepare
       get "status", to: "karaoke_tracks#status", as: :karaoke_status
@@ -43,6 +54,10 @@ Rails.application.routes.draw do
   # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)
   # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
+
+  # The phone remote — unlocked with the code shown on the karaoke screen, so
+  # guests can queue songs without a login (see KaraokeRemoteController).
+  get "karaoke/remote", to: "karaoke_remote#show", as: :karaoke_remote
 
   root "karaoke#index"
 end

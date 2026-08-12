@@ -3,7 +3,12 @@ import { Controller } from "@hotwired/stimulus"
 // The scoreboard shown when a song finishes: a grade per singer, what made it
 // up, and how the performance went line by line.
 export default class extends Controller {
-  static targets = [ "heading", "song", "singers", "spark" ]
+  static targets = [
+    "heading", "song", "singers", "spark", "leaderboard", "leaderboardList",
+    "nextUp", "nextUpArt", "nextUpSong", "nextUpBy", "nextUpNote", "nextUpCount"
+  ]
+
+  static LEADERBOARD_LIMIT = 10
 
   static GRADE_HEADINGS = {
     S: "Outstanding!",
@@ -15,12 +20,23 @@ export default class extends Controller {
 
   connect() {
     this.delegate = null
+    this.countdown = null
+    this.remaining = 0
+  }
+
+  disconnect() {
+    this.clearCountdown()
   }
 
   // results: { track, singers: [{ name, color, score, grade, accuracy,
   //   notesHit, notesTotal, goldenHit, goldenTotal, bestCombo, bestLine,
   //   lineAccuracies, personalBest, bestScore }] }
   show(results) {
+    // The coordinator adds the hand-off after this, if there is one. Clearing
+    // it here means a leftover countdown from the last song can never survive
+    // into a panel that has nothing queued behind it.
+    this.hideNextUp()
+
     const singers = results.singers || []
     const leader = singers.reduce((best, singer) => (!best || singer.score > best.score ? singer : best), null)
 
@@ -32,6 +48,38 @@ export default class extends Controller {
       .join("")
 
     this.renderSparkline(singers)
+    this.loadLeaderboard(results.track, singers)
+  }
+
+  // The song's all-time list, fetched fresh each time so it already includes
+  // the scores this performance just posted. Names persist per browser (the
+  // setup screen saves them), so tonight's singers can be picked out of it.
+  async loadLeaderboard(track, singers) {
+    this.leaderboardTarget.hidden = true
+    if (!track?.isrc) return
+
+    let payload = null
+    try {
+      const response = await fetch(`/api/karaoke/${encodeURIComponent(track.isrc)}/scores`)
+      payload = response.ok ? await response.json() : null
+    } catch {
+      return // the scoreboard works fine without it
+    }
+
+    const best = (payload?.best || []).slice(0, this.constructor.LEADERBOARD_LIMIT)
+    if (best.length === 0) return
+
+    const local = new Set(singers.map((singer) => singer.name))
+    this.leaderboardListTarget.innerHTML = best
+      .map((row, index) => `
+        <li class="karaoke-leaderboard__row${local.has(row.singer_name) ? " is-you" : ""}">
+          <span class="rank">${index + 1}</span>
+          <span class="name">${this.escape(row.singer_name)}</span>
+          <span class="points">${this.number(row.score)}</span>
+        </li>
+      `)
+      .join("")
+    this.leaderboardTarget.hidden = false
   }
 
   singerMarkup(singer, isWinner) {
@@ -87,11 +135,67 @@ export default class extends Controller {
     })
   }
 
+  // --- The queue hand-off ----------------------------------------------------
+
+  // The countdown lives here rather than in the coordinator so what the screen
+  // says and what is about to happen can never disagree: one timer, and it is
+  // the one being displayed.
+  showNextUp(item, seconds) {
+    this.clearCountdown()
+
+    this.nextUpArtTarget.src = item.image_url || ""
+    this.nextUpSongTarget.textContent = `${item.title} — ${item.artist}`
+    this.nextUpByTarget.textContent = item.added_by ? ` · added by ${item.added_by}` : ""
+    // Not a warning: it is why a song queued a minute ago can still be sung
+    // when it comes up.
+    this.nextUpNoteTarget.hidden = Boolean(item.ready)
+    this.nextUpTarget.hidden = false
+
+    this.remaining = seconds
+    this.renderCountdown()
+    this.countdown = setInterval(() => {
+      this.remaining -= 1
+      this.renderCountdown()
+      if (this.remaining <= 0) this.startNext()
+    }, 1000)
+  }
+
+  hideNextUp() {
+    this.clearCountdown()
+    if (this.hasNextUpTarget) this.nextUpTarget.hidden = true
+  }
+
+  renderCountdown() {
+    this.nextUpCountTarget.textContent = this.remaining > 0 ? `${this.remaining}s` : "Starting…"
+  }
+
+  clearCountdown() {
+    clearInterval(this.countdown)
+    this.countdown = null
+  }
+
+  startNext() {
+    this.clearCountdown()
+    this.renderCountdown()
+    this.delegate?.resultsStartNext?.()
+  }
+
+  skipNext() {
+    this.clearCountdown()
+    this.delegate?.resultsSkipNext?.()
+  }
+
+  // --- Actions ---------------------------------------------------------------
+
+  // Both of these are a decision to stay on this song, or leave entirely —
+  // either way the queue's countdown must stop running underneath them.
   singAgain() {
+    this.hideNextUp()
     this.delegate?.resultsSingAgain?.()
   }
 
   back() {
+    this.hideNextUp()
     this.delegate?.resultsBack?.()
   }
 

@@ -38,13 +38,24 @@
   letter-spacing: -0.01em;
 }
 
+// A finished line fades back during an instrumental break, so it can't read
+// as the singer's next cue. Opted back in to a transition (see _base.scss);
+// the doubled class outranks the transition kill's :not() specificity.
+.karaoke .karaoke-lyric--active.karaoke-lyric--active {
+  transition: opacity 0.6s ease;
+}
+
+.karaoke-lyric--active.karaoke-lyric--past {
+  opacity: 0.3;
+}
+
 // Deliberately dimmer than the active line's unsung half: what you are singing
 // now has to read as nearer than what comes next.
 .karaoke-lyric--next {
   font-size: var(--lyric-next-size);
   font-weight: 700;
   line-height: 1.2;
-  color: rgba(244, 244, 248, 0.3);
+  color: color-mix(in srgb, $fg 30%, transparent);
 }
 
 .karaoke-lyric__base {
@@ -85,13 +96,6 @@
   50% { filter: brightness(1.4) drop-shadow(0 0 22px currentColor); }
 }
 
-.karaoke-lyric__empty {
-  color: $fg-dim;
-  font-size: var(--lyric-next-size);
-  text-align: center;
-  grid-row: 2;
-}
-
 // --- Gap cue --------------------------------------------------------------
 // Three dots in the block's top gutter, counting the singer back in after an
 // instrumental break. The row is always there, so showing them shifts nothing.
@@ -113,11 +117,21 @@
   animation: karaoke-dot-pulse 1s ease-in-out infinite;
 }
 
+// Dots change about once a second, so a transition is safe here — and the
+// fade to zero at the end is the exit the abrupt hide never had.
+.karaoke .karaoke-dots i {
+  transition: opacity 0.3s ease;
+}
+
 .karaoke-dots[data-remaining="3"] i:nth-child(1),
 .karaoke-dots[data-remaining="2"] i:nth-child(1),
 .karaoke-dots[data-remaining="2"] i:nth-child(2),
 .karaoke-dots[data-remaining="1"] i {
   opacity: 1;
+}
+
+.karaoke-dots[data-remaining="0"] i {
+  opacity: 0;
 }
 
 @keyframes karaoke-dot-pulse {
@@ -170,6 +184,34 @@
   text-shadow: 0 4px 40px rgba(0, 0, 0, 0.7);
 }
 
+// Each digit lands with a little weight instead of just swapping text.
+.karaoke-countin__digit.is-popping {
+  animation: karaoke-digit-pop 0.35s ease-out;
+}
+
+@keyframes karaoke-digit-pop {
+  from { transform: scale(1.35); opacity: 0.4; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+// The beat after "1": the whole overlay swells and burns out on GO, so the
+// first line gets an entrance instead of the countdown just vanishing.
+// Ends at opacity 0 with `forwards`, so the hidden toggle afterwards is
+// invisible and needs no animationend bookkeeping.
+.karaoke-countin.is-go .karaoke-countin__digit {
+  color: $accent;
+}
+
+.karaoke-countin.is-go {
+  animation: karaoke-go 0.7s ease-out forwards;
+}
+
+@keyframes karaoke-go {
+  0% { opacity: 1; transform: scale(0.9); }
+  30% { opacity: 1; transform: scale(1.12); }
+  100% { opacity: 0; transform: scale(1.25); }
+}
+
 // --- Verdicts -------------------------------------------------------------
 
 .karaoke-verdicts {
@@ -219,10 +261,4 @@
   30% { transform: translateX(-50%) translateY(-10px) scale(1); }
   75% { opacity: 1; }
   100% { opacity: 0; transform: translateX(-50%) translateY(-42px) scale(1); }
-}
-
-@keyframes karaoke-verdict-fade {
-  0% { opacity: 0; }
-  15%, 75% { opacity: 1; }
-  100% { opacity: 0; }
 }

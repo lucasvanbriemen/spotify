@@ -2,13 +2,25 @@
   <h1>Karaoke</h1>
   <p>Search for a song — only tracks with time-synced lyrics show up here.</p>
 
-  <%= form_with url: root_path, method: :get, data: { turbo_frame: "karaoke" }, builder: CustomFormBuilder do |form| %>
+  <%# Results render live from the input events; submitting has nowhere to go
+      (there is no karaoke turbo frame), so Enter is swallowed instead of
+      navigating to "content missing". %>
+  <%= form_with url: root_path, method: :get, data: { action: "submit->karaoke#suppressSubmit" }, builder: CustomFormBuilder do |form| %>
     <%= form.text_field :query, value: params[:query], data: { karaoke_target: "query", action: "input->karaoke#search" }, label: "Search for a song" %>
   <% end %>
 
   <div class="karaoke-results" data-karaoke-target="results"></div>
 
-  <%# Filled from /api/karaoke-history, and hidden until there is a history. %>
+  <%= render "karaoke/queue" %>
+
+  <%# Filled from /api/karaoke-history, and hidden until there is anything to
+      show. Ready songs come first: they've already been separated, so they
+      start instantly instead of after a Demucs run. %>
+  <div class="karaoke-search__section" data-karaoke-target="readySection" hidden>
+    <p class="karaoke-search__section-title">Ready to sing</p>
+    <div class="karaoke-results" data-karaoke-target="readyList"></div>
+  </div>
+
   <div class="karaoke-search__section" data-karaoke-target="recentSection" hidden>
     <p class="karaoke-search__section-title">Recently sung</p>
     <div class="karaoke-results" data-karaoke-target="recentList"></div>

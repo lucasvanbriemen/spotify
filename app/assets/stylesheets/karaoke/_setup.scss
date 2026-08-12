@@ -2,6 +2,9 @@
 
 // Between picking a song and singing it: who is singing, on which mic, while
 // the separation finishes in the background.
+//
+// This is a lean-forward screen — ordinary app UI — so it uses the shared
+// theme tokens and follows light/dark, unlike the always-dark stage.
 
 .karaoke-screen--setup {
   flex-direction: column;
@@ -29,7 +32,7 @@
   height: 84px;
   border-radius: 10px;
   object-fit: cover;
-  background: $bg-raised;
+  background: var(--surface-at-2);
   flex-shrink: 0;
 }
 
@@ -46,7 +49,7 @@
 
   p {
     margin: 0.2rem 0 0;
-    color: $fg-dim;
+    color: var(--on-surface-variant);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -67,25 +70,25 @@
   flex: 1;
   padding: 0.7rem 0.9rem;
   border-radius: $radius;
-  background: $bg-raised;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: $fg-faint;
+  background: var(--surface-at-2);
+  border: 1px solid var(--outline-variant);
+  color: var(--on-surface-variant);
   font-size: 0.95rem;
   font-weight: 600;
 
   &.is-active {
-    color: $fg;
-    border-color: rgba(34, 211, 238, 0.55);
+    color: var(--on-surface);
+    border-color: var(--primary);
   }
 
   &.is-done {
-    color: $good;
-    border-color: rgba(52, 211, 153, 0.4);
+    color: var(--success);
+    border-color: var(--success);
   }
 }
 
 .karaoke-setup__status {
-  color: $accent;
+  color: var(--primary);
   min-height: 1.5em;
   margin: 0;
 }
@@ -96,7 +99,7 @@
   display: inline-flex;
   padding: 4px;
   border-radius: $radius-pill;
-  background: $bg-raised;
+  background: var(--surface-at-2);
   gap: 4px;
 }
 
@@ -108,12 +111,12 @@
   border: none;
   border-radius: $radius-pill;
   background: transparent;
-  color: $fg-dim;
+  color: var(--on-surface-variant);
   cursor: pointer;
 
   &[aria-pressed="true"] {
-    background: $accent;
-    color: $bg;
+    background: var(--primary);
+    color: var(--on-primary);
   }
 }
 
@@ -126,9 +129,9 @@
 .karaoke-singer {
   padding: 1.1rem;
   border-radius: $radius;
-  background: $bg-raised;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-top: 3px solid var(--singer-color, #{$accent});
+  background: var(--surface-at-2);
+  border: 1px solid var(--outline-variant);
+  border-top: 3px solid var(--singer-color, var(--primary));
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
@@ -141,7 +144,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: $fg-faint;
+  color: var(--on-surface-variant);
 }
 
 .karaoke-field {
@@ -149,7 +152,7 @@
   flex-direction: column;
   gap: 0.35rem;
   font-size: 0.9rem;
-  color: $fg-dim;
+  color: var(--on-surface-variant);
 }
 
 .karaoke-input,
@@ -158,13 +161,13 @@
   font-size: 1rem;
   padding: 0.6rem 0.7rem;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: $bg;
-  color: $fg;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-at-1);
+  color: var(--on-surface);
   width: 100%;
   box-sizing: border-box;
 
-  &:focus { outline: 2px solid $accent; outline-offset: 1px; }
+  &:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
 }
 
 .karaoke-swatches {
@@ -181,7 +184,7 @@
   cursor: pointer;
   padding: 0;
 
-  &[aria-pressed="true"] { border-color: $fg; }
+  &[aria-pressed="true"] { border-color: var(--on-surface); }
   &:disabled { opacity: 0.25; cursor: not-allowed; }
 }
 
@@ -190,26 +193,26 @@
 .karaoke-level {
   height: 8px;
   border-radius: $radius-pill;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--surface-at-4);
   overflow: hidden;
 }
 
 .karaoke-level__fill {
   height: 100%;
   width: 100%;
-  background: $good;
+  background: var(--success);
   transform: scaleX(var(--level, 0));
   transform-origin: left center;
 }
 
 .karaoke-singer__check {
   font-size: 0.9rem;
-  color: $fg-dim;
+  color: var(--on-surface-variant);
   min-height: 1.4em;
   margin: 0;
 
-  &.is-ok { color: $good; }
-  &.is-warning { color: $ok; }
+  &.is-ok { color: var(--success); }
+  &.is-warning { color: var(--warning); }
 }
 
 .karaoke-setup__actions {
@@ -222,10 +225,10 @@
 .karaoke-setup__latency {
   max-width: 380px;
 
-  input { accent-color: $accent; }
+  input { accent-color: var(--primary); }
 
   span {
-    color: $fg;
+    color: var(--on-surface);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
   }

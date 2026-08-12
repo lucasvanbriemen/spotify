@@ -78,6 +78,9 @@
     <div class="karaoke-setup__actions">
       <%= button(text: "Enable microphones", type: "button", variant: :outline, data: { karaoke_setup_target: "enableMics", action: "karaoke-setup#enableMics" }) %>
       <%= button(text: "Start singing", type: "button", disabled: true, data: { karaoke_target: "startButton", action: "karaoke#beginPlayback" }) %>
+      <%# Only shown after the instrumental fails to load — without it that
+          failure left Start disabled forever with no way back. %>
+      <%= button(text: "Retry", type: "button", variant: :outline, hidden: true, data: { karaoke_target: "retryButton", action: "karaoke#retryLoad" }) %>
       <%= button(text: "Back", type: "button", variant: :outline, data: { action: "karaoke#back" }) %>
     </div>
   </div>

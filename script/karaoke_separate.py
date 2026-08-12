@@ -21,7 +21,8 @@ Usage:
     python karaoke_separate.py --reanalyze pitch.json --notes-out notes.json
         [--words-out words.json --lrc lyrics.lrc]
 
-    python karaoke_separate.py --self-test
+    python karaoke_separate.py --reextract vocals.mp3 --pitch-out pitch.json
+        [--notes-out notes.json --words-out words.json --lrc lyrics.lrc]
 """
 import argparse
 import json
@@ -46,6 +47,12 @@ FMAX_NOTE = "C6"
 # intro of a separated stem sits ~590x quieter than the verse, so gating on a
 # fraction of the track's own loud level cleanly separates the two.
 SILENCE_RATIO = 0.02
+# pyin is also strictly monophonic: a refrain sung in stacked harmonies reads
+# as "unvoiced" at full volume, and whole sections used to have nothing to
+# sing. Frames that are loud but unvoiced get a second opinion from plain YIN
+# (which always answers), kept only for runs at least this long — singing is
+# sustained, noise is not.
+RESCUE_MIN_SECONDS = 0.3
 
 # --- Note quantization tunables ------------------------------------------
 # 125ms of median filtering flattens pyin's isolated octave blips while leaving
@@ -71,6 +78,10 @@ GOLDEN_MIN_SECONDS = 0.30
 OUTLIER_IQR_MULTIPLIER = 1.5
 # Below this there aren't enough notes for quartiles to mean anything.
 MIN_NOTES_FOR_OUTLIER_REJECTION = 12
+# This many consecutive fenced-out notes that cohere an octave up or down is a
+# register change worth keeping, not scattered tracker junk (see
+# reject_pitch_outliers).
+OUTLIER_RESCUE_MIN_NOTES = 4
 # Voiced blips shorter than this are ignored when deciding where a line's words
 # actually land in time.
 MIN_VOICED_RUN_SECONDS = 0.05
@@ -78,6 +89,10 @@ MIN_VOICED_RUN_SECONDS = 0.05
 TIMESTAMP_PATTERN = re.compile(r"\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]")
 # Enhanced LRC ("A2") word timings, e.g. "[00:12.30] <00:12.30> Hello <00:12.80> from".
 WORD_TAG_PATTERN = re.compile(r"<(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?>")
+# Duet markers some lyric sources put in front of a line ("v1:", "F:").
+# Mirrors the client's SINGER_PREFIX_PATTERN: the displayed text drops the
+# marker, so a timed word carrying it would skew the sweep across the line.
+SINGER_PREFIX_PATTERN = re.compile(r"^\s*\[?(?:v1|v2|m|f|male|female|duet|both)\]?\s*[:.]\s*", re.IGNORECASE)
 
 
 # --- Separation & pitch extraction ---------------------------------------
@@ -97,7 +112,7 @@ def separate(input_path, model, work_dir):
 # match. Downstream (the browser) compares its own live pitch estimate
 # against the point nearest the current playback time.
 def extract_pitch(vocals_path):
-    import librosa  # imported lazily: --reanalyze and --self-test don't need it
+    import librosa  # imported lazily: --reanalyze doesn't need it
 
     y, sr = librosa.load(vocals_path, sr=None, mono=True)
     hop_length = max(1, round(sr * HOP_SECONDS))
@@ -111,11 +126,44 @@ def extract_pitch(vocals_path):
     gate = float(np.percentile(rms, 99)) * SILENCE_RATIO
     loud = np.resize(rms > gate, len(f0))
 
-    hz = [
-        round(float(value), 2) if voiced and audible and not np.isnan(value) else None
-        for value, voiced, audible in zip(f0, voiced_flag, loud)
-    ]
+    voiced = np.array([bool(flag) and not np.isnan(value) for flag, value in zip(voiced_flag, f0)])
+    rescued = rescue_harmonized(y, sr, hop_length, voiced, loud)
+
+    hz = []
+    for index, value in enumerate(f0):
+        if voiced[index] and loud[index]:
+            hz.append(round(float(value), 2))
+        elif index in rescued:
+            hz.append(round(rescued[index], 2))
+        else:
+            hz.append(None)
     return hop_length / sr, hz
+
+
+def rescue_harmonized(y, sr, hop_length, voiced, loud):
+    """Frames pyin refused (its HMM is monophonic — stacked harmonies read as
+    unvoiced at any volume) but that are clearly loud, re-estimated with plain
+    YIN. Only sustained runs qualify; YIN's mistakes on the rest are jittery
+    and get cleaned up by the median filter, the minimum note length and the
+    octave fence downstream."""
+    import librosa
+
+    min_frames = max(1, round(RESCUE_MIN_SECONDS * sr / hop_length))
+    runs = [(start, end) for start, end in _index_runs(loud & ~voiced) if end - start >= min_frames]
+    if not runs:
+        return {}
+
+    yin = librosa.yin(
+        y, fmin=librosa.note_to_hz(FMIN_NOTE), fmax=librosa.note_to_hz(FMAX_NOTE), sr=sr, hop_length=hop_length
+    )
+
+    rescued = {}
+    for start, end in runs:
+        for index in range(start, min(end, len(yin))):
+            value = float(yin[index])
+            if math.isfinite(value) and value > 0:
+                rescued[index] = value
+    return rescued
 
 
 # --- Shared helpers -------------------------------------------------------
@@ -177,7 +225,13 @@ def median_filter_runs(midi, width):
 
 def reject_pitch_outliers(notes):
     """Drops notes lying outside the Tukey fence of the melody's own pitch
-    distribution — the octave errors and rumble pyin leaves behind."""
+    distribution — the octave errors and rumble pyin leaves behind.
+
+    Octave-aware: junk is scattered, singing is contiguous. A run of
+    consecutive fenced-out notes that all land inside the fence under one
+    whole-octave shift is a register change (a falsetto chorus, a dropped
+    verse), not tracker noise, and is kept — scoring folds octaves anyway,
+    and the lane maps whatever range survives."""
     if len(notes) < MIN_NOTES_FOR_OUTLIER_REJECTION:
         return notes
 
@@ -186,7 +240,19 @@ def reject_pitch_outliers(notes):
     spread = (q3 - q1) * OUTLIER_IQR_MULTIPLIER
     low, high = q1 - spread, q3 + spread
 
-    kept = [note for note in notes if low <= note["midi"] <= high]
+    keep = [low <= pitch <= high for pitch in pitches]
+    for start, end in _index_runs([not kept for kept in keep]):
+        if end - start < OUTLIER_RESCUE_MIN_NOTES:
+            continue
+
+        segment = pitches[start:end]
+        if any(
+            all(low <= pitch + shift <= high for pitch in segment)
+            for shift in (-12, 12, -24, 24)
+        ):
+            keep[start:end] = [True] * (end - start)
+
+    kept = [note for note, keeping in zip(notes, keep) if keeping]
     # Never hand back an empty melody because the distribution was degenerate
     # (every note on one pitch makes the fence zero-width).
     return kept if kept else notes
@@ -289,6 +355,20 @@ def parse_lrc(text):
     return entries
 
 
+def _strip_singer_prefix(words):
+    """The duet marker is display metadata, not a sung word. Dropped whole
+    when it stands alone, trimmed off when it's glued to the first word."""
+    if not words:
+        return words
+
+    first = SINGER_PREFIX_PATTERN.sub("", words[0]["w"], count=1).strip()
+    if not first:
+        return words[1:]
+    if first != words[0]["w"]:
+        return [dict(words[0], w=first)] + words[1:]
+    return words
+
+
 def _enhanced_words(text, line_end):
     """Word timings taken verbatim from Enhanced-LRC tags, or None if the line
     has none."""
@@ -307,7 +387,7 @@ def _enhanced_words(text, line_end):
         end = _timestamp_seconds(following) if following else line_end
         words.append({"w": word, "start": round(start, 3), "end": round(max(end, start), 3)})
 
-    return words or None
+    return _strip_singer_prefix(words) or None
 
 
 def _clip_runs(runs, window_start, window_end):
@@ -390,7 +470,7 @@ def time_words(hop_seconds, voiced, lrc_text):
             })
             continue
 
-        words = entry["text"].split()
+        words = SINGER_PREFIX_PATTERN.sub("", entry["text"], count=1).split()
         if not words:
             continue
 
@@ -446,7 +526,10 @@ def main():
     parser.add_argument("--lrc", help="file holding the song's synced (LRC) lyrics")
     parser.add_argument("--reanalyze", metavar="PITCH_JSON",
                         help="recompute notes/words from an existing pitch curve, no demucs")
-    parser.add_argument("--self-test", action="store_true", help="run the analysis checks and exit")
+    parser.add_argument("--reextract", metavar="VOCALS_AUDIO",
+                        help="recompute the pitch curve from an existing vocal stem, no demucs")
+    parser.add_argument("--pitch-out", dest="reextract_pitch_out",
+                        help="where --reextract writes the refreshed pitch curve")
     args = parser.parse_args()
 
     if args.reanalyze:
@@ -455,6 +538,20 @@ def main():
 
         payload = json.loads(Path(args.reanalyze).read_text())
         write_analysis(payload["hop_seconds"], payload["hz"], args)
+        return
+
+    # Cheaper than a separation, dearer than a reanalysis: pyin over the kept
+    # stem. This is how caches predating a pitch-extraction improvement pick
+    # it up without paying for demucs again.
+    if args.reextract:
+        if any([args.input_audio, args.instrumental_out, args.pitch_out]):
+            parser.error("--reextract takes no positional arguments")
+        if not args.reextract_pitch_out:
+            parser.error("--reextract needs --pitch-out")
+
+        hop_seconds, hz = extract_pitch(args.reextract)
+        Path(args.reextract_pitch_out).write_text(json.dumps({"hop_seconds": hop_seconds, "hz": hz}))
+        write_analysis(hop_seconds, hz, args)
         return
 
     if not all([args.input_audio, args.instrumental_out, args.pitch_out]):

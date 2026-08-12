@@ -74,6 +74,14 @@
              data-karaoke-stage-target="faderInput" data-action="input->karaoke-stage#changeVocalGuide">
     </label>
 
+    <%# The same audio-delay trim as the setup screen: sync problems are
+        noticed while singing, so the knob has to be reachable here too. %>
+    <label class="karaoke-controlbar__sync">
+      Sync <span data-karaoke-stage-target="syncValue">0 ms</span>
+      <input type="range" min="-300" max="300" step="10" value="0" aria-label="Audio delay trim"
+             data-karaoke-stage-target="syncInput" data-action="input->karaoke-stage#changeSync">
+    </label>
+
     <button type="button" class="karaoke-controlbar__toggle" aria-pressed="false"
             data-karaoke-stage-target="melodyToggle" data-action="karaoke-stage#toggleMelody">Melody</button>
     <button type="button" class="karaoke-controlbar__toggle" data-karaoke-stage-target="fullscreenButton"

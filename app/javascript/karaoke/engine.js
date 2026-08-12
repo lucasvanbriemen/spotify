@@ -20,6 +20,10 @@ import { PitchSmoother } from "karaoke/pitch_smoother"
 // before the singer needs one.
 const COUNT_IN_SECONDS = 3
 const GAP_CUE_SECONDS = 2
+// The beat after "1": the count-in holds a terminal "GO" state this long into
+// the line, so it can play an exit instead of vanishing on the exact frame the
+// first word starts. Signalled as digit 0.
+const GO_SECONDS = 0.7
 // A note held longer than this is worth telling the singer to hold.
 const HELD_SECONDS = 0.7
 
@@ -38,6 +42,10 @@ export class KaraokeEngine extends EventTarget {
     this.smoothers = []
     this.micListeners = []
     this.frameHandle = null
+    // How far the instrumental file runs behind the timeline the lyrics and
+    // notes were made against — non-zero when a YouTube upload with a longer
+    // lead-in replaced the demucs instrumental (see VocalSeparation#aligned?).
+    this.alignmentOffset = 0
     this.guide = new GuideMelody(transport.context, transport.output)
 
     // Anything scheduled ahead of a seek or a pause describes a moment that is
@@ -71,8 +79,29 @@ export class KaraokeEngine extends EventTarget {
     this.frameState.singers = singers.map(() => ({ midi: null, voiced: false, level: 0, score: 0, combo: 0 }))
 
     this.guide.setMelody(this.melody)
+    this.guide.setTranspose(this.#guideTranspose(singers))
     this.view?.setLines?.(this.timeline.lines)
     this.view?.setNotes?.(this.melody, this.scores)
+  }
+
+  // The song's timing data (lyrics, words, notes) describes the original
+  // recording; a YouTube instrumental can run a fraction of a second behind
+  // it. Applied to the display clock and the scoring clock alike, so both
+  // follow what is actually heard.
+  setAlignmentOffset(seconds) {
+    this.alignmentOffset = Number.isFinite(seconds) ? seconds : 0
+  }
+
+  // Scoring is octave-invariant, but the guide tone is audible: play it in
+  // the singer's own register, shifted by whole octaves towards wherever the
+  // mic check heard them sing.
+  #guideTranspose(singers) {
+    const register = singers.map((singer) => singer.registerMidi).find((midi) => Number.isFinite(midi))
+    const median = this.melody.medianMidi
+    if (!Number.isFinite(register) || !Number.isFinite(median)) return 0
+
+    const octaves = Math.round((register - median) / 12)
+    return Math.max(-2, Math.min(2, octaves)) * 12
   }
 
   setMics(mics) {
@@ -145,7 +174,8 @@ export class KaraokeEngine extends EventTarget {
     // The transport clock is the scheduling clock; sound reaches the room a
     // little later. Drawing on the scheduling clock makes every word light up
     // before it is heard, which reads as the whole stage running early.
-    const time = this.transport.currentTime - this.settings.displayOffsetSeconds(this.transport.context)
+    const time = this.transport.currentTime - this.alignmentOffset
+      - this.settings.displayOffsetSeconds(this.transport.context)
     const state = this.timeline.stateAt(time)
     const frame = this.frameState
 
@@ -161,7 +191,7 @@ export class KaraokeEngine extends EventTarget {
     const offset = this.mics.length > 0 ? this.settings.scoringOffsetSeconds(this.transport.context) : 0
     this.#drainMics(offset)
     this.#advanceScoring(time - offset)
-    this.guide.schedule(time, (songTime) => this.transport.contextTimeFor(songTime))
+    this.guide.schedule(time, (songTime) => this.transport.contextTimeFor(songTime + this.alignmentOffset))
 
     this.view?.frame?.(frame)
   }
@@ -183,6 +213,16 @@ export class KaraokeEngine extends EventTarget {
   // A pure function of the clock, so seeking backwards into an intro re-arms
   // the count-in without any state to reset.
   #countIn(time, state) {
+    // Just past a counted-in line's start: hold a "GO" beat (digit 0) so the
+    // view can play an exit animation over the first word.
+    const current = state.index >= 0 ? this.timeline.lines[state.index] : null
+    if (current && time - current.time < GO_SECONDS && this.#countedIn(state.index)) {
+      this.countInState.kind = state.index === 0 ? "initial" : "gap"
+      this.countInState.secondsRemaining = 0
+      this.countInState.digit = 0
+      return this.countInState
+    }
+
     const upcoming = state.index < 0 ? 0 : state.next
     const line = this.timeline.lines[upcoming]
     if (!line) return null
@@ -197,6 +237,13 @@ export class KaraokeEngine extends EventTarget {
     this.countInState.secondsRemaining = remaining
     this.countInState.digit = Math.max(1, Math.ceil(remaining))
     return this.countInState
+  }
+
+  // Whether a line was preceded by a count-in, mirroring the gate above: the
+  // first line always is (the pre-roll makes room), later ones only after a
+  // real instrumental break.
+  #countedIn(index) {
+    return index === 0 || this.timeline.gapBefore(index) >= GAP_CUE_SECONDS
   }
 
   // Mic frames carry the context time they were measured at, so a stalled
@@ -215,8 +262,9 @@ export class KaraokeEngine extends EventTarget {
       let drawn
 
       for (const sample of frames) {
-        const songTime = this.transport.songTimeAt(sample.t)
-        if (songTime === null) continue
+        const fileTime = this.transport.songTimeAt(sample.t)
+        if (fileTime === null) continue
+        const songTime = fileTime - this.alignmentOffset
 
         const at = songTime - offset
         // Scoring gets the raw estimate: smoothing would only make it late.

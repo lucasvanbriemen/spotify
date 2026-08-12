@@ -5,6 +5,10 @@
 
 .karaoke-screen--stage {
   position: relative;
+  // The stage carries its own ink: it sits on album art, never the app theme,
+  // so it must not inherit light-mode's near-black from the shared stylesheet.
+  background: $bg;
+  color: $fg;
   // HUD / pitch lane / verdict strip / lyric block. The lane takes whatever is
   // left, and the lyric block's rows are fixed so a longer line never resizes
   // anything above it. Rows are assigned explicitly rather than by source
@@ -64,13 +68,18 @@
 .karaoke-backdrop__scrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(6, 6, 12, 0.55), rgba(6, 6, 12, 0.8) 70%, rgba(6, 6, 12, 0.94));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, $bg-sunken 55%, transparent),
+    color-mix(in srgb, $bg-sunken 80%, transparent) 70%,
+    color-mix(in srgb, $bg-sunken 94%, transparent)
+  );
 }
 
 .karaoke-backdrop__pulse {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 62%, rgba(34, 211, 238, 0.5), transparent 60%);
+  background: radial-gradient(circle at 50% 62%, color-mix(in srgb, $accent 50%, transparent), transparent 60%);
   opacity: calc(var(--beat, 0) * 0.15);
 }
 
@@ -91,7 +100,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, $fg 12%, transparent);
   overflow: hidden;
 }
 
@@ -104,7 +113,7 @@
 }
 
 .karaoke-hud__back {
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, $fg 10%, transparent);
   color: $fg;
   border: none;
   width: 40px;
@@ -114,7 +123,7 @@
   cursor: pointer;
   flex-shrink: 0;
 
-  &:hover { background: rgba(255, 255, 255, 0.2); }
+  &:hover { background: color-mix(in srgb, $fg 20%, transparent); }
 }
 
 .karaoke-hud__time {
@@ -232,8 +241,9 @@
   gap: 1rem;
   padding: 0.7rem 1.2rem;
   border-radius: $radius-pill;
-  background: rgba(10, 10, 18, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, $bg 88%, transparent);
+  border: 1px solid color-mix(in srgb, $fg 12%, transparent);
+  color: $fg;
   backdrop-filter: blur(10px);
   opacity: 0;
   pointer-events: none;
@@ -242,9 +252,10 @@
   justify-content: center;
 }
 
-// Opt back in to a transition (see the blanket kill in _base.scss). The extra
-// class keeps this winning regardless of the order the manifest emits files.
-.karaoke .karaoke-controlbar {
+// Opt back in to a transition (see the blanket kill in _base.scss). The
+// doubled class outranks the kill's `.karaoke *:not(.input-wrapper label)`,
+// whose :not() carries (0,1,1) — a single extra class only tied with it.
+.karaoke .karaoke-controlbar.karaoke-controlbar {
   transition: opacity 0.25s ease;
 }
 
@@ -277,7 +288,7 @@
   font-weight: 700;
   padding: 0.45rem 0.9rem;
   border-radius: $radius-pill;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid color-mix(in srgb, $fg 25%, transparent);
   background: transparent;
   color: $fg-dim;
   cursor: pointer;
@@ -317,4 +328,20 @@
   }
 
   &[hidden] { display: none; }
+}
+
+// The same trim as the setup screen, reachable mid-song — sync problems are
+// noticed while singing, not while setting up.
+.karaoke-controlbar__sync {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: $fg-dim;
+  white-space: nowrap;
+
+  input {
+    width: 110px;
+    accent-color: $accent;
+  }
 }

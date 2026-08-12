@@ -15,6 +15,11 @@ export default class extends Controller {
   // A sung note has to hold for about this long before the check passes, so a
   // cough or a chair scrape doesn't count.
   static CHECK_HOLD_MS = 300
+  // Register detection: a rolling window of pitch frames (~5s at the
+  // worklet's rate), refreshed in steps so the median isn't recomputed on
+  // every frame.
+  static REGISTER_WINDOW = 240
+  static REGISTER_MIN_SAMPLES = 40
 
   connect() {
     this.delegate = null
@@ -22,6 +27,8 @@ export default class extends Controller {
     this.devices = []
     this.inputs = [ null, null ]
     this.levelFrame = null
+    this.enabling = null
+    this.registers = [ [], [] ]
 
     const saved = settings.get("singers") || []
     this.count = saved.length === 2 ? 2 : 1
@@ -29,6 +36,12 @@ export default class extends Controller {
       name: saved[index]?.name || `Singer ${index + 1}`,
       color: saved[index]?.color || this.constructor.DEFAULT_COLORS[index],
       deviceId: saved[index]?.deviceId || null,
+      // Labels survive the id rotation Safari and Firefox apply per session,
+      // so a saved mic can be recognised even when its id can't.
+      deviceLabel: saved[index]?.deviceLabel || null,
+      // Median MIDI of what the mic check heard — how the guide melody knows
+      // which octave this voice lives in.
+      registerMidi: saved[index]?.registerMidi ?? null,
       passed: false
     }))
 
@@ -43,7 +56,21 @@ export default class extends Controller {
 
   reset() {
     this.state.forEach((singer) => { singer.passed = false })
+    this.registers = [ [], [] ]
     this.checkTargets.forEach((element) => { element.textContent = ""; element.className = "karaoke-singer__check" })
+    // A browser that remembers the grant shouldn't make anyone find the
+    // button again on every song.
+    this.maybeAutoEnable()
+  }
+
+  // Runs the whole mic flow unprompted when — and only when — the browser
+  // reports the permission as already granted, so it can never surprise
+  // anyone with a permission dialog.
+  async maybeAutoEnable() {
+    if (this.micSystem || this.enabling) return
+    if (!(await MicSystem.permissionGranted())) return
+
+    this.enableMics()
   }
 
   // A TV's own audio delay is invisible to the browser, so this is the only
@@ -95,7 +122,9 @@ export default class extends Controller {
 
   async chooseDevice(event) {
     const index = Number(event.currentTarget.dataset.singer) - 1
-    this.state[index].deviceId = event.currentTarget.value || null
+    const deviceId = event.currentTarget.value || null
+    this.state[index].deviceId = deviceId
+    this.state[index].deviceLabel = this.devices.find((device) => device.deviceId === deviceId)?.label || null
     this.render()
     this.persist()
     await this.openMic(index)
@@ -103,14 +132,30 @@ export default class extends Controller {
 
   // --- Microphones ----------------------------------------------------------
 
-  async enableMics() {
+  // Deduplicated: the click handler and maybeAutoEnable can both arrive while
+  // a previous run is still awaiting the permission dialog, and two runs would
+  // open every mic twice.
+  enableMics() {
+    this.enabling ||= this.#enableMics().finally(() => { this.enabling = null })
+    return this.enabling
+  }
+
+  async #enableMics() {
     const session = await this.delegate?.audioSession?.()
-    if (!session) return
+    if (!session) {
+      // The one failure that used to be silent: the button looked dead.
+      this.checkTargets.forEach((element) => {
+        element.textContent = "Audio couldn't start — reload the page and try again."
+        element.className = "karaoke-singer__check is-warning"
+      })
+      return
+    }
 
     this.micSystem = new MicSystem(session)
     const granted = await this.micSystem.requestPermission()
 
     if (!granted) {
+      this.micSystem = null // next click must re-ask rather than give up forever
       this.checkTargets.forEach((element) => {
         element.textContent = "Microphone blocked — allow it in your browser to be scored."
         element.className = "karaoke-singer__check is-warning"
@@ -119,10 +164,15 @@ export default class extends Controller {
     }
 
     this.devices = await this.micSystem.listDevices()
-    // A device the browser has forgotten (permissions reset, mic unplugged)
-    // must not stay selected, or opening it would throw.
+    // Safari and Firefox rotate device ids between sessions; the label is the
+    // stable half of what was saved. A device the browser has genuinely
+    // forgotten (mic unplugged) must not stay selected, or opening it would
+    // throw.
     this.state.forEach((singer) => {
-      if (singer.deviceId && !this.devices.some((device) => device.deviceId === singer.deviceId)) singer.deviceId = null
+      if (!singer.deviceId || this.devices.some((device) => device.deviceId === singer.deviceId)) return
+
+      const byLabel = singer.deviceLabel && this.devices.find((device) => device.label === singer.deviceLabel)
+      singer.deviceId = byLabel ? byLabel.deviceId : null
     })
 
     this.enableMicsTarget.hidden = true
@@ -131,6 +181,7 @@ export default class extends Controller {
     this.renderLatency() // the session exists now, so the real total can be shown
 
     for (let index = 0; index < this.count; index++) await this.openMic(index)
+    this.micSystem.releasePrimeStream() // whatever the inputs didn't claim
     this.watchLevels()
   }
 
@@ -141,16 +192,21 @@ export default class extends Controller {
       if (this.state[index].deviceId) continue
 
       const taken = this.state.slice(0, index).map((singer) => singer.deviceId)
-      const free = this.devices.find((device) => !taken.includes(device.deviceId))
-      this.state[index].deviceId = free?.deviceId || this.devices[0]?.deviceId || null
+      const chosen = this.devices.find((device) => !taken.includes(device.deviceId)) || this.devices[0]
+      this.state[index].deviceId = chosen?.deviceId || null
+      this.state[index].deviceLabel = chosen?.label || null
     }
   }
 
   async openMic(index) {
     if (!this.micSystem || index >= this.count) return
 
-    this.closeMic(index)
     const deviceId = this.state[index].deviceId
+    // Already listening on that very device — reopening would drop the noise
+    // floor it measured and, on Safari, prompt again.
+    if (deviceId && this.inputs[index]?.deviceId === deviceId && this.inputs[index].stream) return
+
+    this.closeMic(index)
     if (!deviceId) return
 
     try {
@@ -184,6 +240,9 @@ export default class extends Controller {
 
   // The check passes on a sustained pitch, not a loud noise — that is what
   // tells the singer their mic is close enough to be tracked over the music.
+  // The same frames tell us which octave this voice lives in, which is what
+  // lets the guide melody play in the singer's register (any octave scores
+  // the same, so the check copy stays quiet about it).
   listenForSinging(index, input) {
     let since = null
 
@@ -191,15 +250,29 @@ export default class extends Controller {
       const { hz } = event.detail
       if (!hz) { since = null; return }
 
+      this.recordRegister(index, hz)
+
       since ??= performance.now()
       if (performance.now() - since < this.constructor.CHECK_HOLD_MS) return
       if (this.state[index].passed) return
 
       this.state[index].passed = true
-      this.setCheck(index, "Sounds good — you're being picked up.", "is-ok")
+      this.setCheck(index, "Sounds good — you're being picked up. Sing in whatever octave is comfortable.", "is-ok")
     })
 
     this.setCheck(index, "Sing a note to check your mic…", "")
+  }
+
+  recordRegister(index, hz) {
+    const samples = this.registers[index]
+    samples.push(69 + 12 * Math.log2(hz / 440))
+    if (samples.length > this.constructor.REGISTER_WINDOW) samples.shift()
+    if (samples.length < this.constructor.REGISTER_MIN_SAMPLES) return
+    if (samples.length % this.constructor.REGISTER_MIN_SAMPLES !== 0) return // settle, don't churn
+
+    const sorted = [ ...samples ].sort((a, b) => a - b)
+    this.state[index].registerMidi = Math.round(sorted[(sorted.length - 1) >> 1])
+    this.persist()
   }
 
   setCheck(index, message, modifier) {
@@ -269,14 +342,20 @@ export default class extends Controller {
 
   persist() {
     settings.set("singers", this.state.slice(0, this.count).map((singer) => ({
-      name: singer.name, color: singer.color, deviceId: singer.deviceId
+      name: singer.name,
+      color: singer.color,
+      deviceId: singer.deviceId,
+      deviceLabel: singer.deviceLabel,
+      registerMidi: singer.registerMidi
     })))
   }
 
   // --- What the coordinator asks for ----------------------------------------
 
   singers() {
-    return this.state.slice(0, this.count).map((singer) => ({ name: singer.name, color: singer.color, deviceId: singer.deviceId }))
+    return this.state.slice(0, this.count).map((singer) => ({
+      name: singer.name, color: singer.color, deviceId: singer.deviceId, registerMidi: singer.registerMidi
+    }))
   }
 
   micInputs() {

@@ -15,12 +15,13 @@ import { settings } from "karaoke/settings"
 export default class extends Controller {
   static targets = [
     "query", "results",
+    "readySection", "readyList",
     "recentSection", "recentList", "popularSection", "popularList",
-    "art", "title", "artist", "playerStatus", "startButton",
+    "art", "title", "artist", "playerStatus", "startButton", "retryButton",
     "stepDownload", "stepSeparate", "stepAnalyse"
   ]
 
-  static outlets = [ "karaoke-stage", "karaoke-setup", "karaoke-results" ]
+  static outlets = [ "karaoke-stage", "karaoke-setup", "karaoke-results", "karaoke-queue" ]
   static values = { workletUrl: String }
 
   // Matches the iOS app: searches under 3 characters are noise, not signal.
@@ -29,6 +30,10 @@ export default class extends Controller {
   // A play under 5s is a skip/preview, not a listen (mirrors PlayerManager).
   static MIN_REPORTABLE_SECONDS = 5
   static STATUS_POLL_MS = 2000
+  // How long the scoreboard holds before the queue's next song takes over.
+  // Long enough to read a score and reach for Skip, short enough that a room
+  // that has walked away doesn't sit in silence.
+  static NEXT_UP_SECONDS = 15
 
   connect() {
     this.searchToken = 0
@@ -37,12 +42,18 @@ export default class extends Controller {
     this.pollTimer = null
     this.currentTrack = null
     this.artifacts = {}
+    this.alignmentOffset = 0
     this.timeline = LyricsTimeline.empty()
     this.melody = Melody.empty()
     this.session = null
     this.transport = null
     this.engine = null
     this.loadingIsrc = null
+    // The queue row this song came from, and whether the song after it should
+    // start on its own — a hand-off between two queued songs has nobody at the
+    // screen to press Start.
+    this.currentQueueItem = null
+    this.autoStart = false
 
     this.boundPageHide = () => this.reportPlay()
     window.addEventListener("pagehide", this.boundPageHide)
@@ -74,6 +85,10 @@ export default class extends Controller {
     outlet.delegate = this
   }
 
+  karaokeQueueOutletConnected(outlet) {
+    outlet.delegate = this
+  }
+
   // Stimulus throws when a singular outlet is read before it connects, and
   // optional chaining doesn't help because the getter itself raises — so every
   // read goes through these.
@@ -89,12 +104,24 @@ export default class extends Controller {
     return this.hasKaraokeResultsOutlet ? this.karaokeResultsOutlet : null
   }
 
+  get queue() {
+    return this.hasKaraokeQueueOutlet ? this.karaokeQueueOutlet : null
+  }
+
   showScreen(name) {
     this.element.dataset.screen = name
     this.element.classList.remove("karaoke--results")
   }
 
   // --- Search ---------------------------------------------------------
+
+  // The search form exists for semantics and the mobile keyboard's "search"
+  // key; results arrive live from the input events, so an actual submission
+  // has nowhere to go (there is no karaoke turbo frame) and would show
+  // "content missing".
+  suppressSubmit(event) {
+    event.preventDefault()
+  }
 
   search() {
     clearTimeout(this.searchDebounce)
@@ -126,8 +153,11 @@ export default class extends Controller {
     const payload = await this.fetchJson("/api/karaoke-history")
     if (!payload) return
 
+    const ready = payload.ready || []
+    this.readySectionTarget.hidden = ready.length === 0
     this.recentSectionTarget.hidden = payload.recent.length === 0
     this.popularSectionTarget.hidden = payload.most_sung.length === 0
+    this.renderInto(this.readyListTarget, ready)
     this.renderInto(this.recentListTarget, payload.recent)
     this.renderInto(this.popularListTarget, payload.most_sung)
   }
@@ -138,6 +168,9 @@ export default class extends Controller {
     for (const song of songs) {
       const item = document.createElement("div")
       item.className = "result-item"
+      // Focusable, or the Enter/Space handler below could never fire.
+      item.tabIndex = 0
+      item.setAttribute("role", "button")
       item.innerHTML = `
         <img src="${this.escapeAttribute(song.image_url)}">
         <div class="meta">
@@ -148,10 +181,34 @@ export default class extends Controller {
       `
       item.addEventListener("click", () => this.selectSong(song))
       item.addEventListener("keydown", (event) => {
+        // The queue button below is inside the row and keyboard-operable in
+        // its own right; without this, Enter on it would also sing the song.
+        if (event.target !== item) return
         if (event.key === "Enter" || event.key === " ") { event.preventDefault(); this.selectSong(song) }
       })
+
+      item.appendChild(this.queueButton(song))
       list.appendChild(item)
     }
+  }
+
+  // Tapping a result sings it now; this is how you say "after this one".
+  // Built rather than templated so its click can be kept off the row's own.
+  queueButton(song) {
+    const button = document.createElement("button")
+    button.type = "button"
+    button.className = "result-item__queue"
+    button.textContent = "+ Queue"
+    button.setAttribute("aria-label", `Add ${song.title} to the queue`)
+
+    button.addEventListener("click", async (event) => {
+      event.stopPropagation() // the row itself starts the song
+      const added = await this.queue?.add(song)
+      button.textContent = added ? "Queued" : "Try again"
+      setTimeout(() => { button.textContent = "+ Queue" }, 2000)
+    })
+
+    return button
   }
 
   // A prepared song starts immediately; everything else needs a Demucs run.
@@ -166,14 +223,20 @@ export default class extends Controller {
 
   // --- Selecting a song ---------------------------------------------------
 
-  selectSong(song) {
+  // queueItem/autoStart are only passed by the queue: a song handed over
+  // between two queued numbers has to start itself, and has to remember which
+  // row to mark as sung when it finishes.
+  selectSong(song, { autoStart = false, queueItem = null } = {}) {
     this.reportPlay()
     this.stopPlayTimer()
     this.clearPollTimer()
     this.teardownPlayback()
 
+    this.autoStart = autoStart
+    this.currentQueueItem = queueItem
     this.currentTrack = song
     this.artifacts = {}
+    this.alignmentOffset = 0
     this.timeline = LyricsTimeline.empty()
     this.melody = Melody.empty()
 
@@ -181,6 +244,7 @@ export default class extends Controller {
     this.titleTarget.textContent = song.title
     this.artistTarget.textContent = song.artist
     this.startButtonTarget.disabled = true
+    this.retryButtonTarget.hidden = true
 
     this.showScreen("setup")
     this.setup?.reset?.()
@@ -195,7 +259,11 @@ export default class extends Controller {
     this.clearPollTimer()
     this.teardownPlayback()
     this.stage?.leave?.()
+    this.scoreboard?.hideNextUp?.()
     this.currentTrack = null
+    // Walking out of a song is also a decision not to keep walking the queue.
+    this.autoStart = false
+    this.releaseQueueItem()
 
     this.showScreen("search")
     this.queryTarget.focus()
@@ -223,11 +291,17 @@ export default class extends Controller {
 
     if (payload.stage === "failed") {
       this.playerStatusTarget.textContent = "Couldn't prepare this song for karaoke — try another."
+      // Nobody chose this one off a list, so nobody is watching to choose
+      // again: a song the queue can't play must not end the evening.
+      if (this.autoStart) this.skipToNextInQueue()
       return
     }
 
     if (payload.stage === "ready") {
       this.artifacts = payload.artifacts || {}
+      // Non-zero when a YouTube instrumental runs behind the original the
+      // timing data was made against; the engine shifts every clock by it.
+      this.alignmentOffset = Number(payload.alignment_offset_seconds) || 0
       this.setStep("download", "done")
       this.setStep("separate", "done")
       this.setStep("analyse", "done")
@@ -279,6 +353,10 @@ export default class extends Controller {
   async audioSession() {
     this.sessionPromise ||= getAudioSession(this.workletUrlValue).catch(() => null)
     this.session = await this.sessionPromise
+    // A promise that resolved to null is still truthy: without clearing it,
+    // one failure (worklet 404, context refused) is cached for the life of
+    // the page and every audio button stays silently dead.
+    if (!this.session) this.sessionPromise = null
     return this.session
   }
 
@@ -303,6 +381,10 @@ export default class extends Controller {
       return false
     }
 
+    // A retry after a failed load replaces the transport; the dead one's
+    // nodes must not stay connected to the destination.
+    this.transport?.destroy()
+
     const transport = new Transport(this.session.context)
     transport.addEventListener("progress", (event) => {
       const { loaded, total } = event.detail
@@ -314,7 +396,10 @@ export default class extends Controller {
       if (this.currentTrack?.isrc === isrc) this.playerStatusTarget.textContent = "Ready!"
     })
     transport.addEventListener("loaderror", () => {
-      if (this.currentTrack?.isrc === isrc) this.playerStatusTarget.textContent = "Couldn't load the instrumental for this song."
+      if (this.currentTrack?.isrc === isrc) {
+        this.playerStatusTarget.textContent = "Couldn't load the instrumental — press Retry."
+        this.retryButtonTarget.hidden = false
+      }
     })
     transport.addEventListener("play", () => { this.stage?.setPlaying?.(true); this.startPlayTimer() })
     transport.addEventListener("pause", () => { this.stage?.setPlaying?.(false); this.stopPlayTimer() })
@@ -328,8 +413,32 @@ export default class extends Controller {
       vocalsUrl: this.artifacts.vocals ? `/api/karaoke/${encodeURIComponent(isrc)}/vocals` : null
     })
 
-    if (loaded && this.currentTrack?.isrc === isrc) this.startButtonTarget.disabled = false
+    // A failed load must not be cached, or the song is wedged until it is
+    // re-selected; clearing lets Retry (and Start) attempt a fresh fetch.
+    if (!loaded) {
+      this.loadingIsrc = null
+      this.loadPromise = null
+    }
+
+    if (loaded && this.currentTrack?.isrc === isrc) {
+      this.startButtonTarget.disabled = false
+      // The queue's hand-off waits here rather than on the status poll: a song
+      // is ready to sing when its audio is decoded, not when separation ends.
+      if (this.autoStart) {
+        this.autoStart = false
+        this.beginPlayback()
+      }
+    }
     return loaded
+  }
+
+  retryLoad() {
+    const track = this.currentTrack
+    if (!track) return
+
+    this.retryButtonTarget.hidden = true
+    this.playerStatusTarget.textContent = "Retrying…"
+    this.preload(track.isrc)
   }
 
   // Bound to "Start singing" rather than fired automatically: preparation can
@@ -351,7 +460,8 @@ export default class extends Controller {
       singers,
       hasVocals: Boolean(this.artifacts.vocals),
       vocalPercent: settings.get("vocalGuidePercent"),
-      guideMelody: settings.get("guideMelody")
+      guideMelody: settings.get("guideMelody"),
+      latencyTrimMs: settings.get("latencyTrimMs")
     })
 
     await this.preload(track.isrc)
@@ -360,6 +470,7 @@ export default class extends Controller {
     await this.session?.ensureRunning()
 
     this.engine = new KaraokeEngine({ transport: this.transport, settings, view: this.stage })
+    this.engine.setAlignmentOffset(this.alignmentOffset)
     this.engine.loadSong({ timeline: this.timeline, melody: this.melody, singers })
     this.engine.setMics(this.setup?.micInputs?.() || [])
     // loadSong already handed the stage its lines and notes — including the
@@ -378,17 +489,27 @@ export default class extends Controller {
     this.stage?.setPlaying?.(false)
     this.reportPlay()
     this.stopPlayTimer()
+    this.releaseQueueItem()
 
     const results = this.engine?.results() || []
     // No mic means every note reads as silence, which would post a legitimate
     // -looking zero and show a scoreboard full of misses for someone who was
     // only listening.
     const scored = (this.setup?.micInputs?.() || []).some(Boolean)
-    if (results.length === 0 || this.melody.isEmpty || !scored) return
+    const scoreable = results.length > 0 && !this.melody.isEmpty && scored
 
-    const singers = await Promise.all(results.map((result) => this.saveScore(result)))
+    // Read after the row above was released, so the song that just finished
+    // can't come back as its own successor.
+    const next = await this.queue?.peekNext?.()
+    if (!scoreable && !next) return
+
+    const singers = scoreable ? await Promise.all(results.map((result) => this.saveScore(result))) : []
+    // With nothing to score, the panel is only carrying the hand-off — but it
+    // is still the right place for it: it is what is already over the stage.
     this.scoreboard?.show?.({ track: this.currentTrack, singers })
     this.element.classList.add("karaoke--results")
+
+    if (next) this.scoreboard?.showNextUp?.(next, this.constructor.NEXT_UP_SECONDS)
   }
 
   // The response carries the personal-best comparison, which is why this is a
@@ -457,6 +578,13 @@ export default class extends Controller {
     this.engine?.setGuideMelody(on)
   }
 
+  // The engine reads the trim from settings every frame, so writing it is the
+  // whole job.
+  stageLatency(ms) {
+    settings.set("latencyTrimMs", ms)
+    this.setup?.renderLatency?.()
+  }
+
   stageExit() {
     this.stage?.leave?.()
     this.back()
@@ -498,8 +626,16 @@ export default class extends Controller {
     this.melody = Melody.parse(notes, this.timeline)
 
     // Reloading mid-performance would rebuild the scorers and wipe the score;
-    // whatever is already on stage stays until the next song.
-    if (this.transport?.playing) return
+    // whatever is already on stage stays until the next song. The exception:
+    // a stage playing with NO melody (the fetch raced separation finishing)
+    // has no score to wipe, and picking up the fresh notes is what turns its
+    // pitch lane and scoring on at all.
+    if (this.transport?.playing) {
+      if (this.engine && this.engine.melody.isEmpty && !this.melody.isEmpty) {
+        this.engine.loadSong({ timeline: this.timeline, melody: this.melody, singers: this.currentSingers || [] })
+      }
+      return
+    }
 
     this.engine?.loadSong({ timeline: this.timeline, melody: this.melody, singers: this.currentSingers || [] })
   }

@@ -13,9 +13,11 @@ const BUFFER_SIZE = 2048
 // Analysing every half-buffer doubles the rate (to ~47Hz at 48kHz) for the
 // same window length, which matters for short notes.
 const HOP_SIZE = BUFFER_SIZE / 2
-// A singing voice rarely leaves roughly E2–C6; searching outside that range
-// only invites octave errors from noise.
-const MIN_HZ = 70
+// A singing voice rarely leaves roughly A1–C6; the floor sits below a true
+// bass (55Hz = A1) so deep voices don't read as silence and score as misses.
+// Octave errors this invites are harmless: scoring folds octaves anyway, and
+// the lane folds the drawn trail into its own range.
+const MIN_HZ = 55
 const MAX_HZ = 1000
 // Below this normalized correlation there's no clear periodicity — treat it
 // as unvoiced/noise rather than guess. Set high enough that music leaking in

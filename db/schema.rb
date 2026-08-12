@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_08_09_000001) do
+ActiveRecord::Schema[8.0].define(version: 2026_08_12_000001) do
   create_table "cache", primary_key: "key", id: :string, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.text "value", size: :medium, null: false
     t.integer "expiration", null: false
@@ -53,6 +53,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_09_000001) do
     t.integer "available_at", null: false, unsigned: true
     t.integer "created_at", null: false, unsigned: true
     t.index ["queue"], name: "jobs_queue_index"
+  end
+
+  create_table "karaoke_queue_items", charset: "utf8mb4", collation: "utf8mb4_general_ci", force: :cascade do |t|
+    t.string "song_isrc", null: false
+    t.string "title", null: false
+    t.string "artist", null: false
+    t.string "image_url"
+    t.string "added_by"
+    t.string "status", default: "pending", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "played_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["status", "position"], name: "index_karaoke_queue_items_on_status_and_position"
   end
 
   create_table "karaoke_scores", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|

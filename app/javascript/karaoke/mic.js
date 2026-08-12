@@ -26,20 +26,49 @@ export class MicSystem {
   constructor(session) {
     this.session = session
     this.granted = false
+    this.primeStream = null
   }
 
   // Device labels stay empty until permission has been given once, so the
   // picker has to ask before it can offer anything meaningful.
+  //
+  // Asking is expensive on browsers that don't persist the grant (Safari can
+  // prompt per getUserMedia call), so this never opens a probe stream it
+  // doesn't have to: the Permissions API answers first when it can, and when
+  // a probe IS needed it stays alive to become the first singer's input
+  // (claimPrimeStream) instead of being stopped and immediately re-requested
+  // — one prompt instead of two.
   async requestPermission() {
+    if (await this.permissionGranted()) {
+      this.granted = true
+      return true
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: SINGING_CONSTRAINTS })
-      stream.getTracks().forEach((track) => track.stop())
+      this.primeStream = await navigator.mediaDevices.getUserMedia({ audio: SINGING_CONSTRAINTS })
       this.granted = true
       return true
     } catch {
       this.granted = false
       return false
     }
+  }
+
+  // "granted" without ever prompting; anything else — denied, prompt, or a
+  // browser without the API (Firefox has no "microphone" permission name) —
+  // reads as "have to ask". Static so the setup screen can check before it
+  // has any session to build a MicSystem around.
+  static async permissionGranted() {
+    try {
+      const status = await navigator.permissions.query({ name: "microphone" })
+      return status.state === "granted"
+    } catch {
+      return false
+    }
+  }
+
+  async permissionGranted() {
+    return MicSystem.permissionGranted()
   }
 
   async listDevices() {
@@ -55,8 +84,32 @@ export class MicSystem {
 
   async createInput(deviceId, { reduceMusicPickup = false } = {}) {
     const input = new MicInput(this.session.context, deviceId, reduceMusicPickup)
-    await input.open()
+    await input.open(this.claimPrimeStream(deviceId, reduceMusicPickup))
     return input
+  }
+
+  // The probe stream from requestPermission, handed over when the first input
+  // wants the same device with the same constraints. Claimed at most once.
+  claimPrimeStream(deviceId, reduceMusicPickup) {
+    const stream = this.primeStream
+    if (!stream || reduceMusicPickup) return null
+
+    const track = stream.getAudioTracks()[0]
+    if (!track || track.readyState !== "live") {
+      this.primeStream = null
+      return null
+    }
+    if (deviceId && track.getSettings?.().deviceId !== deviceId) return null
+
+    this.primeStream = null
+    return stream
+  }
+
+  // Called once every input is open: a probe nobody claimed must not keep the
+  // browser's recording indicator lit.
+  releasePrimeStream() {
+    this.primeStream?.getTracks().forEach((track) => track.stop())
+    this.primeStream = null
   }
 
   onDeviceChange(callback) {
@@ -85,11 +138,17 @@ export class MicInput extends EventTarget {
     this.lost = false
   }
 
-  async open() {
-    const audio = { ...SINGING_CONSTRAINTS, echoCancellation: this.reduceMusicPickup }
-    if (this.deviceId) audio.deviceId = { exact: this.deviceId }
+  // existingStream, when given, is an already-open stream for this device (the
+  // permission probe) — adopted instead of asking the browser again.
+  async open(existingStream = null) {
+    if (existingStream) {
+      this.stream = existingStream
+    } else {
+      const audio = { ...SINGING_CONSTRAINTS, echoCancellation: this.reduceMusicPickup }
+      if (this.deviceId) audio.deviceId = { exact: this.deviceId }
 
-    this.stream = await navigator.mediaDevices.getUserMedia({ audio })
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio })
+    }
 
     const source = this.context.createMediaStreamSource(this.stream)
     const pitchNode = new AudioWorkletNode(this.context, "karaoke-pitch-processor")

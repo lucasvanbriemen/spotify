@@ -4,8 +4,29 @@
 // a 60fps stage: inherited transitions and inherited motion.
 
 .karaoke {
-  --p1: #{$singer-1};
-  --p2: #{$singer-2};
+  // The stage palette (see _tokens.scss for who uses which palette). One block
+  // of custom properties so JS that draws to canvas — the pitch lane — can
+  // read the same values with getComputedStyle instead of hardcoding copies.
+  --karaoke-bg: #0b0b12;
+  --karaoke-bg-raised: #16161f;
+  --karaoke-bg-sunken: #06060c;
+  --karaoke-fg: #f4f4f8;
+  --karaoke-fg-dim: rgba(244, 244, 248, 0.62);
+  --karaoke-fg-faint: rgba(244, 244, 248, 0.45);
+  --karaoke-accent: #22d3ee;
+  --karaoke-good: #34d399;
+  --karaoke-ok: #fbbf24;
+  --karaoke-bad: #f87171;
+  --karaoke-gold: #fcd34d;
+  --karaoke-singer-1: #22d3ee;
+  --karaoke-singer-2: #a78bfa;
+  // Pitch-lane canvas colours: the guide bars nobody has sung yet and the
+  // now-line. Bright enough to survive a bright album cover behind them.
+  --karaoke-lane-note: rgba(244, 244, 248, 0.45);
+  --karaoke-lane-now: rgba(244, 244, 248, 0.4);
+
+  --p1: var(--karaoke-singer-1);
+  --p2: var(--karaoke-singer-2);
   // Written by the engine every frame. Declared here so they always resolve,
   // even before the first frame.
   --sweep: 0%;
@@ -20,10 +41,6 @@
   --verdict-size: clamp(2rem, 4vw, 3.4rem);
   --countin-size: clamp(4rem, 10vw, 8rem);
 
-  --karaoke-good: #{$good};
-  --karaoke-ok: #{$ok};
-  --karaoke-bad: #{$bad};
-
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
@@ -37,7 +54,7 @@
 // The transition would make every value the engine writes per frame — the
 // lyric wipe, the progress bar, a score counter — arrive 300ms late and
 // smeared. The colour silently repaints anything that hasn't named its own,
-// in a theme this screen deliberately doesn't follow.
+// which on the always-dark stage means near-black ink in light mode.
 //
 // Both are reset for the whole feature; individual properties are opted back
 // in where they're actually wanted, carrying an extra class so they win
@@ -49,9 +66,10 @@
   transition: none;
 }
 
-// Descendants only. The root deliberately keeps the colour it sets above — put
-// `.karaoke` in here too and the whole tree inherits the shared theme's ink,
-// which in light mode is near-black text on this very dark stage.
+// Descendants only. The root deliberately keeps the shared theme's ink — the
+// search and setup screens are ordinary app UI and want it; the stage and
+// scoreboard set their own explicit colour and their descendants inherit that
+// instead.
 .karaoke *,
 .karaoke *::before,
 .karaoke *::after {

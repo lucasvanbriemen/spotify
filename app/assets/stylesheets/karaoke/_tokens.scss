@@ -1,34 +1,40 @@
 // Karaoke design tokens. Variables and mixins only — this file emits no CSS,
 // so the auto-generated manifest can @use it alongside everything else.
 //
-// The karaoke views deliberately don't follow the shared UI theme: this is a
-// lean-back screen read from across a room, always dark, never light.
+// Two palettes coexist deliberately:
+//
+//   * The lean-forward screens (search, setup) are ordinary app UI and use the
+//     shared theme tokens directly — var(--surface-at-*), var(--on-surface),
+//     var(--primary), … — so they follow light/dark like every other screen.
+//   * The stage and the scoreboard over it are lean-back surfaces drawn over
+//     blurred album art: always dark, whatever the app theme, because the
+//     backdrop they sit on is. Those colours are the --karaoke-* custom
+//     properties declared on .karaoke in _base.scss; the aliases below give
+//     every SCSS file one name for them.
 
-$bg: #0b0b12;
-$bg-raised: #16161f;
-$bg-sunken: #06060c;
+$bg: var(--karaoke-bg);
+$bg-raised: var(--karaoke-bg-raised);
+$bg-sunken: var(--karaoke-bg-sunken);
 
-$fg: #f4f4f8;
-$fg-dim: rgba(244, 244, 248, 0.62);
+$fg: var(--karaoke-fg);
+$fg-dim: var(--karaoke-fg-dim);
 // The unsung half of a lyric line sits over album art, so it needs more
 // presence than a normal muted colour would have.
-$fg-faint: rgba(244, 244, 248, 0.45);
+$fg-faint: var(--karaoke-fg-faint);
 
-$accent: #22d3ee;
-$good: #34d399;
-$ok: #fbbf24;
-$bad: #f87171;
+$accent: var(--karaoke-accent);
+$good: var(--karaoke-good);
+$ok: var(--karaoke-ok);
+$bad: var(--karaoke-bad);
 // Golden notes and a Perfect line. Reserved — never offered as a singer colour.
-$gold: #fcd34d;
+$gold: var(--karaoke-gold);
 
 // Singer colours. Cyan and violet stay distinguishable under the common forms
 // of colour blindness and both clear 3:1 against the stage background. Orange
 // and pink are offered as alternates; green/amber/red/gold are not, because
 // they already mean something on this screen.
-$singer-1: #22d3ee;
-$singer-2: #a78bfa;
-$singer-alt-1: #fb923c;
-$singer-alt-2: #f472b6;
+$singer-1: var(--karaoke-singer-1);
+$singer-2: var(--karaoke-singer-2);
 
 $radius: 12px;
 $radius-pill: 999px;

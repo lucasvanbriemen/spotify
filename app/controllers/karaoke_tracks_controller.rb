@@ -29,7 +29,10 @@ class KaraokeTracksController < ApiController
       ready: true,
       stage: "ready",
       artifacts: VocalSeparation.artifacts(isrc),
-      difficulty: VocalSeparation.difficulty(isrc)
+      difficulty: VocalSeparation.difficulty(isrc),
+      # How far the instrumental runs behind the recording the lyrics/notes
+      # were timed to (YouTube uploads only); the engine shifts its clocks by it.
+      alignment_offset_seconds: VocalSeparation.alignment_offset(isrc)
     }
   end
 

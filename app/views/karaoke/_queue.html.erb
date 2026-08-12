@@ -1,0 +1,26 @@
+<%# The room's queue, and the code a phone needs to add to it. Lives inside the
+    .karaoke element so the coordinator's outlet resolves; shown on the search
+    screen, where someone is actually looking at what comes next. %>
+<section class="karaoke-queue" data-controller="karaoke-queue"
+         data-karaoke-queue-link-value="<%= @remote_url %>">
+  <header class="karaoke-queue__header">
+    <h2>Up next <span class="karaoke-queue__count" data-karaoke-queue-target="count"></span></h2>
+    <button type="button" class="karaoke-queue__clear" hidden
+            data-karaoke-queue-target="clear" data-action="karaoke-queue#clear">Clear</button>
+  </header>
+
+  <p class="karaoke-queue__empty" data-karaoke-queue-target="empty">
+    Nothing queued yet — add songs from the search above, or from a phone.
+  </p>
+
+  <ol class="karaoke-queue__list" data-karaoke-queue-target="list"></ol>
+
+  <div class="karaoke-queue__invite">
+    <p class="karaoke-queue__invite-title">Add songs from your phone</p>
+    <p class="karaoke-queue__invite-url"><%= @remote_display_url %></p>
+    <p class="karaoke-queue__invite-code">Code <strong><%= @remote_code %></strong></p>
+    <%# The link carries the code, so it needs no typing at the other end. %>
+    <button type="button" class="karaoke-queue__action"
+            data-karaoke-queue-target="copy" data-action="karaoke-queue#copyLink">Copy link</button>
+  </div>
+</section>

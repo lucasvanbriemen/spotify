@@ -24,15 +24,22 @@ class VocalSeparation
   REANALYZE_TIMEOUT_SECONDS = 120
   ALIGNMENT_CHECK_TIMEOUT_SECONDS = 60
   # How far a YouTube instrumental may start from the original before it is
-  # rejected. This is a straight lyric-sync budget: the lyrics are timed to the
-  # original, so whatever offset is accepted here is heard as the words landing
-  # early or late for the whole song. A quarter of a second is around the
-  # threshold where a sung line starts to feel wrong.
+  # rejected. The lyrics are timed to the original, so any offset accepted here
+  # would be heard as the words landing early or late for the whole song —
+  # which is why the measured value is no longer merely thresholded but stored
+  # in the manifest, so the client can shift its clocks by it and the words
+  # land on the beat regardless.
   ALIGNMENT_TOLERANCE_SECONDS = 0.25
+  # Re-running pyin over a whole vocal stem takes tens of seconds on a CPU —
+  # far less than Demucs, far more than pure reanalysis.
+  REEXTRACT_TIMEOUT_SECONDS = 600
   # Bump when an artifact's format changes or a new required one is added:
   # caches written by an older version are upgraded on their next prepare
   # instead of being served half-ready.
-  ARTIFACT_VERSION = 2
+  # 3: pitch curves rescue loud-but-harmonised sections pyin calls unvoiced,
+  #    the note fence is octave-aware, words.json strips duet markers, and the
+  #    manifest records the YouTube instrumental's alignment offset.
+  ARTIFACT_VERSION = 3
   # Demucs is CPU-heavy enough that running several at once mostly just
   # makes all of them slower rather than finishing sooner (observed:
   # queuing several songs made an unrelated one appear to hang — it hadn't,
@@ -97,6 +104,23 @@ class VocalSeparation
       read_manifest(isrc)&.dig("difficulty")
     end
 
+    # Seconds the instrumental runs behind the recording the lyrics and notes
+    # were timed against — non-zero only for YouTube-sourced instrumentals.
+    # The client shifts its display and scoring clocks by it.
+    def alignment_offset(isrc)
+      read_manifest(isrc)&.dig("alignment_offset_seconds").to_f
+    end
+
+    # Every song that would start instantly, most recently prepared first.
+    # Readiness lives on disk (a manifest per ISRC), so this is a glob, not a
+    # query — fine at living-room scale, and the only place that lists it.
+    def prepared_isrcs
+      Dir.glob(AUDIO_DIR.join("*.karaoke.json"))
+        .sort_by { |path| -File.mtime(path).to_f }
+        .map { |path| File.basename(path).delete_suffix(".karaoke.json") }
+        .select { |isrc| ready?(isrc) }
+    end
+
     # Ensures the original song is downloaded, then separates it. A per-ISRC
     # lock collapses concurrent callers (a prepare request and a background
     # retry) into one Demucs run instead of racing.
@@ -144,29 +168,41 @@ class VocalSeparation
       end
     end
 
-    # A cache from before ARTIFACT_VERSION 2 already holds the expensive parts:
-    # the instrumental and the pitch curve. Notes and word timings are pure
-    # functions of that curve, so they can be recomputed in about a second
-    # rather than by re-running Demucs — which would turn every previously
-    # instant song into a multi-minute wait the first time it was picked.
-    # Those songs keep no vocal stem (older versions deleted it), so they
-    # simply have no vocal guide; deleting the instrumental forces a full
-    # re-separation for one that needs it.
+    # An outdated cache already holds the expensive part: the instrumental.
+    # Everything else can be regenerated without Demucs — which would turn
+    # every previously instant song into a multi-minute wait the first time it
+    # was picked. Songs that kept their vocal stem get a fresh pitch curve
+    # from it (--reextract picks up rescue passes the stored curve predates);
+    # older ones (the stem used to be deleted) recompute notes and words from
+    # the stored curve. Deleting the instrumental forces a full re-separation.
     def upgrade_legacy(isrc)
-      return false unless instrumental_path(isrc).file? && pitch_path(isrc).file?
+      return false unless instrumental_path(isrc).file?
+      return false unless vocals_path(isrc).file? || pitch_path(isrc).file?
 
+      previous = read_manifest(isrc) || {}
       lrc = write_lrc_file(isrc)
-      command = [
-        python_executable.to_s, script_path.to_s,
-        "--reanalyze", pitch_path(isrc).to_s,
-        "--notes-out", notes_path(isrc).to_s
-      ]
+
+      command = [ python_executable.to_s, script_path.to_s ]
+      if vocals_path(isrc).file?
+        command.push("--reextract", vocals_path(isrc).to_s, "--pitch-out", pitch_path(isrc).to_s)
+        timeout = REEXTRACT_TIMEOUT_SECONDS
+      else
+        command.push("--reanalyze", pitch_path(isrc).to_s)
+        timeout = REANALYZE_TIMEOUT_SECONDS
+      end
+      command.push("--notes-out", notes_path(isrc).to_s)
       command.push("--words-out", words_path(isrc).to_s, "--lrc", lrc.to_s) if lrc
 
-      TimedProcess.run(*command, timeout_seconds: REANALYZE_TIMEOUT_SECONDS)
+      TimedProcess.run(*command, timeout_seconds: timeout)
       return false unless notes_path(isrc).file?
 
-      write_manifest(isrc, instrumental_source: "unknown")
+      # The upgrade recomputes analysis, not provenance: whatever the original
+      # separation recorded about its instrumental still holds.
+      write_manifest(
+        isrc,
+        instrumental_source: previous["instrumental_source"] || "unknown",
+        alignment_offset_seconds: previous["alignment_offset_seconds"].to_f
+      )
       true
     ensure
       FileUtils.rm_f(lrc_path(isrc))
@@ -188,7 +224,8 @@ class VocalSeparation
 
       demucs_thread.join
       youtube_found = youtube_thread&.value || false
-      youtube_found &&= tmp_wav.file? && aligned?(tmp_wav, youtube_mp3)
+      offset = youtube_found && tmp_wav.file? ? alignment_offset_of(tmp_wav, youtube_mp3) : nil
+      youtube_found = !offset.nil? && offset.abs <= ALIGNMENT_TOLERANCE_SECONDS
 
       if youtube_found
         FileUtils.mv(youtube_mp3, instrumental_path(isrc))
@@ -207,7 +244,13 @@ class VocalSeparation
         encode_mp3(tmp_vocals, vocals_path(isrc))
       end
 
-      write_manifest(isrc, instrumental_source: youtube_found ? "youtube" : "demucs")
+      write_manifest(
+        isrc,
+        instrumental_source: youtube_found ? "youtube" : "demucs",
+        # Stored rather than merely thresholded: the client shifts its clocks
+        # by this, so even the tolerated residue stops desyncing the lyrics.
+        alignment_offset_seconds: youtube_found ? offset : 0.0
+      )
     ensure
       FileUtils.rm_f(tmp_wav)
       FileUtils.rm_f(tmp_vocals)
@@ -255,16 +298,17 @@ class VocalSeparation
     # Compares onset timing against Demucs's own accompaniment track, which
     # is guaranteed sample-aligned with the original (same source file, no
     # time-stretching) — so any offset found here is the YouTube upload's,
-    # not measurement noise.
-    def aligned?(reference_wav, candidate_mp3)
+    # not measurement noise. Positive means the upload runs behind the
+    # original. nil when the measurement itself failed.
+    def alignment_offset_of(reference_wav, candidate_mp3)
       offset = TimedProcess.capture(
         python_executable.to_s, Rails.root.join("script/check_audio_alignment.py").to_s,
         reference_wav.to_s, candidate_mp3.to_s,
         timeout_seconds: ALIGNMENT_CHECK_TIMEOUT_SECONDS
       )
-      offset.present? && offset.to_f.abs <= ALIGNMENT_TOLERANCE_SECONDS
+      offset.present? ? offset.to_f : nil
     rescue StandardError
-      false
+      nil
     end
 
     def encode_mp3(wav_path, mp3_path)
@@ -275,11 +319,12 @@ class VocalSeparation
     # Written last, and atomically: a crash partway through leaves no manifest
     # at all, so the song reads as not-ready and is retried, rather than
     # appearing ready with a missing piece.
-    def write_manifest(isrc, instrumental_source:)
+    def write_manifest(isrc, instrumental_source:, alignment_offset_seconds: 0.0)
       payload = {
         "version" => ARTIFACT_VERSION,
         "created_at" => Time.current.utc.iso8601,
         "instrumental_source" => instrumental_source,
+        "alignment_offset_seconds" => alignment_offset_seconds.to_f.round(3),
         "artifacts" => {
           "instrumental" => instrumental_path(isrc).file?,
           "pitch" => pitch_path(isrc).file?,

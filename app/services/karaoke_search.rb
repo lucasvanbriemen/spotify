@@ -18,6 +18,27 @@ class KaraokeSearch
       end || []
     end
 
+    # The same hits, shaped the way a karaoke result row draws them. Used by
+    # the remote's search, which has no business handing a phone the playlist
+    # membership map SpotifyController#search returns.
+    #
+    # Readiness is annotated out here rather than inside the cached search: a
+    # song that just finished separating should get its badge on the next
+    # keystroke, not when the TTL expires.
+    def results(query)
+      search(query).select { |track| track["isrc"].present? }.map do |track|
+        {
+          isrc: track["isrc"],
+          title: track["title"],
+          artist: track.dig("artist", "name"),
+          image_url: track.dig("album", "cover_medium") || Song::PLACEHOLDER_IMAGE,
+          duration: track["duration"],
+          ready: VocalSeparation.ready?(track["isrc"]),
+          difficulty: VocalSeparation.difficulty(track["isrc"])&.dig("level")
+        }
+      end
+    end
+
     private
 
     def perform(query)

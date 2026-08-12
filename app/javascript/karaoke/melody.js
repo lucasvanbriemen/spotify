@@ -60,6 +60,15 @@ export class Melody {
     return this.notes.length === 0
   }
 
+  // Where the melody lives, register-wise — what the guide melody's octave
+  // shift is measured against.
+  get medianMidi() {
+    if (this.isEmpty) return null
+
+    const sorted = this.notes.map((note) => note.midi).sort((a, b) => a - b)
+    return sorted[(sorted.length - 1) >> 1]
+  }
+
   get lineCount() {
     return this.notes.reduce((highest, note) => Math.max(highest, note.lineIndex + 1), 0)
   }

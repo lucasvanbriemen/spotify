@@ -13,6 +13,30 @@
       <line class="spark-base" x1="0" y1="27" x2="100" y2="27"></line>
     </svg>
 
+    <%# The song's all-time best per name, from GET /api/karaoke/:isrc/scores.
+        Hidden until the fetch lands — an empty box would only raise questions. %>
+    <div class="karaoke-scoreboard__leaderboard" data-karaoke-results-target="leaderboard" hidden>
+      <h3>Leaderboard</h3>
+      <ol data-karaoke-results-target="leaderboardList"></ol>
+    </div>
+
+    <%# The hand-off to the next song in the queue. Shown whenever there is one
+        — including after a song nobody was scored on, where it is the only
+        thing this panel has to say. %>
+    <div class="karaoke-nextup" data-karaoke-results-target="nextUp" hidden>
+      <img class="karaoke-nextup__art" data-karaoke-results-target="nextUpArt" alt="">
+      <div class="karaoke-nextup__meta">
+        <p class="karaoke-nextup__label">Up next<span data-karaoke-results-target="nextUpBy"></span></p>
+        <p class="karaoke-nextup__song" data-karaoke-results-target="nextUpSong"></p>
+        <p class="karaoke-nextup__note" data-karaoke-results-target="nextUpNote" hidden>
+          Still being prepared — it starts as soon as it's ready.
+        </p>
+      </div>
+      <span class="karaoke-nextup__count" data-karaoke-results-target="nextUpCount"></span>
+      <%= button(text: "Start now", type: "button", data: { action: "karaoke-results#startNext" }) %>
+      <%= button(text: "Skip", type: "button", variant: :outline, data: { action: "karaoke-results#skipNext" }) %>
+    </div>
+
     <div class="karaoke-scoreboard__actions">
       <%= button(text: "Sing again", type: "button", data: { action: "karaoke-results#singAgain" }) %>
       <%= button(text: "Back to search", type: "button", variant: :outline, data: { action: "karaoke-results#back" }) %>

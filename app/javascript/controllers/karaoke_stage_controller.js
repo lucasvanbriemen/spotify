@@ -34,13 +34,16 @@ export default class extends Controller {
     "dots", "activeLine", "activeBase", "activeFill", "nextLine",
     "countIn", "countRing", "countDigit",
     "controlbar", "playButton", "currentTime", "duration", "seek",
-    "fader", "faderInput", "melodyToggle", "fullscreenButton"
+    "fader", "faderInput", "melodyToggle", "fullscreenButton",
+    "syncInput", "syncValue"
   ]
 
   // How long the control bar stays up after the mouse stops moving.
   static CONTROLS_IDLE_MS = 3000
   // A line shrunk below this is unreadable from a sofa; let it wrap instead.
   static MIN_FIT = 0.55
+  // How long a finished line stays at full strength before fading back.
+  static PAST_LINE_SECONDS = 1.5
 
   connect() {
     this.lines = []
@@ -50,6 +53,7 @@ export default class extends Controller {
     this.renderedDigit = null
     this.renderedCountKind = null
     this.renderedHeld = false
+    this.renderedPast = false
     this.renderedScores = [ null, null ]
     this.renderedCombos = [ null, null ]
     this.controlsTimer = null
@@ -65,7 +69,10 @@ export default class extends Controller {
     this.boundVisibility = () => this.reacquireWakeLock()
 
     this.element.addEventListener("pointermove", this.boundPointerMove)
-    this.element.addEventListener("pointerdown", () => { this.pointerDown = true })
+    // Shown on the *down* half of the tap: on a touch screen there is no
+    // pointermove first, and a bar that only appears on pointerup swallows
+    // the tap that was meant for its buttons.
+    this.element.addEventListener("pointerdown", () => { this.pointerDown = true; this.showControls() })
     this.element.addEventListener("pointerup", () => { this.pointerDown = false; this.showControls() })
     document.addEventListener("keydown", this.boundKeydown)
     document.addEventListener("fullscreenchange", this.boundFullscreenChange)
@@ -88,7 +95,7 @@ export default class extends Controller {
   // Called from inside the Start click. requestFullscreen has to run in that
   // gesture's own turn of the event loop, so this must not be awaited on
   // anything beforehand.
-  enter({ track, singers, hasVocals, vocalPercent, guideMelody }) {
+  enter({ track, singers, hasVocals, vocalPercent, guideMelody, latencyTrimMs = 0 }) {
     this.requestFullscreen()
 
     this.songTarget.textContent = `${track.title} — ${track.artist}`
@@ -117,6 +124,8 @@ export default class extends Controller {
     this.faderTarget.hidden = !hasVocals
     this.faderInputTarget.value = vocalPercent
     this.melodyToggleTarget.setAttribute("aria-pressed", String(Boolean(guideMelody)))
+    this.syncInputTarget.value = latencyTrimMs
+    this.syncValueTarget.textContent = this.formatTrim(latencyTrimMs)
 
     this.resetRenderState()
     this.acquireWakeLock()
@@ -136,12 +145,15 @@ export default class extends Controller {
     this.renderedDigit = null
     this.renderedCountKind = null
     this.renderedHeld = false
+    this.renderedPast = false
     this.renderedScores = [ null, null ]
     this.renderedCombos = [ null, null ]
     this.activeBaseTarget.textContent = ""
     this.activeFillTarget.textContent = ""
     this.nextLineTarget.textContent = ""
+    this.activeLineTarget.classList.remove("karaoke-lyric--past")
     this.countInTarget.hidden = true
+    this.countInTarget.classList.remove("is-go")
     this.dotsTarget.hidden = true
   }
 
@@ -189,6 +201,15 @@ export default class extends Controller {
       this.renderedHeld = state.held
     }
 
+    // A line that finished a while ago fades back, so it stops reading as the
+    // singer's current cue during an instrumental break.
+    const line = this.lines[state.line.index]
+    const past = Boolean(line) && state.time > line.endTime + this.constructor.PAST_LINE_SECONDS
+    if (past !== this.renderedPast) {
+      this.activeLineTarget.classList.toggle("karaoke-lyric--past", past)
+      this.renderedPast = past
+    }
+
     this.renderCountIn(state.countIn)
     this.renderClock(state)
     this.renderScores(state.singers)
@@ -208,6 +229,8 @@ export default class extends Controller {
 
     this.activeLineTarget.style.setProperty("--sweep", "0%")
     this.renderedSweep = 0
+    this.activeLineTarget.classList.remove("karaoke-lyric--past")
+    this.renderedPast = false
 
     this.fitLine()
     this.retrigger(this.activeLineTarget, "is-in")
@@ -227,12 +250,18 @@ export default class extends Controller {
     this.activeLineTarget.style.whiteSpace = fit < this.constructor.MIN_FIT ? "normal" : "nowrap"
   }
 
+  // Digit 0 is the "GO" beat the engine holds just past the line's start: the
+  // overlay plays its exit animation there (ending at opacity 0), so the
+  // eventual hidden toggle is invisible and the countdown never just blinks
+  // out. Gap dots get the same treatment through their data-remaining="0"
+  // fade.
   renderCountIn(countIn) {
     const kind = countIn?.kind ?? null
 
     if (kind !== this.renderedCountKind) {
       this.countInTarget.hidden = kind !== "initial"
       this.dotsTarget.hidden = kind !== "gap"
+      this.countInTarget.classList.remove("is-go")
       this.renderedCountKind = kind
       this.renderedDigit = null
     }
@@ -242,8 +271,17 @@ export default class extends Controller {
     if (countIn.digit !== this.renderedDigit) {
       this.renderedDigit = countIn.digit
       if (kind === "initial") {
-        this.countDigitTarget.textContent = String(countIn.digit)
-        this.retrigger(this.countRingTarget, "is-ticking")
+        if (countIn.digit === 0) {
+          this.countDigitTarget.textContent = "GO!"
+          this.countInTarget.classList.add("is-go")
+        } else {
+          // Seeking back into the intro re-arms the count-in; the GO state
+          // must not linger over the fresh digits.
+          this.countInTarget.classList.remove("is-go")
+          this.countDigitTarget.textContent = String(countIn.digit)
+          this.retrigger(this.countDigitTarget, "is-popping")
+          this.retrigger(this.countRingTarget, "is-ticking")
+        }
       } else {
         this.dotsTarget.dataset.remaining = String(countIn.digit)
       }
@@ -315,6 +353,19 @@ export default class extends Controller {
 
   changeVocalGuide() {
     this.delegate?.stageVocalGuide?.(Number(this.faderInputTarget.value))
+  }
+
+  // The latency trim, adjustable without leaving the song — sync problems are
+  // noticed mid-line, not on the setup screen. The engine reads the setting
+  // every frame, so the change is heard immediately.
+  changeSync() {
+    const trim = Number(this.syncInputTarget.value)
+    this.syncValueTarget.textContent = this.formatTrim(trim)
+    this.delegate?.stageLatency?.(trim)
+  }
+
+  formatTrim(ms) {
+    return `${ms > 0 ? "+" : ""}${ms} ms`
   }
 
   toggleMelody() {

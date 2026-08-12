@@ -20,6 +20,10 @@ export class GuideMelody {
     this.melody = null
     this.enabled = false
     this.scheduledUpTo = -1
+    // Whole octaves (in semitones), so a deep or high voice hears the guide
+    // in its own register. Scoring is octave-invariant, so this is display-
+    // level only — see KaraokeEngine#guideTranspose.
+    this.transpose = 0
 
     this.gate = context.createGain()
     this.gate.gain.value = 0
@@ -38,6 +42,13 @@ export class GuideMelody {
   setMelody(melody) {
     this.melody = melody && !melody.isEmpty ? melody : null
     this.reset()
+  }
+
+  setTranspose(semitones) {
+    if (semitones === this.transpose) return
+
+    this.transpose = semitones
+    this.reset() // anything already scheduled is at the old pitch
   }
 
   setEnabled(enabled) {
@@ -75,7 +86,7 @@ export class GuideMelody {
       const endAt = songToContext(note.end)
       if (startAt === null || endAt === null || startAt < this.context.currentTime) continue
 
-      this.oscillator.frequency.setValueAtTime(440 * 2 ** ((note.midi - 69) / 12), startAt)
+      this.oscillator.frequency.setValueAtTime(440 * 2 ** ((note.midi + this.transpose - 69) / 12), startAt)
       this.gate.gain.setTargetAtTime(1, startAt, GATE_SECONDS)
       this.gate.gain.setTargetAtTime(0, Math.max(startAt + 0.01, endAt - 0.01), GATE_SECONDS)
     }

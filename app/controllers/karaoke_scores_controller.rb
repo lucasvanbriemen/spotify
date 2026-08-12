@@ -9,6 +9,9 @@ class KaraokeScoresController < ApiController
   BEST_LIMIT = 10
   RECENT_LIMIT = 10
   SECTION_LIMIT = 10
+  # The ready list is browsing, not history: roomier, but still a cap — the
+  # library only grows, the home page shouldn't.
+  READY_LIMIT = 24
 
   # POST /api/karaoke/:isrc/scores — one call per singer, from the results
   # screen. Answers with the personal-best comparison so the screen can say
@@ -47,13 +50,20 @@ class KaraokeScoresController < ApiController
   end
 
   # GET /api/karaoke-history — what to show on the search screen before anyone
-  # has typed anything.
+  # has typed anything: everything already separated (starts instantly), plus
+  # what was sung recently and most.
   def history
     recent = grouped_songs("MAX(created_at) DESC")
     most_sung = grouped_songs("sing_count DESC")
-    songs = Song.where(isrc: (recent + most_sung).map(&:song_isrc).uniq).index_by(&:isrc)
+    ready_isrcs = VocalSeparation.prepared_isrcs.first(READY_LIMIT)
+
+    isrcs = (recent.map(&:song_isrc) + most_sung.map(&:song_isrc) + ready_isrcs).uniq
+    songs = Song.where(isrc: isrcs).index_by(&:isrc)
 
     render json: {
+      # An artifact can outlive its Song row; a "ready" entry nobody can
+      # recognise (or select — search won't find it) is left out.
+      ready: ready_isrcs.select { |isrc| songs[isrc] }.map { |isrc| song_entry(isrc, songs, ready: true) },
       recent: recent.map { |row| history_entry(row, songs) },
       most_sung: most_sung.map { |row| history_entry(row, songs) }
     }
@@ -70,16 +80,22 @@ class KaraokeScoresController < ApiController
   end
 
   def history_entry(row, songs)
-    song = songs[row.song_isrc]
+    song_entry(row.song_isrc, songs, ready: VocalSeparation.ready?(row.song_isrc))
+      .merge(sing_count: row.sing_count.to_i)
+  end
+
+  # A prepared song may never have been sung, so there is no score row to
+  # describe it — only the song and its artifacts.
+  def song_entry(isrc, songs, ready:)
+    song = songs[isrc]
 
     {
-      isrc: row.song_isrc,
+      isrc: isrc,
       title: song&.title || "Unknown",
       artist: song&.artist || "Unknown Artist",
       image_url: song&.image_url,
-      sing_count: row.sing_count.to_i,
-      ready: VocalSeparation.ready?(row.song_isrc),
-      difficulty: VocalSeparation.difficulty(row.song_isrc)&.dig("level")
+      ready: ready,
+      difficulty: VocalSeparation.difficulty(isrc)&.dig("level")
     }
   end
 

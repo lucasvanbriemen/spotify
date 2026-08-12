@@ -26,14 +26,32 @@ export class PitchLane {
     this.melody = null
     this.width = 0
     this.height = 0
-    this.colors = { singers: [ "#22d3ee", "#a78bfa" ], gold: "#fcd34d", base: "rgba(244,244,248,0.28)" }
+    this.colors = {
+      singers: [ "#22d3ee", "#a78bfa" ],
+      gold: "#fcd34d",
+      base: "rgba(244,244,248,0.45)",
+      now: "rgba(244,244,248,0.4)"
+    }
     this.scores = []
     // One ring buffer of recent pitch per singer, for the trailing line.
     this.trails = [ [], [] ]
 
     this.observer = new ResizeObserver(() => this.resize())
     this.observer.observe(box)
+    this.readThemeColors()
     this.resize()
+  }
+
+  // The canvas can't use var() itself, so the stage tokens (--karaoke-*, see
+  // _base.scss) are resolved here — one source of truth for what the lane
+  // draws and what the stylesheets around it use.
+  readThemeColors() {
+    const style = getComputedStyle(this.box)
+    const read = (name, fallback) => style.getPropertyValue(name).trim() || fallback
+
+    this.colors.base = read("--karaoke-lane-note", this.colors.base)
+    this.colors.now = read("--karaoke-lane-now", this.colors.now)
+    this.colors.gold = read("--karaoke-gold", this.colors.gold)
   }
 
   setMelody(melody) {
@@ -98,7 +116,7 @@ export class PitchLane {
     const x = this.width * NOW_POSITION
 
     context.save()
-    context.strokeStyle = "rgba(244,244,248,0.25)"
+    context.strokeStyle = this.colors.now
     context.lineWidth = 2
     context.beginPath()
     context.moveTo(x, 0)
@@ -237,7 +255,12 @@ export class PitchLane {
         if (Math.abs(candidate - previous) < Math.abs(folded - previous)) folded = candidate
       }
     }
-    return folded
+
+    // A lane narrower than an octave can be unreachable from some registers —
+    // no whole-octave shift lands inside it. Pin the trail to the nearest edge
+    // rather than drawing it off-canvas, where it reads as "my voice doesn't
+    // show up".
+    return Math.max(midiMin, Math.min(midiMax, folded))
   }
 
   roundedRect(x, y, width, height, radius) {
