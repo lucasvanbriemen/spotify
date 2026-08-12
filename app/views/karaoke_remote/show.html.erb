@@ -1,0 +1,56 @@
+<% content_for :title, "Karaoke remote" %>
+
+<%# The phone half of the queue. No login: whoever is in the room and can read
+    the code off the screen can put a song on. See KaraokeRemoteController. %>
+<div class="karaoke-remote">
+  <% if @unlocked %>
+    <div data-controller="karaoke-remote">
+      <header class="karaoke-remote__header">
+        <h1>Karaoke queue</h1>
+        <label class="karaoke-remote__field">
+          Your name
+          <input type="text" class="karaoke-remote__input" maxlength="50" placeholder="Guest"
+                 data-karaoke-remote-target="name" data-action="input->karaoke-remote#saveName">
+        </label>
+      </header>
+
+      <p class="karaoke-remote__status" data-karaoke-remote-target="status" hidden></p>
+
+      <p class="karaoke-remote__nowplaying" data-karaoke-remote-target="nowPlaying" hidden></p>
+
+      <section class="karaoke-remote__section">
+        <label class="karaoke-remote__field">
+          Search for a song
+          <%# type=search rather than text: it is the phone keyboard with the
+              right action key, and the one that offers a clear button. %>
+          <input type="search" class="karaoke-remote__input" placeholder="Song or artist"
+                 data-karaoke-remote-target="query" data-action="input->karaoke-remote#search">
+        </label>
+        <div class="karaoke-remote__results" data-karaoke-remote-target="results"></div>
+      </section>
+
+      <section class="karaoke-remote__section">
+        <h2>Up next <span class="karaoke-remote__count" data-karaoke-remote-target="count"></span></h2>
+        <p class="karaoke-remote__empty" data-karaoke-remote-target="empty">Nothing queued yet — you're up.</p>
+        <ol class="karaoke-remote__queue" data-karaoke-remote-target="queue"></ol>
+      </section>
+    </div>
+  <% else %>
+    <div class="karaoke-remote__lock">
+      <h1>Karaoke queue</h1>
+      <p>Enter the code shown on the karaoke screen to add songs.</p>
+
+      <% if @invalid_code %>
+        <p class="karaoke-remote__error">That code isn't right — check the screen and try again.</p>
+      <% end %>
+
+      <%# A plain GET form: the controller swaps a valid code for a cookie. %>
+      <form action="<%= karaoke_remote_path %>" method="get" class="karaoke-remote__lock-form">
+        <input type="text" name="code" class="karaoke-remote__input karaoke-remote__code-input"
+               maxlength="8" autocomplete="off" autocapitalize="characters" autofocus
+               aria-label="Join code" placeholder="Code">
+        <%= button(text: "Join", type: "submit") %>
+      </form>
+    </div>
+  <% end %>
+</div>

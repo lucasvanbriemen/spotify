@@ -48,7 +48,11 @@ export default class extends Controller {
   }
 
   async tick() {
-    await this.refresh()
+    // Only while the panel is on screen. During a song the coordinator asks
+    // for what it needs (peekNext refreshes), and polling behind a full-screen
+    // stage would be four requests a minute nobody reads.
+    if (this.element.offsetParent !== null) await this.refresh()
+
     // Chained rather than an interval: a slow answer must not stack requests.
     this.pollTimer = setTimeout(() => this.tick(), this.pollMsValue)
   }

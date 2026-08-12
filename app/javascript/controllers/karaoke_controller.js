@@ -608,6 +608,76 @@ export default class extends Controller {
     this.back()
   }
 
+  // The countdown ran out, or someone pressed Start now.
+  resultsStartNext() {
+    this.playNextInQueue()
+  }
+
+  // Not for us, then. Whatever is behind it takes its place on the panel, so
+  // Skip can be pressed twice in a row without the hand-off disappearing.
+  async resultsSkipNext() {
+    await this.queue?.dropNext?.()
+    const next = await this.queue?.peekNext?.()
+
+    if (next) this.scoreboard?.showNextUp?.(next, this.constructor.NEXT_UP_SECONDS)
+  }
+
+  // --- Called by the queue panel -------------------------------------------
+
+  // "Play" on a queued song: it jumps the rest of the queue rather than being
+  // played out of it, so nothing else is disturbed.
+  queuePlay(item) {
+    this.startQueueItem(item)
+  }
+
+  // The queue panel polls; nothing here has to react to it changing. The hook
+  // exists so a queue that empties while the scoreboard is counting down can
+  // take its hand-off back.
+  queueUpdated(items) {
+    if (items.length === 0) this.scoreboard?.hideNextUp?.()
+  }
+
+  // --- Walking the queue ---------------------------------------------------
+
+  async playNextInQueue() {
+    const item = await this.queue?.claimNext?.()
+    // The last song of the evening: stay on the scoreboard rather than
+    // dropping the room back to a search box mid-applause.
+    if (!item) return this.scoreboard?.hideNextUp?.()
+
+    this.startQueueItem(item, { claimed: true })
+  }
+
+  async startQueueItem(item, { claimed = false } = {}) {
+    if (!claimed) await this.queue?.claim?.(item)
+
+    this.scoreboard?.hideNextUp?.()
+    this.element.classList.remove("karaoke--results")
+    this.selectSong(
+      { isrc: item.isrc, title: item.title, artist: item.artist, image_url: item.image_url },
+      { autoStart: true, queueItem: item }
+    )
+  }
+
+  // A song the server can't prepare. Its row is already claimed, so releasing
+  // it here is what keeps the queue moving instead of retrying it forever.
+  skipToNextInQueue() {
+    this.autoStart = false
+    this.releaseQueueItem()
+    this.playNextInQueue()
+  }
+
+  // The song is off the stage — finished, skipped or walked out of. Either way
+  // the row stops being the one being sung, or every phone in the room would
+  // go on showing it.
+  releaseQueueItem() {
+    const item = this.currentQueueItem
+    this.currentQueueItem = null
+    if (item) this.queue?.markDone?.(item.id)
+
+    return item
+  }
+
   // --- Lyrics --------------------------------------------------------------
 
   // Lyrics, word timings and the melody all describe the same song, so they
