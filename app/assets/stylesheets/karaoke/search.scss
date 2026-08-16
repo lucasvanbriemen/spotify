@@ -3,7 +3,12 @@
   overflow-y: auto;
   gap: 1rem;
 
-  width: 30vw;
+  // A single fraction of the viewport was too narrow on a TV and too wide to
+  // read comfortably on a laptop. The clamp keeps the column a comfortable
+  // measure everywhere: it fills a phone, sits around half of a 1080p window,
+  // and stops growing once the rows would be stretched wider than they read.
+  width: clamp(20rem, 52vw, 62rem);
+  max-width: 94vw;
   padding: 1rem;
   margin: 1rem auto;
 
