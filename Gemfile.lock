@@ -85,7 +85,7 @@ GEM
     bindex (0.8.1)
     bootsnap (1.24.5)
       msgpack (~> 1.2)
-    brakeman (8.0.4)
+    brakeman (8.0.6)
       racc
     builder (3.3.0)
     capybara (3.40.0)
@@ -190,8 +190,6 @@ GEM
     mini_mime (1.1.5)
     minitest (5.27.0)
     msgpack (1.8.1)
-    mysql2 (0.5.7)
-      bigdecimal
     net-imap (0.6.4)
       date
       net-protocol
@@ -444,7 +442,6 @@ DEPENDENCIES
   importmap-rails
   jbuilder
   kamal
-  mysql2 (~> 0.5)
   propshaft
   puma (>= 5.0)
   rails (~> 8.0.5)
