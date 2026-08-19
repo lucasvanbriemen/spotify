@@ -18,12 +18,17 @@ Rails.application.configure do
   # Cache assets for far-future expiry since they are all digest stamped.
   config.public_file_server.headers = { "cache-control" => "public, max-age=#{1.year.to_i}" }
 
-  # Let Apache (mod_xsendfile) serve large audio files via the X-Sendfile
-  # header. Without this, a Passenger app process stays busy streaming the whole
-  # MP3 to the client; AVPlayer only drains the socket as fast as it buffers, so
-  # the process is pinned for much of the song. Handing the file to Apache frees
-  # the process immediately and lets Apache handle Range requests natively.
-  config.action_dispatch.x_sendfile_header = "X-Sendfile"
+  # Let nginx serve large audio files. send_file sets X-Accel-Redirect, and the
+  # Rack::Sendfile mapping below rewrites the file's absolute path into a URI
+  # under the internal /_x-accel/ location the nginx vhost aliases to
+  # storage/audio — nginx streams the file (with native Range support) and the
+  # Puma thread is freed immediately, same as the Apache/X-Sendfile setup this
+  # replaces. That header died on the Apache→nginx cutover: nginx ignores
+  # X-Sendfile, so every MP3 went out as an empty 200 and the karaoke stage
+  # reported the instrumental as unloadable.
+  config.action_dispatch.x_sendfile_header = "X-Accel-Redirect"
+  config.middleware.swap Rack::Sendfile, Rack::Sendfile, "X-Accel-Redirect",
+    [ [ Rails.root.join("storage/audio").to_s + "/", "/_x-accel/" ] ]
 
   # Enable serving of images, stylesheets, and JavaScripts from an asset server.
   # config.asset_host = "http://assets.example.com"
