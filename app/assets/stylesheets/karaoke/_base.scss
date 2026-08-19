@@ -3,6 +3,15 @@
 // The shell, the screen routing, and the two things that would otherwise ruin
 // a 60fps stage: inherited transitions and inherited motion.
 
+// The shared button component sets `display: inline-flex` on .button, and a
+// class beats the browser's own `[hidden] { display: none }` — so every button
+// rendered hidden shows up anyway. Most visible on the setup screen, which
+// offers Retry before anything has failed. Scoped here rather than fixed in
+// ui-components, where it would land on every app at once.
+.karaoke .button[hidden] {
+  display: none;
+}
+
 .karaoke {
   // The stage palette (see _tokens.scss for who uses which palette). One block
   // of custom properties so JS that draws to canvas — the pitch lane — can
