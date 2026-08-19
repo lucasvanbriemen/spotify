@@ -156,7 +156,7 @@ export default class extends Controller {
     this.countdown = setInterval(() => {
       this.remaining -= 1
       this.renderCountdown()
-      if (this.remaining <= 0) this.startNext()
+      if (this.remaining <= 0) this.#handOff({ unattended: true })
     }, 1000)
   }
 
@@ -174,10 +174,20 @@ export default class extends Controller {
     this.countdown = null
   }
 
+  // The button under the hand-off. Somebody is standing at the screen, so the
+  // song it starts stops at its setup screen — see the coordinator's
+  // resultsStartNext.
   startNext() {
+    this.#handOff({ unattended: false })
+  }
+
+  // unattended says whether anyone is known to be watching: the countdown
+  // running out is the case nobody is, and the only one where the next song
+  // may start itself.
+  #handOff({ unattended }) {
     this.clearCountdown()
     this.renderCountdown()
-    this.delegate?.resultsStartNext?.()
+    this.delegate?.resultsStartNext?.({ unattended })
   }
 
   skipNext() {

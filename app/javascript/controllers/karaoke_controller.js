@@ -608,9 +608,10 @@ export default class extends Controller {
     this.back()
   }
 
-  // The countdown ran out, or someone pressed Start now.
-  resultsStartNext() {
-    this.playNextInQueue()
+  // The countdown ran out, or someone pressed Start now. Only the first of
+  // those is unattended, and only an unattended song starts itself.
+  resultsStartNext({ unattended = false } = {}) {
+    this.playNextInQueue({ autoStart: unattended })
   }
 
   // Not for us, then. Whatever is behind it takes its place on the panel, so
@@ -626,6 +627,12 @@ export default class extends Controller {
 
   // "Play" on a queued song: it jumps the rest of the queue rather than being
   // played out of it, so nothing else is disturbed.
+  //
+  // It does NOT start itself. Pressing Play is someone choosing this song to
+  // sing, and they need the setup screen the same as anyone who picked it out
+  // of the search — it is where 1 or 2 singers is chosen, and who is on which
+  // mic. Auto-starting straight past it let the screen show for about a second
+  // before the song took over, which read as the choice not being offered.
   queuePlay(item) {
     this.startQueueItem(item)
   }
@@ -639,23 +646,25 @@ export default class extends Controller {
 
   // --- Walking the queue ---------------------------------------------------
 
-  async playNextInQueue() {
+  // autoStart is the hand-off nobody is at the screen for; every other route
+  // into the queue leaves the singers on the setup screen.
+  async playNextInQueue({ autoStart = false } = {}) {
     const item = await this.queue?.claimNext?.()
     // The last song of the evening: stay on the scoreboard rather than
     // dropping the room back to a search box mid-applause.
     if (!item) return this.scoreboard?.hideNextUp?.()
 
-    this.startQueueItem(item, { claimed: true })
+    this.startQueueItem(item, { claimed: true, autoStart })
   }
 
-  async startQueueItem(item, { claimed = false } = {}) {
+  async startQueueItem(item, { claimed = false, autoStart = false } = {}) {
     if (!claimed) await this.queue?.claim?.(item)
 
     this.scoreboard?.hideNextUp?.()
     this.element.classList.remove("karaoke--results")
     this.selectSong(
       { isrc: item.isrc, title: item.title, artist: item.artist, image_url: item.image_url },
-      { autoStart: true, queueItem: item }
+      { autoStart, queueItem: item }
     )
   }
 
@@ -664,7 +673,9 @@ export default class extends Controller {
   skipToNextInQueue() {
     this.autoStart = false
     this.releaseQueueItem()
-    this.playNextInQueue()
+    // Only reached from a song that was itself auto-started, so whatever takes
+    // its place has just as little reason to expect anyone at the screen.
+    this.playNextInQueue({ autoStart: true })
   }
 
   // The song is off the stage — finished, skipped or walked out of. Either way
