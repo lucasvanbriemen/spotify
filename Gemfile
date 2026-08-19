@@ -7,6 +7,10 @@ gem "propshaft"
 gem "dartsass-rails"
 # Primary database: MySQL/MariaDB via the trilogy adapter
 gem "trilogy", ">= 2.7"
+# Trilogy has no Windows support, so config/database.yml falls back to mysql2
+# there. It was in Gemfile.lock without ever being declared here, which meant
+# the first `bundle install` on any other platform dropped it from the lock.
+gem "mysql2", "~> 0.5", platforms: %i[ windows ]
 # Still used by Solid Cache/Queue/Cable for their local production stores
 gem "sqlite3", ">= 2.1"
 # Use the Puma web server [https://github.com/puma/puma]

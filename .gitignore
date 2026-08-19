@@ -42,8 +42,11 @@
 /app/assets/stylesheets/_manifest.scss
 
 # yt-dlp + ffmpeg binaries live in bin/ on the server but are not tracked.
+# ffprobe too: yt-dlp is pointed at bin/ with --ffmpeg-location and looks for
+# both there.
 /bin/yt-dlp
 /bin/ffmpeg
+/bin/ffprobe
 
 # Downloaded MP3 cache.
 /storage/audio/

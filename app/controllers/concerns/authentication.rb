@@ -19,7 +19,7 @@ module Authentication
 
   def require_login
     token = auth_token
-    @current_account = fetch_account(token) if token.present?
+    @current_account = local_dev_account || (fetch_account(token) if token.present?)
 
     if @current_account.nil?
       return redirect_to "#{LOGIN_URL}?redirect=#{CGI.escape(request.original_url)}", allow_other_host: true
@@ -34,6 +34,20 @@ module Authentication
 
   def auth_token
     cookies[:auth_token].presence || params[:auth_token].presence || request.headers["Authorization"].to_s[/\ABearer (.+)\z/, 1]
+  end
+
+  # A dev machine has no business round-tripping through the production login
+  # service to open the karaoke screen — and on a laptop that can't reach it,
+  # every request redirects off-site instead. LOCAL_DEV_ACCOUNT (set in .env)
+  # stands in for the session locally.
+  #
+  # Gated on Rails.env.development? as well as the variable, so the same
+  # variable reaching a deployed environment cannot open it up.
+  def local_dev_account
+    return nil unless Rails.env.development?
+
+    name = ENV["LOCAL_DEV_ACCOUNT"].presence
+    name && { "id" => 0, "name" => name, "email" => "#{name.parameterize}@localhost" }
   end
 
   def fetch_account(token)
