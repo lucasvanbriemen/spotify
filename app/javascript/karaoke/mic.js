@@ -84,6 +84,9 @@ export class MicSystem {
 
   async createInput(deviceId, { reduceMusicPickup = false } = {}) {
     const input = new MicInput(this.session.context, deviceId, reduceMusicPickup)
+    // Every mic joins the shared monitor bus, which is silent unless someone
+    // has asked to hear themselves (see mic_monitor.js).
+    input.monitor = this.session.monitor
     await input.open(this.claimPrimeStream(deviceId, reduceMusicPickup))
     return input
   }
@@ -136,6 +139,10 @@ export class MicInput extends EventTarget {
     this.stream = null
     this.nodes = []
     this.lost = false
+    // Set by MicSystem.createInput. The bus the singer hears themselves on;
+    // deliberately fed from the raw source, so its reverb and limiter can
+    // never reach the pitch worklet and change what gets scored.
+    this.monitor = null
   }
 
   // existingStream, when given, is an already-open stream for this device (the
@@ -162,6 +169,10 @@ export class MicInput extends EventTarget {
     source.connect(pitchNode)
     pitchNode.connect(sink)
     sink.connect(this.context.destination)
+
+    // A second, independent tap off the same source. close() disconnects
+    // source, which takes this branch with it.
+    this.monitor?.addSource(source)
 
     this.nodes = [ source, pitchNode, sink ]
     this.pitchNode = pitchNode

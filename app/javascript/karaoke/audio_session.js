@@ -1,3 +1,5 @@
+import { MicMonitor } from "karaoke/mic_monitor"
+
 // The one AudioContext the karaoke stage uses, shared by playback, every mic
 // and the guide-melody synth.
 //
@@ -24,8 +26,14 @@ export async function getAudioSession(workletUrl) {
   const context = new AudioContext({ latencyHint: "interactive" })
   await context.audioWorklet.addModule(workletUrl)
 
+  // One monitor bus for every mic on this context, for the same reason the
+  // context itself is shared: the singers hear one blend, not one each. Silent
+  // and off the destination until someone asks to hear themselves.
+  const monitor = new MicMonitor(context)
+
   session = {
     context,
+    monitor,
 
     // Browsers start a context suspended until a user gesture. Call this from
     // inside a click handler before expecting sound.
@@ -36,6 +44,7 @@ export async function getAudioSession(workletUrl) {
 
     async close() {
       session = null
+      monitor.destroy()
       await context.close().catch(() => {})
     }
   }

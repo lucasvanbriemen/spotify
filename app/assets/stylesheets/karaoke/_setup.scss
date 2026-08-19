@@ -233,3 +233,28 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+// The PA: how loud the singers hear themselves, and how wet. Grouped so the
+// feedback warning reads as belonging to both sliders rather than to the one
+// above it.
+.karaoke-monitor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 380px;
+
+  input { accent-color: var(--primary); }
+
+  span {
+    color: var(--on-surface);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.karaoke-monitor__note {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--on-surface-variant);
+}

@@ -9,7 +9,11 @@ import { settings } from "karaoke/settings"
 // tracker, so both are scored independently while they sing at the same time.
 // Sharing one device between them would score both on whoever was louder.
 export default class extends Controller {
-  static targets = [ "countOption", "singerCard", "name", "swatch", "device", "level", "check", "enableMics", "latency", "latencyValue" ]
+  static targets = [
+    "countOption", "singerCard", "name", "swatch", "device", "level", "check", "enableMics",
+    "latency", "latencyValue",
+    "monitor", "monitorValue", "monitorReverb", "monitorReverbValue"
+  ]
 
   static DEFAULT_COLORS = [ "#22d3ee", "#a78bfa" ]
   // A sung note has to hold for about this long before the check passes, so a
@@ -46,6 +50,7 @@ export default class extends Controller {
     }))
 
     this.renderLatency()
+    this.renderMonitor()
     this.render()
   }
 
@@ -96,6 +101,45 @@ export default class extends Controller {
     this.latencyValueTarget.textContent = total === null
       ? sign(trim)
       : `${sign(trim)} — lyrics shown ${total} ms behind the audio clock`
+  }
+
+  // --- The PA ---------------------------------------------------------------
+
+  // The monitor bus itself belongs to the audio session, so the level survives
+  // leaving this screen and can be moved again from the stage.
+  get monitorBus() {
+    return this.delegate?.session?.monitor || null
+  }
+
+  changeMonitor() {
+    const percent = Number(this.monitorTarget.value)
+    settings.set("micMonitorPercent", percent)
+    this.monitorBus?.setLevel(percent)
+    this.renderMonitor()
+    // The stage's own fader is the same setting; keep it from reappearing at
+    // its old position mid-song.
+    this.delegate?.monitorChanged?.(percent)
+  }
+
+  changeMonitorReverb() {
+    const percent = Number(this.monitorReverbTarget.value)
+    settings.set("micMonitorReverbPercent", percent)
+    this.monitorBus?.setReverb(percent)
+    this.renderMonitor()
+  }
+
+  renderMonitor() {
+    if (!this.hasMonitorTarget) return
+
+    const level = settings.get("micMonitorPercent")
+    const reverb = settings.get("micMonitorReverbPercent")
+
+    this.monitorTarget.value = level
+    this.monitorReverbTarget.value = reverb
+    // "Off" rather than "0%": it is the state, not a quantity, and it is the
+    // one worth being able to read across a room.
+    this.monitorValueTarget.textContent = level === 0 ? "Off" : `${level}%`
+    this.monitorReverbValueTarget.textContent = `${reverb}%`
   }
 
   // --- Singer choices -------------------------------------------------------

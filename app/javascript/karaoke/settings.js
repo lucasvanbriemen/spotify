@@ -18,6 +18,15 @@ const DEFAULTS = {
   // genuinely suppress instrumental bleed — at the cost of mangling sung
   // pitch. Off by default; worth it only for a mic far from the singer.
   reduceMusicPickup: false,
+  // How loud the singers hear themselves over the music (see mic_monitor.js).
+  // Off by default, and deliberately: with echo cancellation off, a monitor
+  // raised into open speakers is a feedback loop, so it has to be a thing
+  // somebody asked for on a setup that can take it — headphones, or a speaker
+  // pointed away from the mic.
+  micMonitorPercent: 0,
+  // Where a karaoke PA sits: enough to stop a bare voice sounding thin over a
+  // full mix, not enough to hide the words.
+  micMonitorReverbPercent: 25,
   singers: null
 }
 

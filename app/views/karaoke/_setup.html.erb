@@ -66,6 +66,28 @@
       <% end %>
     </div>
 
+    <%# The PA: the singers' own voices back over the music. Off until asked
+        for — the mics run without echo cancellation (it moves sung pitch), so
+        monitoring into open speakers feeds back. See karaoke/mic_monitor.js. %>
+    <div class="karaoke-monitor">
+      <label class="karaoke-field">
+        Hear yourself <span data-karaoke-setup-target="monitorValue">Off</span>
+        <input type="range" min="0" max="100" step="5" value="0" aria-label="Monitor your own voice"
+               data-karaoke-setup-target="monitor" data-action="input->karaoke-setup#changeMonitor">
+      </label>
+
+      <label class="karaoke-field">
+        Reverb <span data-karaoke-setup-target="monitorReverbValue">25%</span>
+        <input type="range" min="0" max="100" step="5" value="25" aria-label="Reverb on your voice"
+               data-karaoke-setup-target="monitorReverb" data-action="input->karaoke-setup#changeMonitorReverb">
+      </label>
+
+      <p class="karaoke-monitor__note">
+        Use headphones, or point the speakers away from the microphone — otherwise this will
+        howl.
+      </p>
+    </div>
+
     <%# A TV adds 30-150ms of audio delay the browser cannot measure. This
         shifts both the lyrics and the scoring: negative if the words land late
         against what you hear, positive if they run ahead of it. %>

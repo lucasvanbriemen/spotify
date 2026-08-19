@@ -35,7 +35,7 @@ export default class extends Controller {
     "countIn", "countRing", "countDigit",
     "controlbar", "playButton", "currentTime", "duration", "seek",
     "fader", "faderInput", "melodyToggle", "fullscreenButton",
-    "syncInput", "syncValue"
+    "syncInput", "syncValue", "monitorInput"
   ]
 
   // How long the control bar stays up after the mouse stops moving.
@@ -95,7 +95,7 @@ export default class extends Controller {
   // Called from inside the Start click. requestFullscreen has to run in that
   // gesture's own turn of the event loop, so this must not be awaited on
   // anything beforehand.
-  enter({ track, singers, hasVocals, vocalPercent, guideMelody, latencyTrimMs = 0 }) {
+  enter({ track, singers, hasVocals, vocalPercent, guideMelody, latencyTrimMs = 0, monitorPercent = 0 }) {
     this.requestFullscreen()
 
     this.songTarget.textContent = `${track.title} — ${track.artist}`
@@ -126,6 +126,7 @@ export default class extends Controller {
     this.melodyToggleTarget.setAttribute("aria-pressed", String(Boolean(guideMelody)))
     this.syncInputTarget.value = latencyTrimMs
     this.syncValueTarget.textContent = this.formatTrim(latencyTrimMs)
+    this.setMonitorPercent(monitorPercent)
 
     this.resetRenderState()
     this.acquireWakeLock()
@@ -366,6 +367,19 @@ export default class extends Controller {
 
   formatTrim(ms) {
     return `${ms > 0 ? "+" : ""}${ms} ms`
+  }
+
+  // How loud the singers hear themselves. Raised mid-song more often than not:
+  // a level that sounded right in a quiet room is a different thing once the
+  // backing track is under it.
+  changeMonitor() {
+    this.delegate?.stageMicMonitor?.(Number(this.monitorInputTarget.value))
+  }
+
+  // Also called when the setup screen moves the same setting, so the two
+  // faders can never disagree.
+  setMonitorPercent(percent) {
+    if (this.hasMonitorInputTarget) this.monitorInputTarget.value = percent
   }
 
   toggleMelody() {

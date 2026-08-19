@@ -461,7 +461,8 @@ export default class extends Controller {
       hasVocals: Boolean(this.artifacts.vocals),
       vocalPercent: settings.get("vocalGuidePercent"),
       guideMelody: settings.get("guideMelody"),
-      latencyTrimMs: settings.get("latencyTrimMs")
+      latencyTrimMs: settings.get("latencyTrimMs"),
+      monitorPercent: settings.get("micMonitorPercent")
     })
 
     await this.preload(track.isrc)
@@ -585,9 +586,26 @@ export default class extends Controller {
     this.setup?.renderLatency?.()
   }
 
+  // The PA fader on the control bar. The bus lives on the audio session, so
+  // this survives the song it was set during.
+  stageMicMonitor(percent) {
+    settings.set("micMonitorPercent", percent)
+    this.session?.monitor?.setLevel(percent)
+    this.setup?.renderMonitor?.()
+  }
+
   stageExit() {
     this.stage?.leave?.()
     this.back()
+  }
+
+  // --- Called by the setup screen ------------------------------------------
+
+  // The monitor level, moved from the setup screen's copy of the fader. Told
+  // to the stage so its own copy doesn't come back at a position that is no
+  // longer true.
+  monitorChanged(percent) {
+    this.stage?.setMonitorPercent?.(percent)
   }
 
   // --- Called by the scoreboard --------------------------------------------

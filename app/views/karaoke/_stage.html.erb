@@ -74,6 +74,14 @@
              data-karaoke-stage-target="faderInput" data-action="input->karaoke-stage#changeVocalGuide">
     </label>
 
+    <%# The PA fader, here for the same reason as the sync trim below: you find
+        out you can't hear yourself while you are singing, not before. %>
+    <label class="karaoke-controlbar__fader">
+      Your voice
+      <input type="range" min="0" max="100" step="5" value="0" aria-label="Hear your own voice"
+             data-karaoke-stage-target="monitorInput" data-action="input->karaoke-stage#changeMonitor">
+    </label>
+
     <%# The same audio-delay trim as the setup screen: sync problems are
         noticed while singing, so the knob has to be reachable here too. %>
     <label class="karaoke-controlbar__sync">
