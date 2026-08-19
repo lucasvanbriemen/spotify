@@ -768,7 +768,12 @@ export default class extends Controller {
 
   async fetchJson(url) {
     try {
-      const response = await fetch(url)
+      // "no-cache" revalidates rather than trusting the HTTP cache: the notes
+      // and words endpoints are cached for a day, so a bad response once
+      // cached (the X-Sendfile outage served empty 200s) would keep the pitch
+      // lane blank for a day of retries. Revalidation makes that a cheap 304
+      // when the artifact is unchanged and a fresh body when it isn't.
+      const response = await fetch(url, { cache: "no-cache" })
       return response.ok ? await response.json() : null
     } catch {
       return null
