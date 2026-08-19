@@ -75,7 +75,7 @@ class SongCache
       FileUtils.mkdir_p(AUDIO_DIR)
 
       env = { "TMP" => tmp_dir.to_s, "TEMP" => tmp_dir.to_s, "TMPDIR" => tmp_dir.to_s }
-      command = [
+      options = [
         ExecutablePath.resolve("yt-dlp").to_s,
         "--no-playlist",
         # Audio-only formats and parallel fragment downloads: never pull the
@@ -93,13 +93,21 @@ class SongCache
         "--match-filter", match_filter(match_duration ? details["duration"] : nil),
         "--max-downloads", "1",
         "--ffmpeg-location", Rails.root.join("bin").to_s,
-        "--output", AUDIO_DIR.join(isrc).to_s,
-        "ytsearch5: #{details.dig("artist", "name")} #{details["title"]} audio"
+        "--output", AUDIO_DIR.join(isrc).to_s
       ]
+      search = "ytsearch5: #{details.dig("artist", "name")} #{details["title"]} audio"
 
+      # Once per player client, stopping at the first that actually produces the
+      # file — a client YouTube is 403ing fails every candidate in the search,
+      # so without this a downloadable song still reads as unavailable.
+      #
       # The exit status is ignored, like in the Laravel app: callers respond
-      # with 404 when no file was produced.
-      TimedProcess.run(*command, env: env, timeout_seconds: DOWNLOAD_TIMEOUT_SECONDS)
+      # with 404 when no file was produced, and that is also what decides here
+      # whether the next client is worth trying.
+      YtDlp.download_attempts.each do |client_options|
+        TimedProcess.run(*options, *client_options, search, env: env, timeout_seconds: DOWNLOAD_TIMEOUT_SECONDS)
+        break if cached?(isrc)
+      end
     end
 
     def match_filter(expected_duration)

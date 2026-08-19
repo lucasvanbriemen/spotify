@@ -47,16 +47,23 @@ class YoutubeKaraokeFinder
     end
 
     def download_video(video_id, out_path)
-      command = [
+      options = [
         ExecutablePath.resolve("yt-dlp").to_s,
         "--no-playlist", "--format", "bestaudio/best", "--extract-audio",
         "--audio-format", "mp3", "--audio-quality", "0", "--restrict-filenames",
         "--ffmpeg-location", Rails.root.join("bin").to_s,
-        "--output", out_path.to_s.delete_suffix(".mp3"),
-        "https://www.youtube.com/watch?v=#{video_id}"
+        "--output", out_path.to_s.delete_suffix(".mp3")
       ]
+      url = "https://www.youtube.com/watch?v=#{video_id}"
 
-      TimedProcess.run(*command, timeout_seconds: DOWNLOAD_TIMEOUT_SECONDS)
+      # Same client walk as SongCache: the search above already proved this
+      # video exists and matches, so a failure here is the download's own and
+      # worth retrying on another client rather than falling back to Demucs's
+      # noisier instrumental.
+      YtDlp.download_attempts.each do |client_options|
+        TimedProcess.run(*options, *client_options, url, timeout_seconds: DOWNLOAD_TIMEOUT_SECONDS)
+        break if out_path.file?
+      end
     end
   end
 end
