@@ -190,6 +190,8 @@ GEM
     mini_mime (1.1.5)
     minitest (5.27.0)
     msgpack (1.8.1)
+    mysql2 (0.5.7)
+      bigdecimal
     net-imap (0.6.4)
       date
       net-protocol
@@ -391,7 +393,7 @@ GEM
     thruster (0.1.21-x86_64-darwin)
     thruster (0.1.21-x86_64-linux)
     timeout (0.6.1)
-    trilogy (2.12.6)
+    trilogy (2.13.0)
       bigdecimal
     tsort (0.2.0)
     turbo-rails (2.0.23)
