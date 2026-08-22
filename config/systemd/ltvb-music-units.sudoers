@@ -1,0 +1,16 @@
+# Lets the Plesk deployment hook (script/plesk_deploy.sh, which runs as the
+# subscription user) restart this app's three long-running units — and nothing
+# else. Install as root, never world-writable:
+#
+#   install -o root -g root -m 0440 \
+#     /var/www/vhosts/ltvb.nl/music.ltvb.nl/config/systemd/ltvb-music-units.sudoers \
+#     /etc/sudoers.d/ltvb-music-units && visudo -c
+#
+# Replaces config/supervisor/ltvb-music-solid-queue.sudoers: the box moved from
+# Apache+Passenger+supervisor to nginx+Puma+systemd, and the units are generated
+# by ltvb-agentd (see /etc/systemd/system/ltvb-*.service).
+#
+# One command, fully specified. The unit list is spelled out rather than
+# globbed: a pattern like ltvb-* would also match every other app's units on
+# this shared box, which is exactly the privilege this file exists to withhold.
+ltvb ALL=(root) NOPASSWD: /usr/bin/systemctl restart --no-block ltvb-app@music.ltvb.nl ltvb-jobs-music-ltvb-nl ltvb-kokoro-music-ltvb-nl

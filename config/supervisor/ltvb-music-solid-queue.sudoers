@@ -1,4 +1,0 @@
-# Allow the Plesk deployment hook to restart only this app's job supervisor.
-ltvb ALL=(root) NOPASSWD: /usr/bin/supervisorctl restart music-solid-queue
-# Reload the local speech model after provider/server changes.
-ltvb ALL=(root) NOPASSWD: /usr/bin/supervisorctl restart music-kokoro

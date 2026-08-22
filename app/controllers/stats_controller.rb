@@ -46,8 +46,10 @@ class StatsController < ApiController
       total_seconds_played: Play.sum(:seconds_played).to_i,
       top_songs: top_songs,
       # Everything radio (news bulletins, warmups, enrichment) depends on the
-      # Solid Queue worker, which Passenger doesn't supervise — surface its
-      # health where it's easy to spot from the app.
+      # Solid Queue worker, which runs as its own systemd unit
+      # (ltvb-jobs-music-ltvb-nl) rather than under the web server — so nothing
+      # about a healthy site implies a healthy queue. Surface it where it's easy
+      # to spot from the app.
       queue_healthy: queue_healthy?
     }
   end

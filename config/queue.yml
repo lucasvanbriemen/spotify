@@ -6,7 +6,14 @@ default: &default
     # Everything except karaoke separation. Named explicitly rather than "*"
     # so this worker can never pick up a minutes-long Demucs run — which means
     # any future job on a new queue must be added here or it will never run.
-    - queues: default
+    #
+    # solid_queue_recurring is that trap, already sprung once: a recurring
+    # entry declared with `command:` (config/recurring.yml's hourly
+    # clear_solid_queue_finished_jobs) has no job class to take a queue_as
+    # from, so Solid Queue puts it on this queue instead. Nothing listened to
+    # it, so from 2026-08-09 one dead job piled up every hour — 310 of them,
+    # none claimed — and finished jobs were never pruned.
+    - queues: [ default, solid_queue_recurring ]
       threads: 3
       processes: <%= ENV.fetch("JOB_CONCURRENCY", 1) %>
       polling_interval: 0.1
