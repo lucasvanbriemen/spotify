@@ -147,6 +147,14 @@ export default class extends Controller {
     if (payload.ok) this.adopt(payload)
   }
 
+  async move(event) {
+    const item = this.itemFor(event)
+    if (!item) return
+
+    const payload = await QueueApi.move(item.id, event.currentTarget.dataset.direction)
+    if (payload.ok) this.adopt(payload)
+  }
+
   async remove(event) {
     const item = this.itemFor(event)
     if (!item) return
@@ -205,15 +213,28 @@ export default class extends Controller {
         </span>
         ${state}
         <span class="karaoke-queue__actions">
-          <button type="button" class="karaoke-queue__action" data-id="${item.id}"
+          <button type="button" class="karaoke-rowbutton" data-id="${item.id}"
                   data-action="karaoke-queue#playNow">Play</button>
-          <button type="button" class="karaoke-queue__action" data-id="${item.id}"
-                  data-action="karaoke-queue#promote" title="Move to the front" ${index === 0 ? "hidden" : ""}>↑</button>
-          <button type="button" class="karaoke-queue__action" data-id="${item.id}"
+          ${this.step(item, "up", "▲", "Move up", index === 0)}
+          ${this.step(item, "down", "▼", "Move down", index === this.items.length - 1)}
+          <button type="button" class="karaoke-rowbutton${index === 0 ? " is-placeholder" : ""}" data-id="${item.id}"
+                  data-action="karaoke-queue#promote" title="Move to the front" aria-label="Move to the front">⇤</button>
+          <button type="button" class="karaoke-rowbutton" data-id="${item.id}"
                   data-action="karaoke-queue#remove" aria-label="Remove from queue">✕</button>
         </span>
       </li>
     `
+  }
+
+  // A reorder button, kept in the layout even at the end of the list where it
+  // does nothing. Removing it instead would reflow the row — the badge column
+  // would go ragged, and the button under the cursor would jump somewhere else
+  // the moment a song reached the top, which is exactly when someone is about
+  // to click it again.
+  step(item, direction, glyph, label, atEnd) {
+    return `<button type="button" class="karaoke-rowbutton${atEnd ? " is-placeholder" : ""}" data-id="${item.id}"
+                    data-direction="${direction}" data-action="karaoke-queue#move"
+                    title="${label}" aria-label="${label}">${glyph}</button>`
   }
 
   flash(element, message) {

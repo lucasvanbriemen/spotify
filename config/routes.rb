@@ -23,6 +23,7 @@ Rails.application.routes.draw do
       patch "queue/:id", to: "karaoke_queue#update", as: :karaoke_queue_item
       delete "queue/:id", to: "karaoke_queue#destroy"
       post "queue/:id/promote", to: "karaoke_queue#promote", as: :karaoke_queue_promote
+      post "queue/:id/move", to: "karaoke_queue#move", as: :karaoke_queue_move
     end
 
     scope "karaoke/:isrc", constraints: { isrc: /[^\/]+/ } do

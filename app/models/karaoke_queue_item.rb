@@ -56,6 +56,25 @@ class KaraokeQueueItem < ApplicationRecord
     def prune_played
       played.where(played_at: ...KEEP_PLAYED_FOR.ago).delete_all
     end
+
+    # Renumbers the waiting list to 1..n, so a swap can mean exactly one place.
+    #
+    # Positions drift by design: next_position counts off the all-time maximum
+    # so a finished row's number is never reused, and promote! goes below the
+    # current minimum. Gaps are therefore normal — and promoting the row that
+    # was already first leaves two rows tied, which would make a swap silently
+    # do nothing at all.
+    #
+    # update_columns, not update!: a position is bookkeeping. Touching
+    # updated_at here would look like activity to a phone watching the queue,
+    # and ages rows against the window now_playing trusts.
+    def resequence!
+      transaction do
+        waiting.each_with_index do |row, index|
+          row.update_columns(position: index + 1) unless row.position == index + 1
+        end
+      end
+    end
   end
 
   # Only one song can be on stage, so claiming this one releases whatever the
@@ -74,5 +93,27 @@ class KaraokeQueueItem < ApplicationRecord
   # meant to override.
   def promote!
     update!(position: (self.class.waiting.minimum(:position) || 1) - 1)
+  end
+
+  # One step up or down the waiting list, for the phone's ▲/▼ buttons.
+  # Returns false at the ends rather than raising: tapping ▲ on the first row
+  # is a miss, not an error.
+  def move!(direction)
+    self.class.resequence!
+
+    rows = self.class.waiting.to_a
+    from = rows.index { |row| row.id == id }
+    return false unless from
+
+    to = direction.to_s == "up" ? from - 1 : from + 1
+    return false unless to.between?(0, rows.size - 1)
+
+    # resequence! just made every position exactly its index + 1, so the swap
+    # is the two indexes rather than a pair of read-back values.
+    self.class.transaction do
+      rows[from].update_columns(position: to + 1)
+      rows[to].update_columns(position: from + 1)
+    end
+    true
   end
 end

@@ -58,14 +58,30 @@ export function creditFor(sungHz, targetMidi) {
 }
 
 export class SingerScore {
-  constructor(melody, singer) {
+  // ownsLine, when given, says which lyric lines are this singer's to sing —
+  // how a duet is scored per singer off a single shared microphone, since the
+  // lyrics say who takes which line even though the audio cannot. null means
+  // the whole song, which is every solo and every song with no duet markers.
+  constructor(melody, singer, ownsLine = null) {
     this.melody = melody
     this.singer = singer
+    this.ownsLine = ownsLine
     this.reset()
   }
 
+  // Whether this line is this singer's. A line nobody is marked for — an
+  // unmarked song, or an explicit "both:" — belongs to everyone.
+  owns(lineIndex) {
+    return !this.ownsLine || this.ownsLine(lineIndex)
+  }
+
   reset() {
-    this.notes = this.melody.notes.map(() => ({ frames: 0, credit: 0, done: false, accuracy: 0, scored: true }))
+    // scored starts as ownership rather than true: a note on the other
+    // singer's line is never theirs to hit or miss, and results() must leave
+    // it out of the total even if the song stops before advance() reaches it.
+    this.notes = this.melody.notes.map((note) => ({
+      frames: 0, credit: 0, done: false, accuracy: 0, scored: this.owns(note.lineIndex)
+    }))
     this.lines = new Map()
     this.lineResults = []
     this.combo = 0
@@ -74,7 +90,7 @@ export class SingerScore {
     this.cursor = 0
     this.finalizedLine = -1
     this.micLostAt = null
-    this.maxRaw = this.melody.perfectRawScore(multiplierFor) || 1
+    this.maxRaw = this.melody.perfectRawScore(multiplierFor, (index) => this.owns(index)) || 1
   }
 
   get score() {
@@ -94,6 +110,12 @@ export class SingerScore {
 
     for (let index = this.cursor; index < notes.length && notes[index].start <= songTime; index++) {
       if (songTime >= notes[index].start && songTime < notes[index].end) {
+        // Singing over the other singer's line earns nothing and costs
+        // nothing — the same treatment as ad-libbing between phrases. On one
+        // shared mic this matters: both voices reach both scorers, and without
+        // it whoever sang loudest would be credited on every line.
+        if (!this.owns(notes[index].lineIndex)) return
+
         const accumulator = this.notes[index]
         accumulator.frames += 1
         accumulator.credit += creditFor(hz, notes[index].midi)
@@ -116,6 +138,11 @@ export class SingerScore {
       if (accumulator.done) continue
 
       accumulator.done = true
+      // Marked done but never entered into this.lines, so the other singer's
+      // lines are never finalized here — which is what keeps a combo alive
+      // across the lines this singer is resting through.
+      if (!this.owns(note.lineIndex)) continue
+
       // Silence with a working mic is a miss; silence because the mic died is
       // not the singer's fault and is left out of their total instead.
       accumulator.accuracy = accumulator.frames > 0 ? accumulator.credit / accumulator.frames : 0
@@ -160,7 +187,9 @@ export class SingerScore {
     for (let index = 0; index < notes.length; index++) {
       if (notes[index].end + GRACE_SECONDS <= songTime) continue
 
-      this.notes[index] = { frames: 0, credit: 0, done: false, accuracy: 0, scored: true }
+      this.notes[index] = {
+        frames: 0, credit: 0, done: false, accuracy: 0, scored: this.owns(notes[index].lineIndex)
+      }
     }
 
     // Lines wholly after the play head are unscored again, and their points

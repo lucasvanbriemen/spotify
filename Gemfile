@@ -39,6 +39,11 @@ gem "bootsnap", require: false
 # must be declared to be usable under Bundler).
 gem "rss"
 
+# The QR code on the karaoke screen that points a phone at /karaoke/remote.
+# Pure Ruby (no native extensions, nothing to compile on deploy) and rendered
+# to inline SVG server-side, so the page needs no JS library and no CDN.
+gem "rqrcode"
+
 # Load database credentials and other secrets from a local .env file.
 # Needed in production too: the Plesk-deployed app and its build step read
 # DB_*/SECRET_KEY_BASE from /var/www/vhosts/.../music.ltvb.nl/.env.

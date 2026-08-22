@@ -93,6 +93,22 @@
   margin: 0;
 }
 
+// Two singers with one input between them. Deliberately prominent rather than
+// fine print: whether the song gives them a score each or one between them is
+// the difference between the scoreboard making sense and looking broken.
+.karaoke-setup__shared {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: $radius;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-at-2);
+  color: var(--on-surface-variant);
+  font-size: 0.85rem;
+  line-height: 1.4;
+
+  &[hidden] { display: none; }
+}
+
 // --- Singers --------------------------------------------------------------
 
 .karaoke-segmented {
@@ -153,6 +169,13 @@
   gap: 0.35rem;
   font-size: 0.9rem;
   color: var(--on-surface-variant);
+
+  // A class with a display value beats the browser's own `[hidden]` rule, so
+  // hiding one of these from JS needs saying explicitly — the same trap
+  // _base.scss documents for the shared .button. Without it, the second
+  // singer's microphone picker stayed on screen, empty, when the two of them
+  // were sharing one input.
+  &[hidden] { display: none; }
 }
 
 .karaoke-input,

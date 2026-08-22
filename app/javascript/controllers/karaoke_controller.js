@@ -322,6 +322,13 @@ export default class extends Controller {
       this.setStep("download", "done")
       this.setStep("separate", "active")
       this.playerStatusTarget.textContent = "Removing vocals — this can take several minutes the first time…"
+    } else if (payload.stage === "queued") {
+      // Enqueued but no worker has it yet. Worth saying out loud: only one song
+      // is separated at a time, so a song picked while another is preparing
+      // sits here for minutes with nothing to show — which read as a hung
+      // download rather than a wait.
+      this.setStep("download", "active")
+      this.playerStatusTarget.textContent = "Waiting for another song to finish preparing…"
     } else {
       this.setStep("download", "active")
       this.playerStatusTarget.textContent = "Downloading original track…"
@@ -449,7 +456,7 @@ export default class extends Controller {
     const track = this.currentTrack
     if (!track) return
 
-    const singers = this.setup?.singers?.() || [ { name: "Singer 1", color: "#22d3ee", deviceId: null } ]
+    const singers = this.duetParts(this.setup?.singers?.() || [ { name: "Singer 1", color: "#22d3ee", deviceId: null } ])
     this.currentSingers = singers
 
     // Both of these must happen inside the click's own turn of the event loop:
@@ -707,6 +714,39 @@ export default class extends Controller {
     return item
   }
 
+  // --- Who is scored on what ------------------------------------------------
+
+  // Two singers sharing one microphone cannot be told apart in the audio — a
+  // receiver that mixes its two mics has already summed them, and pulling two
+  // voices back out of one signal is not something a browser can do. The
+  // lyrics can tell them apart though: a duet marks who takes which line, so
+  // each singer is scored on their own lines off the shared input.
+  //
+  // With no markers there is nothing to separate them by, so they get one score
+  // between them rather than two that would both track whoever sang loudest.
+  duetParts(singers) {
+    if (singers.length < 2) return singers
+
+    const micOf = (singer, index) => singer.micIndex ?? index
+    const sharing = singers.every((singer, index) => micOf(singer, index) === micOf(singers[0], 0))
+    if (!sharing) return singers // a microphone each: scored independently, as before
+
+    return this.duetMarked() ? singers.map((singer, index) => ({ ...singer, part: index + 1 })) : [ this.pairedSinger(singers) ]
+  }
+
+  // A duet is only separable when the lyrics name both parts. One marked part
+  // is a lead vocal with a guest, not two singers taking turns.
+  duetMarked() {
+    const lines = this.timeline?.lines || []
+    return [ 1, 2 ].every((part) => lines.some((line) => line.singer === part))
+  }
+
+  // One card for a pair on one mic. Named for both of them, so the scoreboard
+  // doesn't quietly credit the performance to whoever was listed first.
+  pairedSinger(singers) {
+    return { ...singers[0], name: singers.map((singer) => singer.name).join(" & "), micIndex: 0, part: null }
+  }
+
   // --- Lyrics --------------------------------------------------------------
 
   // Lyrics, word timings and the melody all describe the same song, so they
@@ -723,6 +763,11 @@ export default class extends Controller {
 
     this.timeline = LyricsTimeline.parse(lyrics?.syncedLyrics || "", words)
     this.melody = Melody.parse(notes, this.timeline)
+
+    // The setup screen can only explain what sharing a microphone will mean for
+    // this song once the lyrics are in — and they arrive here well before
+    // anyone presses Start, since this runs as soon as the song is picked.
+    this.setup?.setDuetMarkers?.(this.duetMarked())
 
     // Reloading mid-performance would rebuild the scorers and wipe the score;
     // whatever is already on stage stays until the next song. The exception:

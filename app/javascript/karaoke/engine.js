@@ -18,6 +18,9 @@ import { PitchSmoother } from "karaoke/pitch_smoother"
 
 // How long the count-in runs, and how much silence has to precede a line
 // before the singer needs one.
+// Shared empty array for a mic slot with nothing in it, so the per-frame drain
+// never allocates.
+const NO_FRAMES = []
 const COUNT_IN_SECONDS = 3
 const GAP_CUE_SECONDS = 2
 // The beat after "1": the count-in holds a terminal "GO" state this long into
@@ -74,7 +77,7 @@ export class KaraokeEngine extends EventTarget {
     this.timeline = timeline || LyricsTimeline.empty()
     this.melody = melody || Melody.empty()
     this.singers = singers
-    this.scores = singers.map((singer) => new SingerScore(this.melody, singer))
+    this.scores = singers.map((singer) => new SingerScore(this.melody, singer, this.#ownershipFor(singer)))
     this.smoothers = singers.map(() => new PitchSmoother())
     this.frameState.singers = singers.map(() => ({ midi: null, voiced: false, level: 0, score: 0, combo: 0 }))
 
@@ -90,6 +93,21 @@ export class KaraokeEngine extends EventTarget {
   // follow what is actually heard.
   setAlignmentOffset(seconds) {
     this.alignmentOffset = Number.isFinite(seconds) ? seconds : 0
+  }
+
+  // Which lines this singer is scored on, or null for the whole song.
+  //
+  // singer.part is 1 or 2 for a duet whose lyrics say who takes which line;
+  // it is how two singers sharing one microphone get separate scores, since
+  // the summed audio cannot be told apart but the lyrics can. A line marked
+  // for nobody — an unmarked line, or an explicit "both:" — belongs to both.
+  #ownershipFor(singer) {
+    if (!singer?.part) return null
+
+    return (lineIndex) => {
+      const part = this.timeline.lines[lineIndex]?.singer ?? null
+      return part === null || part === singer.part
+    }
   }
 
   // Scoring is octave-invariant, but the guide tone is audible: play it in
@@ -110,10 +128,18 @@ export class KaraokeEngine extends EventTarget {
     // time.
     this.#releaseMicListeners()
     this.mics = mics || []
-    this.micListeners = this.mics.map((mic, index) => {
+    this.micListeners = this.mics.map((mic, micIndex) => {
       if (!mic) return null
 
-      const handler = () => this.scores[index]?.markMicLost(this.transport.currentTime)
+      // One microphone can feed both singers, so losing it has to end the
+      // scoring for everyone reading it — not just the singer that happens to
+      // sit at the same index.
+      const handler = () => {
+        const at = this.transport.currentTime
+        this.singers.forEach((entry, index) => {
+          if ((entry?.micIndex ?? index) === micIndex) this.scores[index]?.markMicLost(at)
+        })
+      }
       mic.addEventListener("ended", handler)
       return { mic, handler }
     })
@@ -252,13 +278,25 @@ export class KaraokeEngine extends EventTarget {
   #drainMics(offset) {
     if (this.mics.length === 0) return
 
-    this.mics.forEach((mic, index) => {
+    // Every microphone is drained exactly once per frame, before any singer
+    // reads it. drainFrames() empties the buffer, so two singers sharing one
+    // input — a duet on a single mic, which is the only thing a receiver that
+    // mixes its two mics can offer — would otherwise give the first singer
+    // every frame and the second an empty list, scoring them a silent zero.
+    //
+    // Draining every mic rather than only the ones a singer is bound to also
+    // keeps an unclaimed mic's buffer from growing without limit.
+    const framesByMic = this.mics.map((mic) => (mic ? mic.drainFrames() : NO_FRAMES))
+
+    this.singers.forEach((entry, index) => {
+      const micIndex = entry?.micIndex ?? index
+      const mic = this.mics[micIndex]
       if (!mic) return
 
       const singer = this.frameState.singers[index]
       const score = this.scores[index]
       const smoother = this.smoothers[index]
-      const frames = mic.drainFrames()
+      const frames = framesByMic[micIndex]
       let drawn
 
       for (const sample of frames) {

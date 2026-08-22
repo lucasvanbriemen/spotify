@@ -97,6 +97,7 @@ GEM
       rack-test (>= 0.6.3)
       regexp_parser (>= 1.5, < 3.0)
       xpath (~> 3.2)
+    chunky_png (1.4.0)
     concurrent-ruby (1.3.6)
     connection_pool (3.0.2)
     crass (1.0.6)
@@ -190,6 +191,8 @@ GEM
     mini_mime (1.1.5)
     minitest (5.27.0)
     msgpack (1.8.1)
+    mysql2 (0.5.7)
+      bigdecimal
     net-imap (0.6.4)
       date
       net-protocol
@@ -292,6 +295,10 @@ GEM
     reline (0.6.3)
       io-console (~> 0.5)
     rexml (3.4.4)
+    rqrcode (3.2.0)
+      chunky_png (~> 1.0)
+      rqrcode_core (~> 2.0)
+    rqrcode_core (2.1.0)
     rss (0.3.3)
       rexml
     rubocop (1.86.2)
@@ -446,6 +453,7 @@ DEPENDENCIES
   propshaft
   puma (>= 5.0)
   rails (~> 8.0.5)
+  rqrcode
   rss
   rubocop-rails-omakase
   selenium-webdriver

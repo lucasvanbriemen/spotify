@@ -11,6 +11,7 @@ class KaraokeQueueController < ApiController
   # Enough for an evening, low enough that one bored guest can't fill the
   # table from a phone.
   MAX_WAITING = 60
+  MOVE_DIRECTIONS = %w[up down].freeze
 
   def index
     render json: queue_json
@@ -58,6 +59,17 @@ class KaraokeQueueController < ApiController
   # Straight to the front — the "we're all waiting for this one" button.
   def promote
     item.promote!
+    render json: queue_json
+  end
+
+  # One place up or down. Unlike #destroy this is not restricted to the row's
+  # own author: the whole point is that whoever is holding a phone can fix the
+  # running order, and there is no "my songs only" version of that which would
+  # actually solve it.
+  def move
+    return head :bad_request unless MOVE_DIRECTIONS.include?(params[:direction])
+
+    item.move!(params[:direction])
     render json: queue_json
   end
 

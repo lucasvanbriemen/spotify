@@ -53,6 +53,17 @@ export const QueueApi = {
     return request(`${BASE}/${id}/promote`, { method: "POST" })
   },
 
+  // One place up or down. "up" and "down" rather than a target index: the list
+  // is re-rendered from a poll, so an index a phone computed a moment ago may
+  // already mean a different row.
+  move(id, direction) {
+    return request(`${BASE}/${id}/move`, {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ direction })
+    })
+  },
+
   // "playing" when the screen puts a song on stage, "done" when it comes off.
   setStatus(id, status) {
     return request(`${BASE}/${id}`, { method: "PATCH", headers: JSON_HEADERS, body: JSON.stringify({ status }) })

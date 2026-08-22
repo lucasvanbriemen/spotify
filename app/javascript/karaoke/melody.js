@@ -100,9 +100,18 @@ export class Melody {
   // What a flawless run of this song is worth, so two singers on any song can
   // be shown on the same 0..10000 scale. Combo multipliers ramp exactly as
   // they would in a real performance.
-  perfectRawScore(multiplierFor) {
+  //
+  // ownsLine narrows it to one singer's own lines, for a duet where the two
+  // take turns. Without it a singer who sang every one of their lines
+  // perfectly would top out near half the scale, since the other half of the
+  // song was never theirs to sing. The combo ramps across their lines only —
+  // which is exactly what SingerScore#advance does, because it never finalizes
+  // a line the singer doesn't own.
+  perfectRawScore(multiplierFor, ownsLine = () => true) {
     const byLine = new Map()
     for (const note of this.notes) {
+      if (!ownsLine(note.lineIndex)) continue
+
       byLine.set(note.lineIndex, (byLine.get(note.lineIndex) || 0) + note.weight)
     }
 

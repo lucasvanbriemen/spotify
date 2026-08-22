@@ -1,0 +1,87 @@
+@use "tokens" as *;
+
+// Small controls shared by more than one karaoke screen.
+//
+// Both of these existed twice before, in slightly different shapes: the status
+// badge was styled only where it was first used (nested inside a search
+// result), so the very same markup in the queue rendered as bare text; and the
+// row button was a pill on the karaoke screen and a circle on the phone. One
+// definition each, so the same element looks the same wherever it is rendered.
+//
+// Deliberately not the shared ui-components .button: that component is sized
+// for a page button (min-height 2.5rem, 0.75rem padding) and turns a dense list
+// row into something twice as tall. The colours here come from the shared theme
+// tokens, which is the part worth having in common.
+
+// --- Status badge ---------------------------------------------------------
+// Ready / Preparing, and a song's difficulty. Success colouring by default
+// because the common case — "Ready" and "easy" — is good news.
+.karaoke-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.22rem 0.55rem;
+  border-radius: $radius-pill;
+  white-space: nowrap;
+  color: var(--on-success-container);
+  background-color: var(--success-container);
+}
+
+.karaoke-badge--medium {
+  color: var(--on-warning-container);
+  background-color: var(--warning-container);
+}
+
+.karaoke-badge--hard {
+  color: var(--on-error-container);
+  background-color: var(--error-container);
+}
+
+// A song still being separated: not a warning, an explanation of why it can be
+// queued now and sung later.
+.karaoke-badge--preparing {
+  color: var(--on-surface-variant);
+  background-color: var(--surface-at-3);
+}
+
+// --- Row button -----------------------------------------------------------
+// The compact controls on a queue row: play, reorder, remove. Sized for a
+// dense list but never below the ~2.25rem a thumb needs, since the phone
+// remote uses these too.
+.karaoke-rowbutton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--outline-variant, var(--surface-at-3));
+  border-radius: $radius-pill;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--surface-at-3);
+  }
+
+  // Beats the browser's own [hidden] rule, which display:inline-flex overrides
+  // — the same trap _base.scss documents for the shared .button.
+  &[hidden] {
+    display: none;
+  }
+
+  // Holds its place in the row without being usable: a reorder button at the
+  // top or bottom of the list. visibility rather than display, so the row keeps
+  // its width and nothing shifts under the cursor as songs move — and unlike
+  // display:none it still takes no click, no tab stop and no screen-reader
+  // announcement.
+  &.is-placeholder {
+    visibility: hidden;
+  }
+}

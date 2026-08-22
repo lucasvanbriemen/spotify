@@ -191,16 +191,14 @@
   color: var(--on-surface-variant);
 }
 
-.karaoke-remote__remove {
+// The button chrome is .karaoke-rowbutton (see _controls.scss), shared with the
+// karaoke screen's queue rows. Only the reordering row's layout is local.
+.karaoke-remote__row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
   flex-shrink: 0;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 50%;
-  border: 1px solid var(--surface-at-3);
-  background: transparent;
-  color: inherit;
-  font-size: 1rem;
-  cursor: pointer;
+  margin-left: auto;
 }
 
 // --- The code gate --------------------------------------------------------

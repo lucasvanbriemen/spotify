@@ -59,32 +59,14 @@
         }
       }
 
+      // The badge itself is .karaoke-badge in _controls.scss. It used to be
+      // defined here, nested — so the identical markup in the queue panel
+      // rendered as bare text.
       .badges {
         display: flex;
         align-items: center;
         gap: 0.5rem;
         flex-shrink: 0;
-
-        .karaoke-badge {
-          font-size: 0.7rem;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.04em;
-          padding: 0.22rem 0.55rem;
-          border-radius: 1rem;
-          color: var(--on-success-container);
-          background-color: var(--success-container);
-        }
-      
-        .karaoke-badge--medium {
-          color: var(--on-warning-container);
-          background-color: var(--warning-container);
-        }
-      
-        .karaoke-badge--hard {
-          color: var(--on-error-container);
-          background-color: var(--error-container);
-        }
       }
     }
   }

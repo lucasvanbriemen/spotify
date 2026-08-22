@@ -72,9 +72,7 @@ export default class extends Controller {
     }
 
     this.setStatus(null)
-    this.items = payload.items || []
-    this.renderNowPlaying(payload.now_playing)
-    this.renderQueue()
+    this.apply(payload)
   }
 
   renderNowPlaying(item) {
@@ -97,9 +95,24 @@ export default class extends Controller {
     // the list from across the room is not a feature.
     const mine = item.added_by && item.added_by === this.nameTarget.value.trim()
     const remove = mine
-      ? `<button type="button" class="karaoke-remote__remove" data-id="${item.id}"
+      ? `<button type="button" class="karaoke-rowbutton karaoke-remote__remove" data-id="${item.id}"
                  data-action="karaoke-remote#remove" aria-label="Remove ${this.escapeAttribute(item.title)}">✕</button>`
       : ""
+
+    // Reordering, unlike removing, is open to whoever is holding a phone —
+    // fixing the running order is the point, and a "my songs only" version of
+    // it wouldn't fix anything.
+    //
+    // A button with nothing to do at the end of the list keeps its place
+    // (is-placeholder) instead of being dropped. On a phone that matters more
+    // than the width it costs: dropping it slides every other control sideways,
+    // so the same glyph sits at a different spot on each row and a thumb aimed
+    // at ▼ lands on ⇤ instead.
+    const title = this.escapeAttribute(item.title)
+    const step = (direction, glyph, label, atEnd) =>
+      `<button type="button" class="karaoke-rowbutton${atEnd ? " is-placeholder" : ""}" data-id="${item.id}"
+               data-direction="${direction}" data-action="karaoke-remote#move"
+               aria-label="${label} ${title}">${glyph}</button>`
 
     return `
       <li class="karaoke-remote__queue-item">
@@ -110,14 +123,34 @@ export default class extends Controller {
           <span>${this.escape(item.artist)}${by}</span>
         </span>
         ${item.ready ? "" : `<span class="karaoke-remote__preparing">Preparing…</span>`}
-        ${remove}
+        <span class="karaoke-remote__row-actions">
+          ${step("up", "▲", "Move up", index === 0)}
+          ${step("down", "▼", "Move down", index === this.items.length - 1)}
+          <button type="button" class="karaoke-rowbutton${index === 0 ? " is-placeholder" : ""}" data-id="${item.id}"
+                  data-action="karaoke-remote#promote" aria-label="Move ${title} to the front">⇤</button>
+          ${remove}
+        </span>
       </li>
     `
   }
 
   async remove(event) {
-    const id = Number(event.currentTarget.dataset.id)
-    const payload = await QueueApi.remove(id)
+    this.apply(await QueueApi.remove(Number(event.currentTarget.dataset.id)))
+  }
+
+  async move(event) {
+    const { id, direction } = event.currentTarget.dataset
+    this.apply(await QueueApi.move(Number(id), direction))
+  }
+
+  async promote(event) {
+    this.apply(await QueueApi.promote(Number(event.currentTarget.dataset.id)))
+  }
+
+  // Every queue-changing call answers with the whole queue, so adopting the
+  // response is both the optimistic update and the authoritative one — which
+  // is what keeps a reorder from being undone by the next poll.
+  apply(payload) {
     if (!payload.ok) return
 
     this.items = payload.items || []
@@ -184,9 +217,7 @@ export default class extends Controller {
       return
     }
 
-    this.items = payload.items || []
-    this.renderNowPlaying(payload.now_playing)
-    this.renderQueue()
+    this.apply(payload)
   }
 
   // --- Name -----------------------------------------------------------------

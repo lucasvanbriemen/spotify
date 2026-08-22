@@ -43,8 +43,9 @@
   &:empty { display: none; }
 }
 
-.karaoke-queue__clear,
-.karaoke-queue__action {
+// The row controls themselves are .karaoke-rowbutton (see _controls.scss);
+// this is only the panel's own Clear, which is the same shape.
+.karaoke-queue__clear {
   font-size: 0.8rem;
   padding: 0.3rem 0.6rem;
   border: 1px solid var(--outline-variant, var(--surface-at-3));
@@ -54,6 +55,8 @@
   cursor: pointer;
 
   &:hover { background: var(--surface-at-3); }
+
+  &[hidden] { display: none; }
 }
 
 .karaoke-queue__empty {
@@ -126,40 +129,73 @@
   [hidden] { display: none; }
 }
 
-// A song still being separated: not a warning, an explanation of why it can
-// be queued now and sung later.
-.karaoke-badge--preparing {
-  color: var(--on-surface-variant);
-  background-color: var(--surface-at-3);
-}
+// --- "Add songs from your phone" ------------------------------------------
 
-.karaoke-queue__invite {
+.karaoke-invite {
   margin-top: 0.25rem;
   padding-top: 0.75rem;
   border-top: 1px solid var(--surface-at-3);
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 1rem;
+  gap: 1.25rem;
   font-size: 0.85rem;
   color: var(--on-surface-variant);
+
+  // Below this the QR and the text stop fitting side by side, and a QR that has
+  // been squeezed narrow is a QR nobody can scan.
+  @media (max-width: 30rem) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
-.karaoke-queue__invite-title {
-  width: 100%;
+// The SVG carries its own white ground, black modules and quiet zone (see
+// QrHelper), so this only rounds the corners off it. Nothing here may set a
+// colour: doing so is how a themed page turns a working QR into an unscannable
+// one.
+.karaoke-invite__qr {
+  flex-shrink: 0;
+  border-radius: $radius;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.karaoke-invite__qr-svg {
+  // Sized to scan from a sofa at 2-3m on a 55" screen, and to stay a sensible
+  // square on a laptop. Width and height both set: an SVG with only a viewBox
+  // has no intrinsic size to lay out against.
+  width: clamp(6rem, 9vw, 9rem);
+  height: clamp(6rem, 9vw, 9rem);
+  display: block;
+}
+
+.karaoke-invite__details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  align-items: flex-start;
+}
+
+.karaoke-invite__title {
   font-weight: 700;
+  font-size: 1rem;
   color: var(--on-surface);
 }
 
-.karaoke-queue__invite-url {
+.karaoke-invite__url {
   font-family: monospace;
+  color: var(--on-surface);
 }
 
-.karaoke-queue__invite-code strong {
-  font-family: monospace;
-  font-size: 1.3rem;
-  letter-spacing: 0.15em;
-  color: var(--on-surface);
+.karaoke-invite__code {
+  margin-bottom: 0.4rem;
+
+  strong {
+    font-family: monospace;
+    font-size: 1.3rem;
+    letter-spacing: 0.15em;
+    color: var(--on-surface);
+  }
 }
 
 // --- The button on a search result ----------------------------------------

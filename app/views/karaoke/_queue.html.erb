@@ -15,12 +15,24 @@
 
   <ol class="karaoke-queue__list" data-karaoke-queue-target="list"></ol>
 
-  <div class="karaoke-queue__invite">
-    <p class="karaoke-queue__invite-title">Add songs from your phone</p>
-    <p class="karaoke-queue__invite-url"><%= @remote_display_url %></p>
-    <p class="karaoke-queue__invite-code">Code <strong><%= @remote_code %></strong></p>
-    <%# The link carries the code, so it needs no typing at the other end. %>
-    <button type="button" class="karaoke-queue__action"
-            data-karaoke-queue-target="copy" data-action="karaoke-queue#copyLink">Copy link</button>
+  <%# Three ways in, because the room has three kinds of person in it: someone
+      who can point a camera (QR), someone who was sent the link (Copy link),
+      and someone across the room reading the screen (the URL and code, typed
+      by hand). The QR and the link both carry tonight's code; the typed pair
+      does not, which is why all three stay. %>
+  <div class="karaoke-invite">
+    <div class="karaoke-invite__qr">
+      <%= qr_code_svg(@remote_url, title: "Scan to add songs from your phone",
+                      class: "karaoke-invite__qr-svg") %>
+    </div>
+
+    <div class="karaoke-invite__details">
+      <p class="karaoke-invite__title">Add songs from your phone</p>
+      <p class="karaoke-invite__hint">Scan the code, or go to</p>
+      <p class="karaoke-invite__url"><%= @remote_display_url %></p>
+      <p class="karaoke-invite__code">Code <strong><%= @remote_code %></strong></p>
+      <%= button(text: "Copy link", type: "button", variant: :outline,
+                 data: { karaoke_queue_target: "copy", action: "karaoke-queue#copyLink" }) %>
+    </div>
   </div>
 </section>
