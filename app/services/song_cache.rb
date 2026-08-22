@@ -77,6 +77,9 @@ class SongCache
       env = { "TMP" => tmp_dir.to_s, "TEMP" => tmp_dir.to_s, "TMPDIR" => tmp_dir.to_s }
       options = [
         ExecutablePath.resolve("yt-dlp").to_s,
+        # Without a JavaScript runtime YouTube withholds every audio format
+        # and the search returns nothing downloadable — see YtDlp.
+        *YtDlp.media_options,
         "--no-playlist",
         # Audio-only formats and parallel fragment downloads: never pull the
         # video track, and sidestep YouTube's per-connection throttling.

@@ -49,6 +49,8 @@ class YoutubeKaraokeFinder
     def download_video(video_id, out_path)
       options = [
         ExecutablePath.resolve("yt-dlp").to_s,
+        # See YtDlp: no JS runtime means no audio formats are offered at all.
+        *YtDlp.media_options,
         "--no-playlist", "--format", "bestaudio/best", "--extract-audio",
         "--audio-format", "mp3", "--audio-quality", "0", "--restrict-filenames",
         "--ffmpeg-location", Rails.root.join("bin").to_s,

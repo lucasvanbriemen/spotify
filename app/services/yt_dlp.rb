@@ -19,7 +19,35 @@ module YtDlp
   # every download waits on while it 403s.
   DEFAULT_PLAYER_CLIENTS = %w[ web_embedded tv_simply default ].freeze
 
+  # YouTube protects its media URLs with a JavaScript challenge (the "n"
+  # parameter, and signature solving alongside it). yt-dlp ships the solver
+  # scripts, but it needs a JavaScript engine to run them in — and it enables
+  # *only* deno by default, so a box with Node and no deno reports
+  # "JS runtimes: none" and quietly solves nothing. The symptom is not an
+  # error about JavaScript: the challenge fails, every audio format is
+  # withheld, and yt-dlp says "Only images are available for download" and
+  # then "Requested format is not available" for every candidate in the
+  # search. (Observed 2026-08-22: four songs queued at a party, every one
+  # failing its download in about 45 seconds.)
+  #
+  # Overridable through YTDLP_JS_RUNTIMES — a runtime yt-dlp cannot find is
+  # not fatal, it just puts us back to solving nothing, so a server with deno
+  # instead of Node can be re-pointed without a deploy.
+  DEFAULT_JS_RUNTIMES = "node".freeze
+
   class << self
+    # Prepended to every invocation that has to come back with media, which is
+    # every download. Metadata-only calls (--dump-json) do not need it: titles
+    # and durations are not behind the challenge.
+    def media_options
+      runtimes = js_runtimes
+      runtimes.present? ? [ "--js-runtimes", runtimes ] : []
+    end
+
+    def js_runtimes
+      ENV.fetch("YTDLP_JS_RUNTIMES", DEFAULT_JS_RUNTIMES).to_s.strip
+    end
+
     # One entry per attempt: the extra arguments that select that attempt's
     # player client. Callers run their command once per entry and stop as soon
     # as the file they wanted exists.
