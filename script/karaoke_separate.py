@@ -86,6 +86,27 @@ OUTLIER_RESCUE_MIN_NOTES = 4
 # actually land in time.
 MIN_VOICED_RUN_SECONDS = 0.05
 
+# --- Singing-window fence -------------------------------------------------
+# Demucs puts a lead instrument in the same register as the voice into the
+# *vocal* stem — a pan flute, a sax, a lead synth — and everything downstream
+# then treats it as melody. On K3's "Oya Lélé" a fifteen-second pan-flute break
+# arrived as 37 fast ornamented notes: the guide melody played them (so the
+# song sounded like a flute solo rather than a tune to sing), the pitch lane
+# drew them, and — worst of the three — they counted towards the perfect score
+# the singer is marked against, so a flawless performance could not reach it.
+#
+# The lyrics know better than the stem does. A line's words say roughly how
+# long it takes to sing, so anything voiced well past that is not the singer.
+# The budget is deliberately loose — it exists to catch a break measured in
+# seconds, not to trim the tail off a held note.
+NOTE_WINDOW_SECONDS_PER_CHAR = 0.25
+# Even "Oh" gets this long, so a short exclamation held over a bar survives.
+NOTE_WINDOW_MIN_SECONDS = 3.0
+# A note may lead its line slightly (the tracker hears the onset first) and run
+# slightly past the budget.
+NOTE_WINDOW_LEAD_SECONDS = 0.3
+NOTE_WINDOW_TAIL_SECONDS = 0.5
+
 TIMESTAMP_PATTERN = re.compile(r"\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]")
 # Enhanced LRC ("A2") word timings, e.g. "[00:12.30] <00:12.30> Hello <00:12.80> from".
 WORD_TAG_PATTERN = re.compile(r"<(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?>")
@@ -258,10 +279,13 @@ def reject_pitch_outliers(notes):
     return kept if kept else notes
 
 
-def quantize_notes(hop_seconds, hz):
+def quantize_notes(hop_seconds, hz, windows=None):
     """The sung melody as discrete notes: {notes: [{start, end, midi, golden}],
     midi_min, midi_max}. Empty notes are a legal result (rap, spoken word, a
-    stem pyin can't track) — the client hides the pitch lane."""
+    stem pyin can't track) — the client hides the pitch lane.
+
+    windows, when given, is where the lyrics say singing happens; notes outside
+    it are instrument bleed and are dropped (see singing_windows)."""
     midi = median_filter_runs(hz_to_midi_array(hz), MEDIAN_FILTER_FRAMES)
 
     # Split each voiced run wherever the pitch departs from the note so far.
@@ -296,6 +320,10 @@ def quantize_notes(hop_seconds, hz):
 
     notes = [note for note in merged if (note["end"] - note["start"]) * hop_seconds >= MIN_NOTE_SECONDS]
     notes = reject_pitch_outliers(notes)
+    # Before the range and the golden picks are taken, not after: a flute break
+    # left in would set the top of the pitch lane and win the golden decile
+    # with notes that are then dropped from under both.
+    notes = fence_notes_to_singing(notes, windows, hop_seconds)
     if not notes:
         return {"notes": [], "midi_min": None, "midi_max": None}
 
@@ -329,6 +357,48 @@ def quantize_notes(hop_seconds, hz):
         "midi_min": midi_min,
         "midi_max": midi_max,
     }
+
+
+def singing_windows(lrc_text, total_seconds):
+    """When the lyrics say somebody is singing: one (start, end) per LRC line,
+    each capped at what its own words could plausibly take. None when there are
+    no usable lyrics to fence against."""
+    entries = parse_lrc(lrc_text)
+    if not entries:
+        return None
+
+    windows = []
+    for index, entry in enumerate(entries):
+        start = entry["time"]
+        next_start = entries[index + 1]["time"] if index + 1 < len(entries) else total_seconds
+        budget = max(NOTE_WINDOW_MIN_SECONDS, len(entry["text"]) * NOTE_WINDOW_SECONDS_PER_CHAR)
+        end = min(next_start, start + budget)
+        if end <= start:
+            continue
+
+        windows.append((start - NOTE_WINDOW_LEAD_SECONDS, end + NOTE_WINDOW_TAIL_SECONDS))
+
+    return windows or None
+
+
+def fence_notes_to_singing(notes, windows, hop_seconds):
+    """Drops notes whose midpoint falls where no line is being sung. Midpoint
+    rather than overlap: a note straddling the edge of a window belongs to
+    whichever side it mostly sits on. Notes are still in frame indices here,
+    which is why the hop is needed to compare them against the lyrics' clock."""
+    if not windows:
+        return notes
+
+    kept = []
+    cursor = 0
+    for note in notes:
+        middle = (note["start"] + note["end"]) / 2 * hop_seconds
+        while cursor < len(windows) and windows[cursor][1] < middle:
+            cursor += 1
+        if cursor < len(windows) and windows[cursor][0] <= middle:
+            kept.append(note)
+
+    return kept
 
 
 # --- words.json -----------------------------------------------------------
@@ -457,7 +527,13 @@ def time_words(hop_seconds, voiced, lrc_text):
     lines = []
     for index, entry in enumerate(entries):
         window_start = entry["time"]
-        window_end = entries[index + 1]["time"] if index + 1 < len(entries) else total_seconds
+        next_start = entries[index + 1]["time"] if index + 1 < len(entries) else total_seconds
+        # Capped by what the line's own words could take, for the same reason
+        # the notes are (see singing_windows). "Oh jee" in front of a fifteen
+        # second flute break was stretched across the whole of it, one syllable
+        # lasting 8.25s, because the stem stayed "voiced" throughout.
+        budget = max(NOTE_WINDOW_MIN_SECONDS, len(entry["text"]) * NOTE_WINDOW_SECONDS_PER_CHAR)
+        window_end = min(next_start, window_start + budget)
         if window_end <= window_start:
             continue
 
@@ -490,20 +566,24 @@ def write_analysis(hop_seconds, hz, args):
     """Writes whichever of notes.json / words.json were asked for. Word timings
     are optional: without usable lyrics we skip them and exit cleanly, and the
     client falls back to estimating word positions itself."""
+    lrc_text = None
+    if args.lrc:
+        try:
+            lrc_text = Path(args.lrc).read_text(encoding="utf-8")
+        except OSError as error:
+            sys.stderr.write(f"could not read --lrc: {error}\n")
+
     if args.notes_out:
-        Path(args.notes_out).write_text(json.dumps(quantize_notes(hop_seconds, hz)))
+        # Without lyrics there is nothing to fence against and every note is
+        # kept, which is the behaviour every song had before the fence existed.
+        windows = singing_windows(lrc_text, len(hz) * hop_seconds) if lrc_text else None
+        Path(args.notes_out).write_text(json.dumps(quantize_notes(hop_seconds, hz, windows)))
 
     if not args.words_out:
         return
 
-    if not args.lrc:
+    if lrc_text is None:
         sys.stderr.write("no --lrc given; skipping word timings\n")
-        return
-
-    try:
-        lrc_text = Path(args.lrc).read_text(encoding="utf-8")
-    except OSError as error:
-        sys.stderr.write(f"could not read --lrc: {error}\n")
         return
 
     payload = time_words(hop_seconds, [value is not None for value in hz], lrc_text)

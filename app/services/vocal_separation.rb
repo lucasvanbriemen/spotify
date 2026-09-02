@@ -39,7 +39,10 @@ class VocalSeparation
   # 3: pitch curves rescue loud-but-harmonised sections pyin calls unvoiced,
   #    the note fence is octave-aware, words.json strips duet markers, and the
   #    manifest records the YouTube instrumental's alignment offset.
-  ARTIFACT_VERSION = 3
+  # 4: notes and word timings are fenced to where the lyrics say singing
+  #    happens, so a lead instrument Demucs left in the vocal stem stops being
+  #    played as the guide melody and counted into the perfect score.
+  ARTIFACT_VERSION = 4
   # Demucs is CPU-heavy enough that running several at once mostly just
   # makes all of them slower rather than finishing sooner (observed:
   # queuing several songs made an unrelated one appear to hang — it hadn't,

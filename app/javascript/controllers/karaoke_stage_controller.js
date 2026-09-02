@@ -31,7 +31,7 @@ export default class extends Controller {
     "chip", "chipName", "chipScore", "chipCombo",
     "lane", "canvas",
     "verdict",
-    "dots", "activeLine", "activeBase", "activeFill", "nextLine",
+    "dots", "partBadge", "activeLine", "activeBase", "activeFill", "nextLine",
     "countIn", "countRing", "countDigit",
     "controlbar", "playButton", "currentTime", "duration", "seek",
     "fader", "faderInput", "melodyToggle", "fullscreenButton",
@@ -112,6 +112,9 @@ export default class extends Controller {
     this.backdropTarget.src = track.image_url || ""
     this.element.dataset.singers = String(singers.length)
     this.singerColors = singers.map((singer) => singer.color)
+    // Indexed by part - 1, and empty on a song nobody split: that is what
+    // keeps a solo performance from growing a name badge over every line.
+    this.partNames = singers.map((singer) => (singer.part ? singer.name : null))
     this.lane?.setColors({ singers: this.singerColors })
 
     singers.forEach((singer, index) => {
@@ -162,6 +165,7 @@ export default class extends Controller {
     this.activeBaseTarget.textContent = ""
     this.activeFillTarget.textContent = ""
     this.nextLineTarget.textContent = ""
+    if (this.hasPartBadgeTarget) this.partBadgeTarget.hidden = true
     this.activeLineTarget.classList.remove("karaoke-lyric--past")
     this.countInTarget.hidden = true
     this.countInTarget.classList.remove("is-go")
@@ -235,8 +239,14 @@ export default class extends Controller {
     this.activeFillTarget.textContent = line ? line.text : ""
     this.nextLineTarget.textContent = next ? next.text : ""
 
-    this.activeLineTarget.classList.toggle("karaoke-lyric--p1", line?.singer === 1)
-    this.activeLineTarget.classList.toggle("karaoke-lyric--p2", line?.singer === 2)
+    // Who sings what, said three ways: the line is tinted, the line coming up
+    // is tinted, and the singer is named over the top. One colour difference
+    // on the wipe was too easy to miss from across a room — and it only
+    // arrived as the line was already being sung, which is too late to be a
+    // cue about whose turn it is.
+    this.paintPart(this.activeLineTarget, line?.singer ?? null)
+    this.paintPart(this.nextLineTarget, next?.singer ?? null)
+    this.renderPartBadge(line?.singer ?? null)
 
     this.activeLineTarget.style.setProperty("--sweep", "0%")
     this.renderedSweep = 0
@@ -339,6 +349,24 @@ export default class extends Controller {
         this.renderedCombos[index] = combo
       }
     })
+  }
+
+  paintPart(element, part) {
+    element.classList.toggle("karaoke-lyric--p1", part === 1)
+    element.classList.toggle("karaoke-lyric--p2", part === 2)
+  }
+
+  // The name of whoever this line belongs to, over the line itself. Hidden
+  // outright on a song with no parts, rather than showing a blank chip.
+  renderPartBadge(part) {
+    if (!this.hasPartBadgeTarget) return
+
+    const name = part ? this.partNames?.[part - 1] : null
+    this.partBadgeTarget.hidden = !name
+    if (!name) return
+
+    this.partBadgeTarget.textContent = name
+    this.partBadgeTarget.className = `karaoke-cue__part karaoke-cue__part--p${part}`
   }
 
   // Perfect / Great / Good / Miss, popped above the singer's side of the

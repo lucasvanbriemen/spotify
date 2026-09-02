@@ -75,6 +75,49 @@
 .karaoke-lyric--p1 .karaoke-lyric__fill { --line-color: var(--p1); }
 .karaoke-lyric--p2 .karaoke-lyric__fill { --line-color: var(--p2); }
 
+// A tinted *unsung* line as well as a tinted wipe. The wipe alone said whose
+// line it was only once they were already singing it, which is no use as a
+// cue — and from the back of a room the difference between two wipe colours
+// is not something you notice at all. The base and the next line carry the
+// same tint, so whose turn it is (and whose it is about to be) reads before a
+// word of it has been sung.
+.karaoke-lyric--p1 .karaoke-lyric__base { color: color-mix(in srgb, var(--p1) 45%, #{$fg-faint}); }
+.karaoke-lyric--p2 .karaoke-lyric__base { color: color-mix(in srgb, var(--p2) 45%, #{$fg-faint}); }
+
+.karaoke-lyric--next.karaoke-lyric--p1 { color: color-mix(in srgb, var(--p1) 55%, transparent); }
+.karaoke-lyric--next.karaoke-lyric--p2 { color: color-mix(in srgb, var(--p2) 55%, transparent); }
+
+// --- Whose line it is -----------------------------------------------------
+
+// Row one of the lyric block: the name badge and the waiting dots, side by
+// side so the count-in never costs the singer the label telling them it is
+// their turn.
+.karaoke-cue {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  min-height: 1.6rem;
+}
+
+.karaoke-cue__part {
+  padding: 0.1rem 0.7rem;
+  border-radius: $radius-pill;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cue-color, #{$accent});
+  border: 1px solid color-mix(in srgb, var(--cue-color, #{$accent}) 55%, transparent);
+  background: color-mix(in srgb, var(--cue-color, #{$accent}) 16%, transparent);
+  white-space: nowrap;
+
+  &[hidden] { display: none; }
+}
+
+.karaoke-cue__part--p1 { --cue-color: var(--p1); }
+.karaoke-cue__part--p2 { --cue-color: var(--p2); }
+
 // Entrance for a freshly swapped line. Transform and opacity only.
 .karaoke-lyric.is-in {
   animation: karaoke-line-in 0.16s ease-out;

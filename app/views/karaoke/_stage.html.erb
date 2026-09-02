@@ -42,7 +42,12 @@
   </div>
 
   <div class="karaoke-lyricblock">
-    <div class="karaoke-dots" data-karaoke-stage-target="dots" hidden><i></i><i></i><i></i></div>
+    <%# Row one of the lyric grid: whose line this is, and the waiting dots.
+        Both live in one flex row so neither has to be given up for the other. %>
+    <div class="karaoke-cue">
+      <span class="karaoke-cue__part" data-karaoke-stage-target="partBadge" hidden></span>
+      <div class="karaoke-dots" data-karaoke-stage-target="dots" hidden><i></i><i></i><i></i></div>
+    </div>
 
     <%# Two stacked copies of the same text: the dim one underneath, the sung
         one clipped over it. Both share a grid cell, so they line up exactly. %>

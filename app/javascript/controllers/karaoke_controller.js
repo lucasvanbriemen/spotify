@@ -780,12 +780,12 @@ export default class extends Controller {
     if (singers.length < 2) return singers
     if (!this.duetSplittable()) return singers
 
-    const micOf = (singer, index) => singer.micIndex ?? index
-    const sharing = singers.every((singer, index) => micOf(singer, index) === micOf(singers[0], 0))
-    // A microphone each already tells them apart. Splitting the lyrics on top
-    // of that would only stop each of them being scored on half the song.
-    if (!sharing) return singers
-
+    // Regardless of how the microphones are arranged. A duet is a duet: the
+    // point is that Elton takes his lines and Kiki takes hers, and that is as
+    // true with a microphone each as with one between them — scoring someone
+    // on lines that were never theirs to sing marks them down for waiting
+    // their turn.
+    //
     // Writes the structural guess onto the lines, if that is what the split
     // rests on. Done here, on the way to the stage, so a song sung solo is
     // never coloured as a duet it was only ever a candidate for.
