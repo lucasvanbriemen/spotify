@@ -43,6 +43,18 @@ class VocalSeparation
   #    happens, so a lead instrument Demucs left in the vocal stem stops being
   #    played as the guide melody and counted into the perfect score.
   ARTIFACT_VERSION = 4
+  # Bumped only when *pitch extraction itself* changes — which is a far rarer
+  # event than an artifact bump, and a far more expensive one to act on.
+  # Everything downstream of the curve (notes, words) is recomputed from the
+  # stored pitch.json in about a second; re-extracting the curve means running
+  # pyin over the whole vocal stem again, tens of seconds a song. Without this,
+  # every artifact bump re-extracted every song that still had its stem: 56 of
+  # the 80 on prod at v4, for a change that touched neither pyin nor its input.
+  #
+  # A manifest from before this was recorded is read as version 1 when it is
+  # v3 or newer, because v3 is exactly where the current extraction (the
+  # rescue passes for loud harmonised sections) landed.
+  PITCH_VERSION = 1
   # Demucs is CPU-heavy enough that running several at once mostly just
   # makes all of them slower rather than finishing sooner (observed:
   # queuing several songs made an unrelated one appear to hang — it hadn't,
@@ -151,6 +163,15 @@ class VocalSeparation
 
     private
 
+    # See PITCH_VERSION. 0 for a manifest old enough that its curve predates
+    # the current extraction, which is the one case worth paying pyin for.
+    def stored_pitch_version(manifest)
+      recorded = manifest["pitch_version"]
+      return recorded.to_i if recorded
+
+      manifest["version"].to_i >= 3 ? 1 : 0
+    end
+
     def failed_marker(isrc)
       AUDIO_DIR.join("#{isrc}.separate.failed")
     end
@@ -186,7 +207,7 @@ class VocalSeparation
       lrc = write_lrc_file(isrc)
 
       command = [ python_executable.to_s, script_path.to_s ]
-      if vocals_path(isrc).file?
+      if vocals_path(isrc).file? && stored_pitch_version(previous) != PITCH_VERSION
         command.push("--reextract", vocals_path(isrc).to_s, "--pitch-out", pitch_path(isrc).to_s)
         timeout = REEXTRACT_TIMEOUT_SECONDS
       else
@@ -325,6 +346,7 @@ class VocalSeparation
     def write_manifest(isrc, instrumental_source:, alignment_offset_seconds: 0.0)
       payload = {
         "version" => ARTIFACT_VERSION,
+        "pitch_version" => PITCH_VERSION,
         "created_at" => Time.current.utc.iso8601,
         "instrumental_source" => instrumental_source,
         "alignment_offset_seconds" => alignment_offset_seconds.to_f.round(3),
