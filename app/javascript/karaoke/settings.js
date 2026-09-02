@@ -27,9 +27,10 @@ const DEFAULTS = {
   // Where a karaoke PA sits: enough to stop a bare voice sounding thin over a
   // full mix, not enough to hide the words.
   micMonitorReverbPercent: 25,
-  // Jump the long stretches with nothing to sing — a two-minute outro, an
-  // eight-bar solo — rather than leaving a room standing there. On by
-  // default; the engine's INSTRUMENTAL_SKIP_SECONDS is the threshold.
+  // Offer to jump the long stretches with nothing to sing — a two-minute
+  // outro, an eight-bar solo. The offer is a button on the stage and nothing
+  // moves until it is pressed; this only controls whether it appears at all.
+  // The engine's INSTRUMENTAL_SKIP_SECONDS is the threshold.
   skipLongInstrumentals: true,
   singers: null,
   // Where the screen was when it was last reloaded — see the coordinator's

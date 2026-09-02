@@ -51,7 +51,9 @@ export default class extends Controller {
       passed: false
     }))
 
-    this.separateColours() // a duplicate may already be on disk
+    // A duplicate may already be on disk; repair it and write the repair back,
+    // so it is fixed for good rather than re-fixed on every load.
+    if (this.separateColours()) this.persist()
     this.renderLatency()
     this.renderMonitor()
     this.render()
@@ -181,11 +183,14 @@ export default class extends Controller {
   // badges and their pitch trails the same colour, which is the one thing the
   // part colours exist to prevent.
   separateColours(chosenIndex = 0) {
-    if (this.count < 2 || this.state[0].color !== this.state[1].color) return
+    if (this.count < 2 || this.state[0].color !== this.state[1].color) return false
 
     const other = chosenIndex === 0 ? 1 : 0
     const free = this.palette().find((colour) => colour !== this.state[chosenIndex].color)
-    if (free) this.state[other].color = free
+    if (!free) return false
+
+    this.state[other].color = free
+    return true
   }
 
   // The colours actually on offer, read off the swatches so the palette lives

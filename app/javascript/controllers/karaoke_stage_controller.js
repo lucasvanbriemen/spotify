@@ -31,7 +31,7 @@ export default class extends Controller {
     "chip", "chipName", "chipScore", "chipCombo",
     "lane", "canvas",
     "verdict",
-    "dots", "partBadge", "activeLine", "activeBase", "activeFill", "nextLine",
+    "dots", "partBadge", "skip", "activeLine", "activeBase", "activeFill", "nextLine",
     "countIn", "countRing", "countDigit",
     "controlbar", "playButton", "currentTime", "duration", "seek",
     "fader", "faderInput", "melodyToggle", "fullscreenButton",
@@ -54,6 +54,7 @@ export default class extends Controller {
     this.renderedCountKind = null
     this.renderedHeld = false
     this.renderedPast = false
+    this.renderedSkip = false
     this.renderedScores = [ null, null ]
     this.renderedCombos = [ null, null ]
     this.controlsTimer = null
@@ -160,12 +161,14 @@ export default class extends Controller {
     this.renderedCountKind = null
     this.renderedHeld = false
     this.renderedPast = false
+    this.renderedSkip = false
     this.renderedScores = [ null, null ]
     this.renderedCombos = [ null, null ]
     this.activeBaseTarget.textContent = ""
     this.activeFillTarget.textContent = ""
     this.nextLineTarget.textContent = ""
     if (this.hasPartBadgeTarget) this.partBadgeTarget.hidden = true
+    if (this.hasSkipTarget) { this.skipTarget.hidden = true; this.renderedSkip = false }
     this.activeLineTarget.classList.remove("karaoke-lyric--past")
     this.countInTarget.hidden = true
     this.countInTarget.classList.remove("is-go")
@@ -226,6 +229,7 @@ export default class extends Controller {
     }
 
     this.renderCountIn(state.countIn)
+    this.renderSkip(state.skip)
     this.renderClock(state)
     this.renderScores(state.singers)
     this.lane?.frame(state.time, state.singers)
@@ -362,6 +366,23 @@ export default class extends Controller {
 
     const styles = getComputedStyle(this.element)
     return chosen.map((colour, index) => styles.getPropertyValue(`--karaoke-singer-${index + 1}`).trim() || colour)
+  }
+
+  // Shown while a long instrumental stretch is running. Its own state is a
+  // single boolean, so it is only touched when that flips — this runs sixty
+  // times a second.
+  renderSkip(skip) {
+    if (!this.hasSkipTarget) return
+
+    const offered = Boolean(skip)
+    if (offered === this.renderedSkip) return
+
+    this.renderedSkip = offered
+    this.skipTarget.hidden = !offered
+  }
+
+  skipInstrumental() {
+    this.delegate?.stageSkipInstrumental?.()
   }
 
   paintPart(element, part) {

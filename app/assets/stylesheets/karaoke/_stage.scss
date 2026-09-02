@@ -228,6 +228,29 @@
   height: 100%;
 }
 
+// --- Skip -----------------------------------------------------------------
+
+// Sits above the control bar, out of the lyrics' way. Deliberately quiet: it
+// is an offer, not the main thing on the screen.
+.karaoke-skip {
+  position: fixed;
+  right: 1.6rem;
+  bottom: 6rem;
+  z-index: $z-controls;
+  padding: 0.6rem 1.1rem;
+  border-radius: $radius-pill;
+  border: 1px solid color-mix(in srgb, $fg 22%, transparent);
+  background: color-mix(in srgb, $bg 88%, transparent);
+  backdrop-filter: blur(10px);
+  color: $fg;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover { border-color: color-mix(in srgb, $accent 60%, transparent); }
+  &[hidden] { display: none; }
+}
+
 // --- Control bar ----------------------------------------------------------
 
 .karaoke-controlbar {

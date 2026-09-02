@@ -30,10 +30,11 @@ const GO_SECONDS = 0.7
 // A note held longer than this is worth telling the singer to hold.
 const HELD_SECONDS = 0.7
 // Stretches of a song with nothing to sing: a long intro, a solo in the
-// middle, the fade-out after the last word. Past this much of it, standing at
-// the microphone watching a progress bar is worse than the cut, so the
-// transport is moved on — the same thing a streaming app does when it skips
-// you to the next thing rather than making you wait it out.
+// middle, the fade-out after the last word. Past this much of it, the stage
+// offers to jump the gap — the button a streaming service puts over its
+// opening titles. Offered, never taken automatically: an instrumental break
+// is part of the song, and a stage that cuts one on its own takes the choice
+// away from a room that might be enjoying it.
 const INSTRUMENTAL_SKIP_SECONDS = 20
 // What is left of the break after a skip: enough for the count-in (three
 // seconds, plus its GO beat) to land in silence and for the singer to hear
@@ -87,9 +88,15 @@ export class KaraokeEngine extends EventTarget {
       line: { index: -1, sweep: 0, wordIndex: -1, next: -1 },
       held: false,
       countIn: null,
+      // { target } while a long instrumental stretch is running, so the view
+      // can offer the skip; null the rest of the time.
+      skip: null,
       singers: []
     }
     this.countInState = { kind: "initial", secondsRemaining: 0, digit: 3 }
+    // Reused like countInState, for the same reason: read every frame.
+    this.skipState = { target: 0 }
+    this.skipTarget = null
   }
 
   loadSong({ timeline, melody, singers = [] }) {
@@ -232,6 +239,8 @@ export class KaraokeEngine extends EventTarget {
     frame.line.next = state.next
     frame.held = this.#isHeld(time, state)
     frame.countIn = this.#countIn(time, state)
+    frame.skip = this.#skipOffer(time, state)
+    if (frame.skip === null) this.skipTarget = null
 
     const offset = this.mics.length > 0 ? this.settings.scoringOffsetSeconds(this.transport.context) : 0
     this.#drainMics(offset)
@@ -239,24 +248,35 @@ export class KaraokeEngine extends EventTarget {
     this.guide.schedule(time, (songTime) => this.transport.contextTimeFor(songTime + this.alignmentOffset))
 
     this.view?.frame?.(frame)
-    this.#skipInstrumental(time, state)
   }
 
-  // Runs last in the frame, so the view has already drawn the moment before
-  // the cut rather than a frame of the far side of it.
-  #skipInstrumental(time, state) {
-    if (!this.transport.playing || this.timeline.isEmpty) return
+  // Whether a long instrumental stretch is running, and where skipping it
+  // would land. Read once per frame into frame.skip; the jump itself only
+  // happens if somebody asks for it (see skipInstrumental).
+  #skipOffer(time, state) {
+    if (!this.transport.playing || this.timeline.isEmpty) return null
     // Negative time is the count-in running ahead of the audio; there is
     // nothing to skip yet, and the pre-roll exists precisely to be waited out.
-    if (time < 0) return
-    if (this.settings.get?.("skipLongInstrumentals") === false) return
+    if (time < 0) return null
+    if (this.settings.get?.("skipLongInstrumentals") === false) return null
 
     const target = this.#skipTargetAt(time, state)
-    if (target === null) return
+    if (target === null) return null
 
-    // The transport's clock is the file's; time here is the recording's. They
-    // differ by the alignment offset on a YouTube-sourced instrumental.
-    this.transport.seek(target + this.alignmentOffset)
+    this.skipTarget = target
+    this.skipState.target = target
+    return this.skipState
+  }
+
+  // Taken by the stage's skip button. The transport's clock is the file's;
+  // time here is the recording's, and they differ by the alignment offset on
+  // a YouTube-sourced instrumental.
+  skipInstrumental() {
+    if (this.skipTarget === null) return false
+
+    this.transport.seek(this.skipTarget + this.alignmentOffset)
+    this.skipTarget = null
+    return true
   }
 
   // Where the play head should jump to, or null to let the song run.

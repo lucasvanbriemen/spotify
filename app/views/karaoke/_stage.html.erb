@@ -58,6 +58,12 @@
     <p class="karaoke-lyric karaoke-lyric--next" data-karaoke-stage-target="nextLine"></p>
   </div>
 
+  <%# Offered over a long instrumental stretch, the way a streaming service
+      offers to jump its opening titles. Nothing skips on its own — a break is
+      part of the song, and a room may well be enjoying it. %>
+  <button type="button" class="karaoke-skip" data-karaoke-stage-target="skip"
+          data-action="karaoke-stage#skipInstrumental" hidden>Skip instrumental ⏭</button>
+
   <div class="karaoke-countin" data-karaoke-stage-target="countIn" hidden>
     <svg class="karaoke-countin__ring" data-karaoke-stage-target="countRing" viewBox="0 0 100 100" aria-hidden="true">
       <circle cx="50" cy="50" r="45" pathLength="100"></circle>

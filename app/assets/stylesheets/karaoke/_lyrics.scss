@@ -81,11 +81,19 @@
 // is not something you notice at all. The base and the next line carry the
 // same tint, so whose turn it is (and whose it is about to be) reads before a
 // word of it has been sung.
-.karaoke-lyric--p1 .karaoke-lyric__base { color: color-mix(in srgb, var(--p1) 45%, #{$fg-faint}); }
-.karaoke-lyric--p2 .karaoke-lyric__base { color: color-mix(in srgb, var(--p2) 45%, #{$fg-faint}); }
+//
+// The singer's own hue, dimmed by alpha rather than muddied toward white.
+// It started as 45% of the hue mixed into a translucent white, which came out
+// a pale grey-white with barely a tint in it — cyan and violet were the same
+// washed-out colour from the sofa, which defeated the whole point. Mixing
+// toward transparent instead keeps the hue exactly as saturated as the
+// singer's chip while leaving the sung half, at full opacity, clearly ahead of
+// it — so the line says whose it is *and* the wipe still reads.
+.karaoke-lyric--p1 .karaoke-lyric__base { color: color-mix(in srgb, var(--p1) 72%, transparent); }
+.karaoke-lyric--p2 .karaoke-lyric__base { color: color-mix(in srgb, var(--p2) 72%, transparent); }
 
-.karaoke-lyric--next.karaoke-lyric--p1 { color: color-mix(in srgb, var(--p1) 55%, transparent); }
-.karaoke-lyric--next.karaoke-lyric--p2 { color: color-mix(in srgb, var(--p2) 55%, transparent); }
+.karaoke-lyric--next.karaoke-lyric--p1 { color: color-mix(in srgb, var(--p1) 70%, transparent); }
+.karaoke-lyric--next.karaoke-lyric--p2 { color: color-mix(in srgb, var(--p2) 70%, transparent); }
 
 // --- Whose line it is -----------------------------------------------------
 

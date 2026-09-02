@@ -1,10 +1,9 @@
-// Skipping the stretches of a song with nothing to sing.
+// Offering to skip the stretches of a song with nothing to sing.
 //
-// A two-minute outro or an eight-bar solo leaves a room standing at the
-// microphone watching a progress bar, so past INSTRUMENTAL_SKIP_SECONDS the
-// engine moves the play head on and leaves just enough of the break for the
-// count-in to land in. These tests pin where it cuts to, and — just as
-// important — where it leaves the song alone.
+// Past INSTRUMENTAL_SKIP_SECONDS the engine offers the jump — the button a
+// streaming service puts over its opening titles — and the play head only
+// moves when it is taken. These tests pin when the offer appears, where
+// taking it lands, and, just as important, when nothing is offered at all.
 import { test } from "node:test"
 import assert from "node:assert/strict"
 
@@ -85,27 +84,40 @@ function engineOn(lrc = LRC, { settings = fakeSettings(), duration = 200 } = {})
   return { engine, transport }
 }
 
-function at(setup, time) {
+// Advances the clock one frame and reports whether a skip is on offer.
+function offerAt(setup, time) {
   setup.transport.currentTime = time
   pump()
+  return setup.engine.frameState.skip
+}
+
+// The same, then presses the button.
+function at(setup, time) {
+  offerAt(setup, time)
+  setup.engine.skipInstrumental()
   return setup.transport.seeks
 }
 
-test("a long intro is skipped to just before the first line", () => {
+test("a long intro is offered, and taking it lands just before the first line", () => {
   const setup = engineOn()
 
-  assert.deepEqual(at(setup, 0.5), [ 36 ], "40s of intro leaves the four-second lead-in")
+  assert.ok(offerAt(setup, 0.5), "40s of intro is worth offering to skip")
+  assert.deepEqual(setup.transport.seeks, [], "but nothing moves on its own")
+
+  setup.engine.skipInstrumental()
+  assert.deepEqual(setup.transport.seeks, [ 36 ], "taking it leaves the four-second lead-in")
   setup.engine.stop()
 })
 
-test("the skip lands past its own target, so the next frame doesn't skip again", () => {
+test("taking the offer withdraws it, so it cannot be taken twice", () => {
   const setup = engineOn()
 
   at(setup, 0.5)
   pump() // the frame straight after the cut, reading the clock the seek set
-  pump()
 
-  assert.equal(setup.transport.seeks.length, 1)
+  assert.equal(setup.engine.frameState.skip, null, "the offer is gone once taken")
+  setup.engine.skipInstrumental()
+  assert.equal(setup.transport.seeks.length, 1, "a second press does nothing")
   setup.engine.stop()
 })
 
@@ -134,7 +146,7 @@ test("a line still being sung is never cut short", () => {
 
   // Inside the first line, which runs from 40s. The 28-second solo is coming,
   // but the singer is mid-phrase.
-  assert.deepEqual(at(setup, 40.5), [])
+  assert.equal(offerAt(setup, 40.5), null)
   setup.engine.stop()
 })
 
@@ -150,7 +162,7 @@ test("a long tail after the last word ends the song instead of playing out", () 
 test("a song that ends soon after its last word plays out", () => {
   const setup = engineOn(LRC, { duration: 90 })
 
-  assert.deepEqual(at(setup, 86), [])
+  assert.equal(offerAt(setup, 86), null)
   setup.engine.stop()
 })
 
@@ -159,14 +171,15 @@ test("the count-in's pre-roll is never skipped", () => {
 
   // Negative song time: the clock is running ahead of the audio so the
   // count-in has somewhere to happen.
-  assert.deepEqual(at(setup, -2), [])
+  assert.equal(offerAt(setup, -2), null)
   setup.engine.stop()
 })
 
-test("skipping can be turned off", () => {
+test("the offer can be turned off entirely", () => {
   const setup = engineOn(LRC, { settings: fakeSettings({ skipLongInstrumentals: false }) })
 
-  assert.deepEqual(at(setup, 0.5), [])
+  assert.equal(offerAt(setup, 0.5), null)
+  assert.deepEqual(setup.transport.seeks, [])
   setup.engine.stop()
 })
 
@@ -185,6 +198,6 @@ test("the seek is in the file's clock, not the recording's", () => {
 test("a song with no lyrics at all is left alone", () => {
   const setup = engineOn("")
 
-  assert.deepEqual(at(setup, 30), [])
+  assert.equal(offerAt(setup, 30), null)
   setup.engine.stop()
 })

@@ -618,6 +618,10 @@ export default class extends Controller {
     else this.transport.play()
   }
 
+  stageSkipInstrumental() {
+    this.engine?.skipInstrumental()
+  }
+
   stageSeek(fraction) {
     if (!this.transport?.duration) return
 
