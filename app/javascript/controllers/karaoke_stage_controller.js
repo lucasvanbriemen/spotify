@@ -111,7 +111,7 @@ export default class extends Controller {
     this.songTarget.textContent = `${track.title} — ${track.artist}`
     this.backdropTarget.src = track.image_url || ""
     this.element.dataset.singers = String(singers.length)
-    this.singerColors = singers.map((singer) => singer.color)
+    this.singerColors = this.distinctColors(singers)
     // Indexed by part - 1, and empty on a song nobody split: that is what
     // keeps a solo performance from growing a name badge over every line.
     this.partNames = singers.map((singer) => (singer.part ? singer.name : null))
@@ -119,7 +119,7 @@ export default class extends Controller {
 
     singers.forEach((singer, index) => {
       const number = index + 1
-      this.element.style.setProperty(`--p${number}`, singer.color)
+      this.element.style.setProperty(`--p${number}`, this.singerColors[index])
       const chip = this.chipFor(number)
       if (chip) {
         chip.hidden = false
@@ -349,6 +349,19 @@ export default class extends Controller {
         this.renderedCombos[index] = combo
       }
     })
+  }
+
+  // Two singers must never be painted the same colour. The tinted line, the
+  // name badge, the score chips and the pitch trails all rest on the
+  // difference, and a stored setup can still hold a duplicate from before the
+  // setup screen repaired them. Falls back to the stage's own palette rather
+  // than trusting what it was handed.
+  distinctColors(singers) {
+    const chosen = singers.map((singer) => singer.color)
+    if (new Set(chosen).size === chosen.length) return chosen
+
+    const styles = getComputedStyle(this.element)
+    return chosen.map((colour, index) => styles.getPropertyValue(`--karaoke-singer-${index + 1}`).trim() || colour)
   }
 
   paintPart(element, part) {

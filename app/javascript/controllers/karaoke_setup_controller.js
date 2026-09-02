@@ -51,6 +51,7 @@ export default class extends Controller {
       passed: false
     }))
 
+    this.separateColours() // a duplicate may already be on disk
     this.renderLatency()
     this.renderMonitor()
     this.render()
@@ -149,6 +150,7 @@ export default class extends Controller {
   chooseCount(event) {
     this.count = Number(event.currentTarget.dataset.count)
     if (this.count === 1) this.closeMic(1)
+    this.separateColours()
     this.render()
     this.persist()
   }
@@ -162,8 +164,34 @@ export default class extends Controller {
   chooseColour(event) {
     const index = Number(event.currentTarget.dataset.singer) - 1
     this.state[index].color = event.currentTarget.dataset.colour
+    this.separateColours(index)
     this.render()
     this.persist()
+  }
+
+  // Keeps the two singers on different colours, moving whichever of them did
+  // not just choose.
+  //
+  // render() marks the other singer's colour as a disabled swatch, but that
+  // only guards the case it can see: with one singer showing, every swatch is
+  // enabled, so picking singer 1's colour there and *then* adding a second
+  // singer leaves both on it. Nothing repaired that, and the duplicate is
+  // self-locking — the shared colour is disabled for both cards, so it cannot
+  // be clicked away from. On the stage it painted both singers' lines, their
+  // badges and their pitch trails the same colour, which is the one thing the
+  // part colours exist to prevent.
+  separateColours(chosenIndex = 0) {
+    if (this.count < 2 || this.state[0].color !== this.state[1].color) return
+
+    const other = chosenIndex === 0 ? 1 : 0
+    const free = this.palette().find((colour) => colour !== this.state[chosenIndex].color)
+    if (free) this.state[other].color = free
+  }
+
+  // The colours actually on offer, read off the swatches so the palette lives
+  // in one place (the view) rather than being restated here.
+  palette() {
+    return [ ...new Set(this.swatchTargets.map((swatch) => swatch.dataset.colour)) ]
   }
 
   async chooseDevice(event) {
