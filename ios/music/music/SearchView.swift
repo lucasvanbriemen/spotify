@@ -42,7 +42,7 @@ struct SearchView: View {
                 .padding([.trailing, .leading], 8)
             }
         }
-        .searchable(text: $searchText, prompt: "Search songs")
+        .searchable(text: $searchText, prompt: "Search songs or paste a YouTube link")
         .searchFocused($searchFieldFocused)
         .task {
             try? await Task.sleep(for: .milliseconds(150))

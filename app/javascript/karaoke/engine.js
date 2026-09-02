@@ -29,6 +29,25 @@ const GAP_CUE_SECONDS = 2
 const GO_SECONDS = 0.7
 // A note held longer than this is worth telling the singer to hold.
 const HELD_SECONDS = 0.7
+// Stretches of a song with nothing to sing: a long intro, a solo in the
+// middle, the fade-out after the last word. Past this much of it, standing at
+// the microphone watching a progress bar is worse than the cut, so the
+// transport is moved on — the same thing a streaming app does when it skips
+// you to the next thing rather than making you wait it out.
+const INSTRUMENTAL_SKIP_SECONDS = 20
+// What is left of the break after a skip: enough for the count-in (three
+// seconds, plus its GO beat) to land in silence and for the singer to hear
+// where the beat is again.
+const SKIP_LEAD_SECONDS = 4
+// A skip has to be worth the seam it puts in the music. Also what stops the
+// frame after a skip from skipping again: the play head lands a display
+// offset short of the target, which is far inside this.
+const MIN_SKIP_SAVING_SECONDS = 1.5
+// The outro skip stops just short of the end rather than on it. A buffer
+// source started at exactly its own duration plays nothing, and whether it
+// then fires "ended" is not worth betting the queue's hand-off on — a quarter
+// second of fade-out ends the song the ordinary way, and nobody hears it.
+const OUTRO_TAIL_SECONDS = 0.25
 
 export class KaraokeEngine extends EventTarget {
   constructor({ transport, settings, view = null }) {
@@ -220,6 +239,52 @@ export class KaraokeEngine extends EventTarget {
     this.guide.schedule(time, (songTime) => this.transport.contextTimeFor(songTime + this.alignmentOffset))
 
     this.view?.frame?.(frame)
+    this.#skipInstrumental(time, state)
+  }
+
+  // Runs last in the frame, so the view has already drawn the moment before
+  // the cut rather than a frame of the far side of it.
+  #skipInstrumental(time, state) {
+    if (!this.transport.playing || this.timeline.isEmpty) return
+    // Negative time is the count-in running ahead of the audio; there is
+    // nothing to skip yet, and the pre-roll exists precisely to be waited out.
+    if (time < 0) return
+    if (this.settings.get?.("skipLongInstrumentals") === false) return
+
+    const target = this.#skipTargetAt(time, state)
+    if (target === null) return
+
+    // The transport's clock is the file's; time here is the recording's. They
+    // differ by the alignment offset on a YouTube-sourced instrumental.
+    this.transport.seek(target + this.alignmentOffset)
+  }
+
+  // Where the play head should jump to, or null to let the song run.
+  #skipTargetAt(time, state) {
+    const lines = this.timeline.lines
+    const upcoming = state.index < 0 ? 0 : state.next
+    // The silence we are sitting in starts where the last line finished — or
+    // at the top of the song, for an intro.
+    const from = state.index < 0 ? 0 : lines[state.index].endTime
+    if (time < from) return null // still inside a line, whatever it is
+
+    if (upcoming < 0) return this.#outroTargetAt(time, lines[lines.length - 1])
+
+    const until = lines[upcoming].time
+    if (until - from < INSTRUMENTAL_SKIP_SECONDS) return null
+
+    const target = until - SKIP_LEAD_SECONDS
+    return time < target - MIN_SKIP_SAVING_SECONDS ? target : null
+  }
+
+  // Past the last word. Nothing is coming, so the skip runs the song out — the
+  // transport reports the end as the song finishing, which is what hands the
+  // stage over to the scoreboard and the next song in the queue.
+  #outroTargetAt(time, lastLine) {
+    const duration = this.transport.duration
+    if (!duration || duration - lastLine.endTime < INSTRUMENTAL_SKIP_SECONDS) return null
+
+    return time < duration - MIN_SKIP_SAVING_SECONDS ? duration - OUTRO_TAIL_SECONDS : null
   }
 
   // Prefer the melody: a real note tells us how long it is held, where the

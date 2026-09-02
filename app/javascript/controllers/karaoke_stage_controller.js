@@ -68,12 +68,20 @@ export default class extends Controller {
     this.boundFullscreenChange = () => this.syncFullscreenButton()
     this.boundVisibility = () => this.reacquireWakeLock()
 
+    this.boundPointerRelease = () => { this.pointerDown = false }
+
     this.element.addEventListener("pointermove", this.boundPointerMove)
     // Shown on the *down* half of the tap: on a touch screen there is no
     // pointermove first, and a bar that only appears on pointerup swallows
     // the tap that was meant for its buttons.
     this.element.addEventListener("pointerdown", () => { this.pointerDown = true; this.showControls() })
-    this.element.addEventListener("pointerup", () => { this.pointerDown = false; this.showControls() })
+    this.element.addEventListener("pointerup", () => this.showControls())
+    // The release is watched on the window, not the stage: let go outside the
+    // element — or have the browser cancel the pointer, which going full
+    // screen can do — and the stage's own pointerup never comes. The flag
+    // would stay set, and a set flag means the bar never hides again.
+    window.addEventListener("pointerup", this.boundPointerRelease)
+    window.addEventListener("pointercancel", this.boundPointerRelease)
     document.addEventListener("keydown", this.boundKeydown)
     document.addEventListener("fullscreenchange", this.boundFullscreenChange)
     document.addEventListener("visibilitychange", this.boundVisibility)
@@ -81,6 +89,8 @@ export default class extends Controller {
 
   disconnect() {
     this.element.removeEventListener("pointermove", this.boundPointerMove)
+    window.removeEventListener("pointerup", this.boundPointerRelease)
+    window.removeEventListener("pointercancel", this.boundPointerRelease)
     document.removeEventListener("keydown", this.boundKeydown)
     document.removeEventListener("fullscreenchange", this.boundFullscreenChange)
     document.removeEventListener("visibilitychange", this.boundVisibility)
@@ -416,12 +426,34 @@ export default class extends Controller {
     clearTimeout(this.controlsTimer)
 
     this.controlsTimer = setTimeout(() => {
-      // Never yank the bar away mid-drag, or while a control has focus.
-      if (this.pointerDown || this.controlbarTarget.matches(":focus-within")) return this.showControls()
+      // Never yank the bar away mid-drag, or out from under the keyboard.
+      if (this.pointerDown || this.keyboardIsOnTheBar()) return this.showControls()
 
       this.element.classList.remove("is-controls-visible")
       this.element.classList.add("is-idle")
     }, this.constructor.CONTROLS_IDLE_MS)
+  }
+
+  // Whether somebody is working the bar with the keyboard, which is the only
+  // focus worth holding it open for.
+  //
+  // :focus-within is not that test. A mouse click leaves focus on the button
+  // it hit, so one press of pause — or one nudge of the sync slider — used to
+  // pin the bar open, and every frame of the song after that was sung with a
+  // control bar across the bottom of the screen and a mouse cursor on top of
+  // it. :focus-visible is the browser's own answer to "was this focus reached
+  // by keyboard", which is exactly the question being asked.
+  keyboardIsOnTheBar() {
+    const focused = document.activeElement
+    if (!focused || !this.controlbarTarget.contains(focused)) return false
+
+    // Safari only shipped :focus-visible for form controls late; a browser
+    // that cannot answer keeps the old, safer behaviour of holding the bar.
+    try {
+      return focused.matches(":focus-visible")
+    } catch {
+      return true
+    }
   }
 
   // --- Full screen and wake lock -------------------------------------------

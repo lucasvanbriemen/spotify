@@ -48,10 +48,18 @@ class FakeTransport extends EventTarget {
     this.output = {}
     this.currentTime = 0
     this.duration = 300
+    this.playing = true
+    this.seeks = []
   }
 
   songTimeAt() { return null }
   contextTimeFor(songTime) { return songTime }
+
+  seek(seconds) {
+    this.seeks.push(seconds)
+    this.currentTime = Math.min(seconds, this.duration)
+    this.dispatchEvent(new CustomEvent("seeked", { detail: { time: this.currentTime } }))
+  }
 }
 
 const fakeSettings = {

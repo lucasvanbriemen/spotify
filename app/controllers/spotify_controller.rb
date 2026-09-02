@@ -2,6 +2,7 @@
 # SpotifyController).
 class SpotifyController < ApiController
   include ServesAudio
+  include ValidatesIsrc
 
   def search
     query = params[:q].to_s.strip
@@ -36,10 +37,9 @@ class SpotifyController < ApiController
   end
 
   def get_mp3
-    isrc = params[:isrc]
-    # ISRCs are alphanumeric; this also keeps the value safe to use in the
-    # audio file path below.
-    return head :bad_request unless isrc.match?(/\A[a-zA-Z0-9-]+\z/)
+    # ValidatesIsrc's format check is also what keeps the value safe to use in
+    # the audio file path below.
+    return head :bad_request unless valid_isrc?
 
     if TalkSegment.talk_id?(isrc)
       # Talk audio is generated, never downloaded: a talk id must not fall
@@ -54,8 +54,7 @@ class SpotifyController < ApiController
   # Fire-and-forget warmup used by the app for upcoming queue songs: caches
   # the MP3 in the background so pressing play on it later is instant.
   def prepare
-    isrc = params[:isrc]
-    return head :bad_request unless isrc.match?(/\A[a-zA-Z0-9-]+\z/)
+    return head :bad_request unless valid_isrc?
 
     if TalkSegment.talk_id?(isrc)
       return head :ok if TalkAudio.rendered?(isrc)
@@ -159,6 +158,14 @@ class SpotifyController < ApiController
   def lyrics_lookup_attrs(isrc)
     if (song = Song.find_by(isrc: isrc))
       { artist: song.artist, title: song.title, album: song.album, duration: song.duration }
+    elsif YoutubeTrack.isrc?(isrc)
+      # Deezer has never heard of a pasted video. LRCLIB might still know the
+      # song, keyed on the artist and title parsed out of the upload's own
+      # title — which is why that parsing bothers to strip "(Official Video)".
+      details = YoutubeTrack.track_details(isrc)
+      return nil unless details
+
+      { artist: details.dig("artist", "name"), title: details["title"], album: nil, duration: details["duration"] }
     else
       details = Deezer::Client.track_details(isrc)
       # An unknown ISRC comes back as 200 OK with an error body, not a

@@ -8,9 +8,6 @@
 class KaraokeQueueController < ApiController
   include KaraokeRemoteAccess
 
-  # Enough for an evening, low enough that one bored guest can't fill the
-  # table from a phone.
-  MAX_WAITING = 60
   MOVE_DIRECTIONS = %w[up down].freeze
 
   def index
@@ -19,10 +16,6 @@ class KaraokeQueueController < ApiController
 
   def create
     return head :bad_request unless params[:isrc].to_s.match?(KaraokeQueueItem::SONG_ISRC_FORMAT)
-
-    if KaraokeQueueItem.waiting.count >= MAX_WAITING
-      return render json: { error: "The queue is full — sing a few first." }, status: :unprocessable_entity
-    end
 
     KaraokeQueueItem.prune_played
     item = KaraokeQueueItem.enqueue(

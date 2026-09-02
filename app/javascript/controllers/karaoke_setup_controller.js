@@ -5,13 +5,15 @@ import { settings } from "karaoke/settings"
 // Who is singing, in what colour, on which microphone — set up while the
 // separation finishes in the background.
 //
-// Two singers means two separate input devices, each with its own pitch
-// tracker, so both are scored independently while they sing at the same time.
-// Sharing one device between them would score both on whoever was louder.
+// Both singers pick their own microphone. Two devices means two pitch
+// trackers and two independent scores; picking the same device is allowed and
+// normal — a receiver that mixes two microphones into one jack offers only one
+// input, and the pair still want a score each. That input is then opened once
+// and read by both (see `sharing`).
 export default class extends Controller {
   static targets = [
     "countOption", "singerCard", "name", "swatch", "device", "level", "check", "enableMics",
-    "latency", "latencyValue", "sharedNotice",
+    "latency", "latencyValue",
     "monitor", "monitorValue", "monitorReverb", "monitorReverbValue"
   ]
 
@@ -168,22 +170,13 @@ export default class extends Controller {
     const index = Number(event.currentTarget.dataset.singer) - 1
     const deviceId = event.currentTarget.value || null
 
-    // The other singer's microphone. render() marks the option disabled, but a
-    // keyboard can still select a disabled option in some browsers — and
-    // accepting it would put both singers back on one summed signal with
-    // nothing on screen to say so.
-    const other = index === 0 ? 1 : 0
-    if (deviceId && this.count === 2 && this.state[other].deviceId === deviceId) {
-      this.render() // snap the select back to what is actually open
-      this.setCheck(index, `That's singer ${other + 1}'s microphone — pick another.`, "is-warning")
-      return
-    }
-
     this.state[index].deviceId = deviceId
     this.state[index].deviceLabel = this.devices.find((device) => device.deviceId === deviceId)?.label || null
     this.render()
     this.persist()
-    await this.openMic(index)
+    // Not openMic(index): landing on the other singer's device drops the
+    // second input, and moving off it brings one back.
+    await this.syncMics()
   }
 
   // --- Microphones ----------------------------------------------------------
@@ -236,52 +229,47 @@ export default class extends Controller {
     this.render()
     this.renderLatency() // the session exists now, so the real total can be shown
 
-    for (let index = 0; index < this.openCount; index++) await this.openMic(index)
+    await this.syncMics()
     this.micSystem.releasePrimeStream() // whatever the inputs didn't claim
     this.watchLevels()
   }
 
-  // True when two singers have to share one input, because the browser only
-  // offers one. That is the normal case with a receiver that mixes its two
-  // microphones down to a single jack before the computer ever sees them —
-  // there is no second device to give the second singer.
+  // True when both singers have landed on the same input — either because they
+  // chose it, or because a receiver that mixes its two microphones into one
+  // jack is the only device the browser offers.
   get sharing() {
-    return this.count === 2 && this.devices.length < 2
+    return this.count === 2 && Boolean(this.state[0].deviceId) && this.state[0].deviceId === this.state[1].deviceId
   }
 
-  // Two singers get different devices by default — the whole point is one mic
-  // each.
-  //
-  // Never the same device twice. The previous `|| this.devices[0]` fallback
-  // did exactly that when only one input existed, which is the bug this file's
-  // own header warns about: both singers were tracked on one summed signal, so
-  // both were scored on whoever happened to be louder. One input for two
-  // singers is now an explicit shared mic (see `sharing`), stated on screen,
-  // rather than a duplicate nobody was told about.
+  // One mic each where the hardware allows it, since that is the only setup
+  // that can actually tell two voices apart. Where it doesn't, both singers
+  // get the only input there is — a second singer with no microphone at all
+  // would be scored a silent zero for a performance they sang.
   assignDefaultDevices() {
-    // A device id saved by that older behaviour is still on disk for anyone who
-    // used it, and would survive as a silent duplicate. Drop it.
-    if (this.count === 2 && this.state[0].deviceId && this.state[0].deviceId === this.state[1].deviceId) {
-      this.state[1].deviceId = null
-      this.state[1].deviceLabel = null
-    }
-
-    for (let index = 0; index < this.openCount; index++) {
+    for (let index = 0; index < this.count; index++) {
       if (this.state[index].deviceId) continue
 
       const taken = this.state.slice(0, index).map((singer) => singer.deviceId)
-      const chosen = this.devices.find((device) => !taken.includes(device.deviceId))
+      const chosen = this.devices.find((device) => !taken.includes(device.deviceId)) || this.devices[0]
       this.state[index].deviceId = chosen?.deviceId || null
       this.state[index].deviceLabel = chosen?.label || null
     }
   }
 
-  // How many microphones to actually open. Two singers sharing one input need
-  // one: opening the same device twice would run two pitch trackers over the
-  // same audio, which costs a worklet for nothing and gives both singers an
-  // identical trail.
+  // How many microphones to actually open. Two singers on one input need one:
+  // opening the same device twice would run two pitch trackers over the same
+  // audio, which costs a worklet for nothing and gives both singers an
+  // identical trail anyway.
   get openCount() {
     return this.sharing ? 1 : this.count
+  }
+
+  // Opens exactly the inputs the current choices call for and closes the rest,
+  // so switching a select onto — or off — the other singer's microphone leaves
+  // the right number of trackers running.
+  async syncMics() {
+    for (let index = this.openCount; index < this.inputs.length; index++) this.closeMic(index)
+    for (let index = 0; index < this.openCount; index++) await this.openMic(index)
   }
 
   async openMic(index) {
@@ -411,48 +399,20 @@ export default class extends Controller {
       swatch.disabled = this.count === 2 && this.state[otherIndex].color === colour
     })
 
-    this.renderSharedNotice()
-
     this.deviceTargets.forEach((select) => {
       const index = Number(select.dataset.singer) - 1
-      // Sharing one input: the second singer has no device of their own to
-      // choose, and offering them the first singer's is how this went wrong
-      // before.
-      select.closest(".karaoke-field").hidden = this.sharing && index > 0
       if (this.devices.length === 0) return
 
-      const taken = this.state.filter((_singer, other) => other !== index && other < this.count).map((singer) => singer.deviceId)
+      // Every device is offered to every singer, the other's included. Two
+      // singers on one microphone is a real setup, not a mistake to be
+      // prevented — see `sharing`.
       select.innerHTML = this.devices
         .map((device) => {
-          const disabled = taken.includes(device.deviceId) ? " disabled" : ""
           const selected = this.state[index].deviceId === device.deviceId ? " selected" : ""
-          return `<option value="${device.deviceId}"${selected}${disabled}>${this.escape(device.label)}</option>`
+          return `<option value="${device.deviceId}"${selected}>${this.escape(device.label)}</option>`
         })
         .join("")
     })
-  }
-
-  // Whether this song's lyrics say who sings which line. Told to us by the
-  // coordinator once the lyrics land, because it is a property of the song and
-  // not of the hardware — and it decides whether two singers on one microphone
-  // get a score each or one between them.
-  setDuetMarkers(marked) {
-    this.duetMarked = Boolean(marked)
-    this.renderSharedNotice()
-  }
-
-  // Said out loud rather than left to be discovered. Two singers on one input
-  // is a real limitation of a receiver that mixes its microphones, and a
-  // single combined score looks exactly like a bug when you were expecting two.
-  renderSharedNotice() {
-    if (!this.hasSharedNoticeTarget) return
-
-    this.sharedNoticeTarget.hidden = !this.sharing
-    if (!this.sharing) return
-
-    this.sharedNoticeTarget.textContent = this.duetMarked
-      ? "One microphone between you — but this song marks who sings each line, so you each get your own score."
-      : "One microphone between you. This song doesn't mark who sings each line, so you'll share a single score."
   }
 
   persist() {

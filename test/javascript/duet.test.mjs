@@ -187,6 +187,12 @@ class FakeTransport extends EventTarget {
   // Mic frames are stamped on the audio clock; here it is the song clock too.
   songTimeAt(t) { return t }
   contextTimeFor(songTime) { return songTime }
+  // The real transport moves the play head and tells everyone; the engine
+  // skips long instrumental stretches through this (see engine.test.mjs).
+  seek(seconds) {
+    this.currentTime = Math.min(seconds, this.duration)
+    this.dispatchEvent(new CustomEvent("seeked", { detail: { time: this.currentTime } }))
+  }
 }
 
 const fakeSettings = {
@@ -266,4 +272,189 @@ test("losing a shared microphone ends scoring for both singers, not just the fir
   assert.equal(second.notesTotal, 0, "singer 2 must not be blamed for a mic that died before their line")
 
   engine.stop()
+})
+
+// --- Finding a split in songs that don't spell one out ---------------------
+//
+// Marked duets are rare; two people on one microphone are not. Everything
+// below is about the three ways a split is found short of "v1:"/"v2:", and
+// about the false positive each of them has to avoid.
+
+test("names in the lyrics are numbered by where they first appear", () => {
+  const lines = LyricsTimeline.parse([
+    "[00:00.00] Rihanna: the first line",
+    "[00:02.00] Eminem: the answer",
+    "[00:04.00] Rihanna: back to me",
+    "[00:06.00] Eminem: and back again",
+    "[00:08.00] Both: together now"
+  ].join("\n")).lines
+
+  assert.deepEqual(lines.map((line) => line.singer), [ 1, 2, 1, 2, null ])
+  assert.equal(lines[0].text, "the first line", "the name is not sung, so it is not shown")
+  assert.equal(lines[4].text, "together now")
+})
+
+test("a bracketed name works the same way", () => {
+  const lines = LyricsTimeline.parse([
+    "[00:00.00] [Elton] I hope you don't mind",
+    "[00:02.00] [Kiki] that I put down in words",
+    "[00:04.00] [Elton] how wonderful life is",
+    "[00:06.00] [Kiki] while you're in the world"
+  ].join("\n")).lines
+
+  assert.deepEqual(lines.map((line) => line.singer), [ 1, 2, 1, 2 ])
+  assert.equal(lines[0].text, "I hope you don't mind")
+})
+
+test("a section header hands its lines to whoever it names", () => {
+  const lines = LyricsTimeline.parse([
+    "[00:00.00] [Verse 1: Beyonce]",
+    "[00:02.00] my first line",
+    "[00:04.00] my second line",
+    "[00:06.00] [Verse 2: Jay]",
+    "[00:08.00] his first line",
+    "[00:10.00] his second line"
+  ].join("\n")).lines
+
+  assert.deepEqual(lines.map((line) => line.singer), [ null, 1, 1, null, 2, 2 ])
+})
+
+test("a lyric that merely contains a colon is not a duet marker", () => {
+  const lines = LyricsTimeline.parse([
+    "[00:00.00] Baby: hold on tight",
+    "[00:02.00] the road is long",
+    "[00:04.00] and we are young"
+  ].join("\n")).lines
+
+  assert.deepEqual(lines.map((line) => line.singer), [ null, null, null ])
+  assert.equal(lines[0].text, "Baby: hold on tight", "nothing was stripped out of the line")
+})
+
+// Lyrics that only bracket the guest's lines are describing a duet just as
+// plainly as ones that mark both sides.
+test("one marked part hands every unmarked line to the other singer", () => {
+  const lines = LyricsTimeline.parse([
+    "[00:00.00] my verse",
+    "[00:02.00] still my verse",
+    "[00:04.00] f: her chorus",
+    "[00:06.00] f: still her chorus",
+    "[00:08.00] both: and out together"
+  ].join("\n")).lines
+
+  assert.deepEqual(lines.map((line) => line.singer), [ 1, 1, 2, 2, null ])
+})
+
+// The last resort: verses alternate, and whatever repeats is the chorus.
+// Three-line sections with eight-second breaks between them — a section has to
+// be a verse's worth of lines before a gap is read as ending it.
+const STRUCTURED_LRC = [
+  "[00:00.00] verse one line one",
+  "[00:02.00] verse one line two",
+  "[00:04.00] verse one line three",
+  "[00:12.00] the chorus goes here",
+  "[00:14.00] and here as well",
+  "[00:16.00] and once more",
+  "[00:24.00] verse two line one",
+  "[00:26.00] verse two line two",
+  "[00:28.00] verse two line three",
+  "[00:36.00] the chorus goes here",
+  "[00:38.00] and here as well",
+  "[00:40.00] and once more",
+  "[00:48.00] the bridge is mine",
+  "[00:50.00] and mine as well",
+  "[00:52.00] and mine again",
+  "[01:00.00] your bridge answers",
+  "[01:02.00] and answers again",
+  "[01:04.00] and answers once more"
+].join("\n")
+
+test("a song with no markers at all can still be split by its structure", () => {
+  const timeline = LyricsTimeline.parse(STRUCTURED_LRC)
+
+  // Nothing is coloured until somebody asks for the split — a solo singer must
+  // not see a song painted in two parts.
+  assert.deepEqual(timeline.lines.map((line) => line.singer), new Array(18).fill(null))
+  assert.equal(timeline.splittable, true)
+
+  assert.equal(timeline.applyStructuralSplit(), true)
+  assert.deepEqual(timeline.lines.map((line) => line.singer), [
+    1, 1, 1, // verse one
+    null, null, null, // the chorus repeats, so it is everyone's
+    2, 2, 2, // verse two
+    null, null, null,
+    1, 1, 1, // the bridge goes back round
+    2, 2, 2
+  ])
+})
+
+test("a song too short or too shapeless to divide is left whole", () => {
+  const timeline = LyricsTimeline.parse([
+    "[00:00.00] one line",
+    "[00:02.00] and another",
+    "[00:04.00] and a third",
+    "[00:06.00] and a fourth"
+  ].join("\n"))
+
+
+  assert.equal(timeline.splittable, false)
+  assert.equal(timeline.applyStructuralSplit(), false)
+  assert.deepEqual(timeline.lines.map((line) => line.singer), [ null, null, null, null ])
+})
+
+test("a marked duet is reported splittable without being restructured", () => {
+  const timeline = LyricsTimeline.parse(DUET_LRC)
+
+  assert.equal(timeline.splittable, true)
+  assert.equal(timeline.applyStructuralSplit(), true)
+  assert.deepEqual(timeline.lines.map((line) => line.singer), [ 1, 2, 1, null ], "the markers still decide")
+})
+
+test("section labels are not two singers", () => {
+  const timeline = LyricsTimeline.parse([
+    "[00:00.00] [Verse 1] the opening line",
+    "[00:02.00] [Verse 1] and the next",
+    "[00:04.00] [Chorus] the chorus goes here",
+    "[00:06.00] [Chorus] and here as well",
+    "[00:08.00] [Verse 2] the second verse",
+    "[00:10.00] [Chorus] the chorus goes here"
+  ].join("\n"))
+
+  assert.deepEqual(timeline.lines.map((line) => line.singer), new Array(6).fill(null))
+  assert.equal(timeline.lines[0].text, "[Verse 1] the opening line", "a label is left where it was")
+})
+
+test("a bracketed part marker without a colon still counts", () => {
+  const lines = LyricsTimeline.parse([
+    "[00:00.00] [V1] my line",
+    "[00:02.00] [V2] your line",
+    "[00:04.00] [Both] and ours"
+  ].join("\n")).lines
+
+  assert.deepEqual(lines.map((line) => line.singer), [ 1, 2, null ])
+  assert.deepEqual(lines.map((line) => line.text), [ "my line", "your line", "and ours" ])
+})
+
+// A slow song leaves seconds between two lines of the same breath, and line
+// ends are mostly estimates. Without folding the short groups together, every
+// line of a ballad becomes its own section and the two singers end up trading
+// the microphone line by line.
+test("pauses inside a verse do not become section boundaries", () => {
+  const ballad = []
+  for (let index = 0; index < 16; index++) {
+    const seconds = index * 6 // six seconds apart, all of it one long verse
+    ballad.push(`[00:${String(seconds).padStart(2, "0")}.00] slow line number ${index}`)
+  }
+
+  const timeline = LyricsTimeline.parse(ballad.join("\n"))
+  timeline.applyStructuralSplit()
+
+  // Whatever it decides, it must not hand every other line to the other
+  // singer: a real section is at least a few lines long.
+  const runs = timeline.lines.reduce((lengths, line, index) => {
+    if (index > 0 && line.singer === timeline.lines[index - 1].singer) lengths[lengths.length - 1] += 1
+    else lengths.push(1)
+    return lengths
+  }, [])
+
+  assert.ok(Math.min(...runs) >= 3, `each singer keeps the line for a while, got runs ${runs}`)
 })

@@ -28,12 +28,6 @@
       </div>
     </div>
 
-    <%# Shown only when two singers have one input between them — which is what
-        a receiver that mixes its two mics into a single jack leaves us with.
-        Whether that means one score or two is a property of the song's lyrics,
-        so the text is filled in once they load. %>
-    <p class="karaoke-setup__shared" data-karaoke-setup-target="sharedNotice" hidden></p>
-
     <div class="karaoke-singers">
       <% [ 1, 2 ].each do |number| %>
         <div class="karaoke-singer" data-karaoke-setup-target="singerCard" data-singer="<%= number %>" <%= "hidden" if number == 2 %>>

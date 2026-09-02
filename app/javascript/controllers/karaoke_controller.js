@@ -34,6 +34,9 @@ export default class extends Controller {
   // Long enough to read a score and reach for Skip, short enough that a room
   // that has walked away doesn't sit in silence.
   static NEXT_UP_SECONDS = 15
+  // How long a remembered screen is still where you are. An evening, near
+  // enough; past that, opening the page is a new night and belongs on search.
+  static SESSION_TTL_MS = 6 * 60 * 60 * 1000
 
   connect() {
     this.searchToken = 0
@@ -59,6 +62,7 @@ export default class extends Controller {
     window.addEventListener("pagehide", this.boundPageHide)
 
     this.loadHistory()
+    this.restoreSession()
   }
 
   disconnect() {
@@ -147,6 +151,7 @@ export default class extends Controller {
     }
 
     this.renderInto(this.resultsTarget, payload.songs)
+    this.rememberSession()
   }
 
   async loadHistory() {
@@ -248,9 +253,51 @@ export default class extends Controller {
 
     this.showScreen("setup")
     this.setup?.reset?.()
+    this.rememberSession()
 
     this.loadSongData(song.isrc)
     this.prepare(song.isrc)
+  }
+
+  // --- Surviving a reload ---------------------------------------------------
+
+  // A refresh in the middle of an evening used to land the room back on an
+  // empty search box, with a song that had been separating for two minutes
+  // forgotten. The song and the search that found it are remembered instead.
+  //
+  // The stage is deliberately not: audio and full screen both need the click
+  // that a reload threw away, so a reloaded performance comes back as the
+  // setup screen with Start ready to press, rather than a stage with no sound.
+  rememberSession() {
+    const track = this.currentTrack
+
+    settings.set("session", {
+      at: Date.now(),
+      query: this.queryTarget.value.trim() || null,
+      // Only what a result row needs to draw and to be re-selected; everything
+      // else about the song is re-fetched on the way back in.
+      track: track ? { isrc: track.isrc, title: track.title, artist: track.artist, image_url: track.image_url } : null
+    })
+  }
+
+  restoreSession() {
+    const saved = settings.get("session")
+    if (!saved) return
+
+    if (Date.now() - (saved.at || 0) > this.constructor.SESSION_TTL_MS) {
+      settings.set("session", null)
+      return
+    }
+
+    if (saved.query) {
+      this.queryTarget.value = saved.query
+      this.runSearch(saved.query)
+    }
+
+    // Re-selecting re-runs preparation, which is the point: a song that was
+    // still being separated when the page reloaded keeps its place in the
+    // queue and picks its polling back up.
+    if (saved.track?.isrc) this.selectSong(saved.track)
   }
 
   back() {
@@ -267,6 +314,7 @@ export default class extends Controller {
 
     this.showScreen("search")
     this.queryTarget.focus()
+    this.rememberSession()
     this.loadHistory()
   }
 
@@ -720,31 +768,33 @@ export default class extends Controller {
   // receiver that mixes its two mics has already summed them, and pulling two
   // voices back out of one signal is not something a browser can do. The
   // lyrics can tell them apart though: a duet marks who takes which line, so
-  // each singer is scored on their own lines off the shared input.
+  // each singer is scored on their own lines off the shared input. Failing
+  // that, the song's own structure will do: verses alternate and the chorus is
+  // everyone's, which is how a room splits a song anyway.
   //
-  // With no markers there is nothing to separate them by, so they get one score
-  // between them rather than two that would both track whoever sang loudest.
+  // A song with neither still gets a card each, never one between them.
+  // Everybody sings the whole song and is scored on the whole song — the two
+  // of them are competing, and on one shared microphone that is as close to
+  // separating them as the audio allows.
   duetParts(singers) {
     if (singers.length < 2) return singers
+    if (!this.duetSplittable()) return singers
 
     const micOf = (singer, index) => singer.micIndex ?? index
     const sharing = singers.every((singer, index) => micOf(singer, index) === micOf(singers[0], 0))
-    if (!sharing) return singers // a microphone each: scored independently, as before
+    // A microphone each already tells them apart. Splitting the lyrics on top
+    // of that would only stop each of them being scored on half the song.
+    if (!sharing) return singers
 
-    return this.duetMarked() ? singers.map((singer, index) => ({ ...singer, part: index + 1 })) : [ this.pairedSinger(singers) ]
+    // Writes the structural guess onto the lines, if that is what the split
+    // rests on. Done here, on the way to the stage, so a song sung solo is
+    // never coloured as a duet it was only ever a candidate for.
+    this.timeline.applyStructuralSplit()
+    return singers.map((singer, index) => ({ ...singer, part: index + 1 }))
   }
 
-  // A duet is only separable when the lyrics name both parts. One marked part
-  // is a lead vocal with a guest, not two singers taking turns.
-  duetMarked() {
-    const lines = this.timeline?.lines || []
-    return [ 1, 2 ].every((part) => lines.some((line) => line.singer === part))
-  }
-
-  // One card for a pair on one mic. Named for both of them, so the scoreboard
-  // doesn't quietly credit the performance to whoever was listed first.
-  pairedSinger(singers) {
-    return { ...singers[0], name: singers.map((singer) => singer.name).join(" & "), micIndex: 0, part: null }
+  duetSplittable() {
+    return Boolean(this.timeline?.splittable)
   }
 
   // --- Lyrics --------------------------------------------------------------
@@ -763,11 +813,6 @@ export default class extends Controller {
 
     this.timeline = LyricsTimeline.parse(lyrics?.syncedLyrics || "", words)
     this.melody = Melody.parse(notes, this.timeline)
-
-    // The setup screen can only explain what sharing a microphone will mean for
-    // this song once the lyrics are in — and they arrive here well before
-    // anyone presses Start, since this runs as soon as the song is picked.
-    this.setup?.setDuetMarkers?.(this.duetMarked())
 
     // Reloading mid-performance would rebuild the scorers and wipe the score;
     // whatever is already on stage stays until the next song. The exception:

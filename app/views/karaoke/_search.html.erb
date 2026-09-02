@@ -1,12 +1,13 @@
 <section class="karaoke-screen karaoke-screen--search">
   <h1>Karaoke</h1>
-  <p>Search for a song — only tracks with time-synced lyrics show up here.</p>
+  <p>Search for a song — only tracks with time-synced lyrics show up here.
+     Paste a YouTube link to sing something the search can't find.</p>
 
   <%# Results render live from the input events; submitting has nowhere to go
       (there is no karaoke turbo frame), so Enter is swallowed instead of
       navigating to "content missing". %>
   <%= form_with url: root_path, method: :get, data: { action: "submit->karaoke#suppressSubmit" }, builder: CustomFormBuilder do |form| %>
-    <%= form.text_field :query, value: params[:query], data: { karaoke_target: "query", action: "input->karaoke#search" }, label: "Search for a song" %>
+    <%= form.text_field :query, value: params[:query], data: { karaoke_target: "query", action: "input->karaoke#search" }, label: "Search for a song, or paste a YouTube link" %>
   <% end %>
 
   <div class="karaoke-results" data-karaoke-target="results"></div>

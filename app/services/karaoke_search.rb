@@ -10,6 +10,13 @@ class KaraokeSearch
 
   class << self
     def search(query)
+      # A pasted YouTube link is a request for that video, not a search to
+      # filter: it is shown whether or not LRCLIB knows the song. Without
+      # synced lyrics the stage has no words to sweep, but the pitch lane and
+      # the scoring still work — those come from the vocal stem, not the
+      # lyrics — so the song is singable either way.
+      return SongSearch.search(query)[:tracks] if YoutubeTrack.url?(query)
+
       # skip_nil + presence: an empty result isn't cached. Cheap to recompute,
       # and caching it would let a transient LRCLIB outage look like "no
       # karaoke-ready songs" for the full TTL instead of just that one search.

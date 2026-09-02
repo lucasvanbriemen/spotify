@@ -30,6 +30,7 @@ class SongCache
 
       with_lock(isrc) do
         next true if cached?(isrc) # downloaded while we waited for the lock
+        next cache_youtube(isrc) if YoutubeTrack.isrc?(isrc)
 
         details = Deezer::Client.track_details(isrc)
         download(isrc, details)
@@ -44,6 +45,19 @@ class SongCache
     end
 
     private
+
+    # A pasted YouTube link names the upload outright, so there is no search
+    # to run and no duration window to satisfy — the singer already chose
+    # which one they meant. The Song row is written from the video's own
+    # metadata; Deezer has never heard of this ISRC.
+    def cache_youtube(isrc)
+      details = YoutubeTrack.track_details(isrc)
+      return false unless details
+      return false unless YoutubeTrack.download(isrc, path(isrc))
+
+      create_song(isrc, details)
+      true
+    end
 
     def with_lock(isrc)
       FileUtils.mkdir_p(AUDIO_DIR)

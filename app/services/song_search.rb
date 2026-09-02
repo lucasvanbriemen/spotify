@@ -8,6 +8,9 @@
 # the song entirely) fall back to cached, concurrent Deezer lookups.
 # Deezer's own ranking remains the fallback when iTunes finds nothing, and
 # playlist search stays on Deezer.
+#
+# A pasted YouTube link short-circuits all of it: it is not a query to rank,
+# it is the one track the user already picked (see YoutubeTrack).
 class SongSearch
   RESULT_CACHE_TTL = 10.minutes
   RESOLVE_CACHE_TTL = 30.days
@@ -19,6 +22,13 @@ class SongSearch
 
   class << self
     def search(query)
+      # Before the cache: YoutubeTrack does its own (month-long) caching of the
+      # video metadata, and a link that failed to resolve should be retried on
+      # the next paste rather than answering "no results" for ten minutes.
+      if (video_id = YoutubeTrack.video_id_in(query))
+        return { tracks: [ YoutubeTrack.track(video_id) ].compact, playlists: [] }
+      end
+
       Rails.cache.fetch("song_search/v1/#{query.downcase}", expires_in: RESULT_CACHE_TTL) do
         perform(query)
       end

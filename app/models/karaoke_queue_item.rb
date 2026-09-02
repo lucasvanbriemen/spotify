@@ -10,7 +10,7 @@ class KaraokeQueueItem < ApplicationRecord
 
   # Same format check as the karaoke API's ValidatesIsrc: it is also what keeps
   # the value safe to join onto a cached-file path downstream.
-  SONG_ISRC_FORMAT = /\A[a-zA-Z0-9-]+\z/
+  SONG_ISRC_FORMAT = /\A[a-zA-Z0-9_-]+\z/
 
   # A "playing" row is only trusted for this long: closing the browser mid-song
   # leaves one behind, and nothing else would ever clear it.
