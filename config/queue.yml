@@ -17,11 +17,16 @@ default: &default
       threads: 3
       processes: <%= ENV.fetch("JOB_CONCURRENCY", 1) %>
       polling_interval: 0.1
-    # One process, one thread: at most one separation at a time system-wide,
-    # which the topology now guarantees on top of VocalSeparation's mutex.
+    # One thread per process, and by default one process: at most one
+    # separation at a time system-wide, which the topology guarantees on top of
+    # VocalSeparation's mutex. That mutex is process-local, so KARAOKE_CONCURRENCY
+    # is the only thing holding that guarantee up -- raise it and Demucs runs
+    # genuinely overlap. Each run wants ~3 of prod's 6 cores and peaks around
+    # 1.5GB RSS, so 2 saturates the box and the systemd unit's MemoryMax has to
+    # be raised to match or the cgroup gets OOM-killed mid-separation.
     - queues: karaoke
       threads: 1
-      processes: 1
+      processes: <%= ENV.fetch("KARAOKE_CONCURRENCY", 1) %>
       polling_interval: 1
 
 development:
