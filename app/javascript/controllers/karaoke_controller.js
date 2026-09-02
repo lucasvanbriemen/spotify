@@ -793,12 +793,12 @@ export default class extends Controller {
     // Writes the structural guess onto the lines, if that is what the split
     // rests on. Done here, on the way to the stage, so a song sung solo is
     // never coloured as a duet it was only ever a candidate for.
-    this.timeline.applyStructuralSplit()
+    this.timeline.applySplit(this.currentTrack)
     return singers.map((singer, index) => ({ ...singer, part: index + 1 }))
   }
 
   duetSplittable() {
-    return Boolean(this.timeline?.splittable)
+    return Boolean(this.timeline?.splittableFor?.(this.currentTrack))
   }
 
   // --- Lyrics --------------------------------------------------------------

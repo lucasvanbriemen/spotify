@@ -70,6 +70,26 @@ const MIN_LINES_PER_SECTION = 3
 // one verse and a chorus, and guessing who takes what would be a coin flip.
 const MIN_SECTIONS = 4
 const MIN_LINES_PER_STRUCTURAL_PART = 2
+
+// A few songs are call-and-response duets — the two singers trade a line each,
+// all the way through — and their lyrics say nothing about it. Structure alone
+// cannot find that: it groups lines by the musical breaks between them, so it
+// hands out whole verses, which is right for most duets and wrong for these.
+// Alternating line by line on every unmarked song would be wrong far more
+// often than right, so the ones that work that way are named here.
+//
+// Matched on artist and title rather than ISRC: the same recording turns up
+// under a different ISRC on every remaster and compilation.
+const LINE_BY_LINE_DUETS = [
+  { title: /don'?t go breaking my heart/i, artist: /elton john|kiki dee/i }
+]
+
+function isLineByLineDuet(track) {
+  if (!track) return false
+
+  return LINE_BY_LINE_DUETS.some(({ title, artist }) =>
+    title.test(track.title || "") && artist.test(track.artist || ""))
+}
 // How long a line of a given length plausibly takes to sing. Used only when
 // nothing better is available: without it a line would be assumed to run right
 // up to the next one, so the highlight would crawl through an instrumental
@@ -438,9 +458,13 @@ export class LyricsTimeline {
     return new LyricsTimeline(lines)
   }
 
-  // Whether two singers on one microphone can be scored separately on this
-  // song — either because the lyrics say who sings what, or because the song
-  // has a structure clear enough to alternate across (see structuralParts).
+  // Whether two singers can be scored separately on this song — because the
+  // lyrics say who sings what, because it is a known call-and-response duet,
+  // or because its structure is clear enough to alternate across.
+  splittableFor(track = null) {
+    return isLineByLineDuet(track) || this.splittable
+  }
+
   get splittable() {
     return this.hasBothParts || this.#structuralPlan() !== null
   }
@@ -449,12 +473,20 @@ export class LyricsTimeline {
     return [ 1, 2 ].every((part) => this.lines.some((line) => line.singer === part))
   }
 
-  // Writes the structural guess onto the lines, so the stage colours them and
-  // the engine scores them per singer. A no-op on a song the lyrics already
-  // split. Returns whether the song ended up split at all.
-  applyStructuralSplit() {
+  // Writes a split onto the lines, so the stage colours them and the engine
+  // scores them per singer. A no-op on a song the lyrics already split.
+  // Returns whether the song ended up split at all.
+  applySplit(track = null) {
+    if (this.hasBothParts) return true
+
+    // A named call-and-response duet trades a line each the whole way through.
+    if (isLineByLineDuet(track)) {
+      this.lines.forEach((line, index) => { line.singer = (index % 2) + 1 })
+      return true
+    }
+
     const plan = this.#structuralPlan()
-    if (!plan) return this.hasBothParts
+    if (!plan) return false
 
     plan.forEach((part, index) => { this.lines[index].singer = part })
     return true

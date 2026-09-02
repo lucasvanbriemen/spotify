@@ -376,7 +376,7 @@ test("a song with no markers at all can still be split by its structure", () => 
   assert.deepEqual(timeline.lines.map((line) => line.singer), new Array(18).fill(null))
   assert.equal(timeline.splittable, true)
 
-  assert.equal(timeline.applyStructuralSplit(), true)
+  assert.equal(timeline.applySplit(), true)
   assert.deepEqual(timeline.lines.map((line) => line.singer), [
     1, 1, 1, // verse one
     null, null, null, // the chorus repeats, so it is everyone's
@@ -397,7 +397,7 @@ test("a song too short or too shapeless to divide is left whole", () => {
 
 
   assert.equal(timeline.splittable, false)
-  assert.equal(timeline.applyStructuralSplit(), false)
+  assert.equal(timeline.applySplit(), false)
   assert.deepEqual(timeline.lines.map((line) => line.singer), [ null, null, null, null ])
 })
 
@@ -405,7 +405,7 @@ test("a marked duet is reported splittable without being restructured", () => {
   const timeline = LyricsTimeline.parse(DUET_LRC)
 
   assert.equal(timeline.splittable, true)
-  assert.equal(timeline.applyStructuralSplit(), true)
+  assert.equal(timeline.applySplit(), true)
   assert.deepEqual(timeline.lines.map((line) => line.singer), [ 1, 2, 1, null ], "the markers still decide")
 })
 
@@ -446,7 +446,7 @@ test("pauses inside a verse do not become section boundaries", () => {
   }
 
   const timeline = LyricsTimeline.parse(ballad.join("\n"))
-  timeline.applyStructuralSplit()
+  timeline.applySplit()
 
   // Whatever it decides, it must not hand every other line to the other
   // singer: a real section is at least a few lines long.
@@ -457,4 +457,33 @@ test("pauses inside a verse do not become section boundaries", () => {
   }, [])
 
   assert.ok(Math.min(...runs) >= 3, `each singer keeps the line for a while, got runs ${runs}`)
+})
+
+// Some duets trade a line each the whole way through and say nothing about it
+// in their lyrics. Structure groups by the breaks between lines, so it hands
+// out whole verses — right for most duets, wrong for these.
+test("a named call-and-response duet alternates every line", () => {
+  const timeline = LyricsTimeline.parse(STRUCTURED_LRC)
+  const track = { title: "Don't Go Breaking My Heart (Remastered)", artist: "Elton John" }
+
+  assert.equal(timeline.splittableFor(track), true)
+  assert.equal(timeline.applySplit(track), true)
+
+  const parts = timeline.lines.map((line) => line.singer)
+  assert.deepEqual(parts, parts.map((_part, index) => (index % 2) + 1))
+})
+
+test("the same lyrics under any other name still split by structure", () => {
+  const timeline = LyricsTimeline.parse(STRUCTURED_LRC)
+  timeline.applySplit({ title: "Some Other Song", artist: "Somebody Else" })
+
+  // Structural blocks, not strict alternation.
+  assert.deepEqual(timeline.lines.map((line) => line.singer).slice(0, 6), [ 1, 1, 1, null, null, null ])
+})
+
+test("a marked duet ignores the call-and-response list", () => {
+  const timeline = LyricsTimeline.parse(DUET_LRC)
+  timeline.applySplit({ title: "Don't Go Breaking My Heart", artist: "Elton John" })
+
+  assert.deepEqual(timeline.lines.map((line) => line.singer), [ 1, 2, 1, null ], "the markers still decide")
 })
