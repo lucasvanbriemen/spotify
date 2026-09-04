@@ -15,6 +15,14 @@ namespace :karaoke do
       puts "device:  #{GpuHost.device}"
       puts
 
+      GpuHost.unquotable_paths.each do |name, path|
+        puts "WARNING: #{name} contains a space or a quote: #{path.inspect}"
+        puts "  The remote command string cannot survive that. Move the checkout"
+        puts "  somewhere without spaces (C:/karaoke/music), or set #{name} to a"
+        puts "  path without any -- a Windows 8.3 short name works too."
+        puts
+      end
+
       report = GpuHost.probe
       abort "no answer from #{GpuHost.target}. Is it awake, and is the key authorized?" unless report
 

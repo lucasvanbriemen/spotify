@@ -121,6 +121,15 @@ module GpuHost
       [ root, *parts ].compact.join("/").presence
     end
 
+    # A space in either of these breaks the remote command string, and the
+    # failure is silent and total: cmd.exe reads the first word as the program
+    # and the rest as arguments to it. Reported by karaoke:gpu:probe rather
+    # than raised, since it is a setup mistake, not a runtime condition.
+    def unquotable_paths
+      { "KARAOKE_GPU_PYTHON" => python, "KARAOKE_GPU_AGENT" => agent }
+        .select { |_, path| path.to_s.match?(/[\s"]/) }
+    end
+
     # Whether work should be sent there at all. Cached both ways, and retried
     # before giving up, because the answer decides between ~40s and ~205s and
     # is wrong in both directions if asked only once.
@@ -267,6 +276,13 @@ module GpuHost
       key = ENV["KARAOKE_GPU_SSH_KEY"].presence
       options.push("-i", key, "-o", "IdentitiesOnly=yes") if key
 
+      # python and agent are passed as separate arguments, which ssh joins with
+      # a space into one remote command string -- parsed on that end by cmd.exe.
+      # Left unquoted deliberately: quoting works in cmd.exe and sh but makes
+      # PowerShell (if it has been made the DefaultShell) treat the program
+      # path as a string expression rather than something to run. Unquoted
+      # works in all three, at the price of not tolerating a space in either
+      # path -- which karaoke:gpu:probe checks for and names.
       [ "ssh", *options, target, python, agent ]
     end
 

@@ -67,7 +67,11 @@ exactly as before. Set `KARAOKE_GPU_SSH` to turn it on:
 | `KARAOKE_LOCAL_DEVICE` | torch device for a *local* run — `mps` on an Apple laptop is ~8x its CPU. |
 
 The box needs the same things this host does: a checkout, the `vendor/karaoke/`
-venv, and `bin/yt-dlp` + `bin/ffmpeg`. Verify all of it with:
+venv, and `bin/yt-dlp` + `bin/ffmpeg`. Put the checkout somewhere **without
+spaces in the path** (`C:/karaoke/music`, not `C:/Users/Some Name/music`): `ssh`
+joins the interpreter and the agent into one remote command string, and nothing
+can quote that in a way cmd.exe *and* PowerShell both accept. `probe` says so if
+you get it wrong. Verify all of it with:
 
 ```sh
 bin/rails karaoke:gpu:probe   # what the box says about itself: torch, CUDA, tools
