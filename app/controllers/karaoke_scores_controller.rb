@@ -9,9 +9,6 @@ class KaraokeScoresController < ApiController
   BEST_LIMIT = 10
   RECENT_LIMIT = 10
   SECTION_LIMIT = 10
-  # The ready list is browsing, not history: roomier, but still a cap — the
-  # library only grows, the home page shouldn't.
-  READY_LIMIT = 24
 
   # POST /api/karaoke/:isrc/scores — one call per singer, from the results
   # screen. Answers with the personal-best comparison so the screen can say
@@ -50,22 +47,23 @@ class KaraokeScoresController < ApiController
   end
 
   # GET /api/karaoke-history — what to show on the search screen before anyone
-  # has typed anything: everything already separated (starts instantly), plus
-  # what was sung recently and most.
+  # has typed anything: the whole downloaded library (every song already
+  # separated, so it starts instantly), plus what was sung recently.
+  #
+  # The ready list is uncapped: it is the library, and a library you cannot
+  # see all of is one you end up searching for things you already have.
   def history
     recent = grouped_songs("MAX(created_at) DESC")
-    most_sung = grouped_songs("sing_count DESC")
-    ready_isrcs = VocalSeparation.prepared_isrcs.first(READY_LIMIT)
+    ready_isrcs = VocalSeparation.prepared_isrcs
 
-    isrcs = (recent.map(&:song_isrc) + most_sung.map(&:song_isrc) + ready_isrcs).uniq
+    isrcs = (recent.map(&:song_isrc) + ready_isrcs).uniq
     songs = Song.where(isrc: isrcs).index_by(&:isrc)
 
     render json: {
       # An artifact can outlive its Song row; a "ready" entry nobody can
       # recognise (or select — search won't find it) is left out.
       ready: ready_isrcs.select { |isrc| songs[isrc] }.map { |isrc| song_entry(isrc, songs, ready: true) },
-      recent: recent.map { |row| history_entry(row, songs) },
-      most_sung: most_sung.map { |row| history_entry(row, songs) }
+      recent: recent.map { |row| history_entry(row, songs) }
     }
   end
 

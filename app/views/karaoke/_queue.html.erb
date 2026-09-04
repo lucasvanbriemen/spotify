@@ -5,8 +5,14 @@
          data-karaoke-queue-link-value="<%= @remote_url %>">
   <header class="karaoke-queue__header">
     <h2>Up next <span class="karaoke-queue__count" data-karaoke-queue-target="count"></span></h2>
-    <button type="button" class="karaoke-queue__clear" hidden
-            data-karaoke-queue-target="clear" data-action="karaoke-queue#clear">Clear</button>
+    <div class="karaoke-queue__tools">
+      <%# Both hidden until there is something to act on: a panel that says
+          "nothing queued yet" underneath a Clear button reads as broken. %>
+      <button type="button" class="karaoke-queue__tool" hidden
+              data-karaoke-queue-target="shuffle" data-action="karaoke-queue#shuffle">Shuffle</button>
+      <button type="button" class="karaoke-queue__tool" hidden
+              data-karaoke-queue-target="clear" data-action="karaoke-queue#clear">Clear</button>
+    </div>
   </header>
 
   <p class="karaoke-queue__empty" data-karaoke-queue-target="empty">

@@ -14,7 +14,13 @@ class KaraokeScreenshotsTest < ApplicationSystemTestCase
     end
   end
 
-  teardown { KaraokeQueueItem.delete_all }
+  teardown do
+    KaraokeQueueItem.delete_all
+    # The phone screenshot below shrinks the window; the next test in the
+    # process inherits it, and at 390px the queue rows squeeze their titles
+    # down to nothing — which reads as "the queue didn't render".
+    page.driver.browser.manage.window.resize_to(1400, 1400)
+  end
 
   test "screenshot the karaoke screen" do
     visit root_path

@@ -43,9 +43,14 @@
   &:empty { display: none; }
 }
 
+.karaoke-queue__tools {
+  display: flex;
+  gap: 0.4rem;
+}
+
 // The row controls themselves are .karaoke-rowbutton (see _controls.scss);
-// this is only the panel's own Clear, which is the same shape.
-.karaoke-queue__clear {
+// these are only the panel's own Shuffle and Clear, which are the same shape.
+.karaoke-queue__tool {
   font-size: 0.8rem;
   padding: 0.3rem 0.6rem;
   border: 1px solid var(--outline-variant, var(--surface-at-3));

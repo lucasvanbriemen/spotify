@@ -66,6 +66,14 @@ class KaraokeQueueController < ApiController
     render json: queue_json
   end
 
+  # Deals the waiting list out again in a random order — the "nobody pick, just
+  # play something" button. Open to phones for the same reason #move is: the
+  # running order belongs to the room.
+  def shuffle
+    KaraokeQueueItem.shuffle!
+    render json: queue_json
+  end
+
   # Clears what is waiting, not what has been sung.
   def destroy_all
     KaraokeQueueItem.waiting.destroy_all

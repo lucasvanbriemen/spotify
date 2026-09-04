@@ -15,6 +15,9 @@
   // order: if any child ever leaves the flow, the 1fr must stay with the lane
   // instead of being inherited by whatever follows it.
   grid-template-rows: auto minmax(0, 1fr) auto auto;
+  // minmax(0, 1fr), not the default auto: an auto column is sized by its
+  // content, so one long lyric line would stretch the whole stage sideways.
+  grid-template-columns: minmax(0, 1fr);
   height: 100%;
   overflow: hidden;
 }

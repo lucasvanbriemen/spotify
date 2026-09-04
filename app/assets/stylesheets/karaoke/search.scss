@@ -16,6 +16,20 @@
     font-size: 0.85rem;
     color: var(--on-surface-variant);
     margin: 0 0 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  // How many songs are downloaded. Same pill as the queue's count, so the two
+  // numbers on this screen read as the same kind of thing.
+  .karaoke-search__section-count {
+    font-weight: 700;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: var(--surface-at-3);
+
+    &:empty { display: none; }
   }
 
   .karaoke-results {

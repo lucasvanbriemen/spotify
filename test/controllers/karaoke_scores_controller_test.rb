@@ -79,6 +79,10 @@ class KaraokeScoresControllerTest < ActionDispatch::IntegrationTest
     assert_equal ISRC, entry["isrc"]
     assert_equal "Test Song", entry["title"]
     assert entry["ready"]
+
+    # The library replaced the "most sung" list: what you already have is more
+    # use on the way in than what has been sung the most often.
+    assert_nil payload["most_sung"]
   end
 end
 

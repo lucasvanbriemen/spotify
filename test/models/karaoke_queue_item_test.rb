@@ -77,6 +77,29 @@ class KaraokeQueueItemTest < ActiveSupport::TestCase
     assert_equal %w[b a], order
   end
 
+  test "shuffling deals the waiting list out again without losing or duplicating a row" do
+    %w[a b c d e].each { |title| enqueue(title) }
+
+    KaraokeQueueItem.shuffle!
+
+    assert_equal %w[a b c d e], order.sort
+    assert_equal [ 1, 2, 3, 4, 5 ], KaraokeQueueItem.waiting.map(&:position)
+  end
+
+  test "shuffling leaves the song on stage and the ones already sung alone" do
+    %w[a b c].each { |title| enqueue(title) }
+    playing = enqueue("a")
+    playing.start!
+    sung = enqueue("b")
+    sung.finish!
+
+    KaraokeQueueItem.shuffle!
+
+    assert_equal %w[c], order
+    assert_equal "playing", playing.reload.status
+    assert_equal "done", sung.reload.status
+  end
+
   test "a played row keeps its position out of the waiting list's numbering" do
     %w[a b c].each { |title| enqueue(title) }
     enqueue("a").finish!

@@ -104,19 +104,17 @@ class YoutubeTrack
       video_id && track(video_id)
     end
 
-    # Downloads the video's audio as an mp3 at out_path. Unlike SongCache's
-    # search-and-pick, the video is named outright, so there is no duration
-    # window to satisfy — the singer already chose which upload they meant.
-    def download(isrc, out_path)
+    # Stages the video's audio as an mp3 called `name` in the session. Unlike
+    # SongCache's search-and-pick, the video is named outright, so there is no
+    # duration window to satisfy — the singer already chose which upload they
+    # meant. The caller fetches it out of the session; where the session lives
+    # is not this method's business.
+    def download(session:, isrc:, name:)
       video_id = video_id_from_isrc(isrc)
       return false unless video_id
 
-      tmp_dir = Rails.root.join("tmp/yt-dlp")
-      FileUtils.mkdir_p(tmp_dir)
-      FileUtils.mkdir_p(out_path.dirname)
-
       options = [
-        ExecutablePath.resolve("yt-dlp").to_s,
+        session.tool("yt-dlp"),
         # Without a JavaScript runtime YouTube withholds every audio format —
         # see YtDlp.
         *YtDlp.media_options,
@@ -125,17 +123,19 @@ class YoutubeTrack
         "--concurrent-fragments", "4",
         "--extract-audio", "--audio-format", "mp3", "--audio-quality", "0",
         "--restrict-filenames", "--no-progress",
-        "--ffmpeg-location", Rails.root.join("bin").to_s,
-        "--output", out_path.to_s.delete_suffix(".mp3")
+        "--ffmpeg-location", session.bin_dir,
+        "--output", session.path(name.delete_suffix(".mp3"))
       ]
-      env = { "TMP" => tmp_dir.to_s, "TEMP" => tmp_dir.to_s, "TMPDIR" => tmp_dir.to_s }
 
       YtDlp.download_attempts.each do |client_options|
-        TimedProcess.run(*options, *client_options, url_for(video_id), env: env, timeout_seconds: DOWNLOAD_TIMEOUT_SECONDS)
-        break if out_path.file?
+        result = session.run(
+          *options, *client_options, url_for(video_id),
+          outputs: [ name ], timeout_seconds: DOWNLOAD_TIMEOUT_SECONDS
+        )
+        return true if result.produced?(name)
       end
 
-      out_path.file?
+      false
     end
 
     # Splits "Artist - Title (Official Video)" the way an uploader wrote it.
@@ -156,6 +156,11 @@ class YoutubeTrack
 
     private
 
+    # Left on this host, unlike the download above. Metadata extraction is not
+    # behind the JavaScript challenge and is not the thing YouTube 403s, so it
+    # has nothing to gain from the GPU box's address — and it sits on the
+    # interactive path, where a sleeping desktop would only add latency to
+    # somebody pasting a link.
     def metadata(video_id)
       # skip_nil: a yt-dlp hiccup must not cache "this video doesn't exist"
       # for a month — the next paste of the same link should try again.

@@ -31,11 +31,10 @@ export default class extends Controller {
     "chip", "chipName", "chipScore", "chipCombo",
     "lane", "canvas",
     "verdict",
-    "dots", "partBadge", "skip", "activeLine", "activeBase", "activeFill", "nextLine",
+    "dots", "partBadge", "skip", "activeLine", "activeBase", "activeFill", "nextLine", "nextText",
     "countIn", "countRing", "countDigit",
     "controlbar", "playButton", "currentTime", "duration", "seek",
-    "fader", "faderInput", "melodyToggle", "fullscreenButton",
-    "syncInput", "syncValue", "monitorInput"
+    "fullscreenButton", "monitorInput"
   ]
 
   // How long the control bar stays up after the mouse stops moving.
@@ -62,12 +61,21 @@ export default class extends Controller {
     this.singerColors = [ "#22d3ee", "#a78bfa" ]
     this.pointerDown = false
     this.wakeLock = null
-    this.delegate = null
+    // ??=, not =: the coordinator assigns this from its outlet callback, and
+    // Stimulus does not promise that callback runs after this controller has
+    // connected. When it ran first, connect() wiped the delegate — and every
+    // control here goes through it, so the screen came up with dead buttons
+    // about one load in ten.
+    this.delegate ??= null
 
     this.boundPointerMove = () => this.showControls()
     this.boundKeydown = (event) => this.onKeydown(event)
     this.boundFullscreenChange = () => this.syncFullscreenButton()
     this.boundVisibility = () => this.reacquireWakeLock()
+    // A line is fitted to the width it was swapped in at. Going full screen —
+    // or off it, or a phone turning sideways — changes that width, and without
+    // this the line stays at the old scale until the next one comes along.
+    this.boundResize = () => this.fitLine()
 
     this.boundPointerRelease = () => { this.pointerDown = false }
 
@@ -86,6 +94,7 @@ export default class extends Controller {
     document.addEventListener("keydown", this.boundKeydown)
     document.addEventListener("fullscreenchange", this.boundFullscreenChange)
     document.addEventListener("visibilitychange", this.boundVisibility)
+    window.addEventListener("resize", this.boundResize)
   }
 
   disconnect() {
@@ -95,6 +104,7 @@ export default class extends Controller {
     document.removeEventListener("keydown", this.boundKeydown)
     document.removeEventListener("fullscreenchange", this.boundFullscreenChange)
     document.removeEventListener("visibilitychange", this.boundVisibility)
+    window.removeEventListener("resize", this.boundResize)
     clearTimeout(this.controlsTimer)
     this.lane?.dispose()
     this.lane = null
@@ -106,7 +116,7 @@ export default class extends Controller {
   // Called from inside the Start click. requestFullscreen has to run in that
   // gesture's own turn of the event loop, so this must not be awaited on
   // anything beforehand.
-  enter({ track, singers, hasVocals, vocalPercent, guideMelody, latencyTrimMs = 0, monitorPercent = 0 }) {
+  enter({ track, singers, monitorPercent = 0 }) {
     this.requestFullscreen()
 
     this.songTarget.textContent = `${track.title} — ${track.artist}`
@@ -135,11 +145,6 @@ export default class extends Controller {
       if (chip) chip.hidden = true
     }
 
-    this.faderTarget.hidden = !hasVocals
-    this.faderInputTarget.value = vocalPercent
-    this.melodyToggleTarget.setAttribute("aria-pressed", String(Boolean(guideMelody)))
-    this.syncInputTarget.value = latencyTrimMs
-    this.syncValueTarget.textContent = this.formatTrim(latencyTrimMs)
     this.setMonitorPercent(monitorPercent)
 
     this.resetRenderState()
@@ -166,7 +171,7 @@ export default class extends Controller {
     this.renderedCombos = [ null, null ]
     this.activeBaseTarget.textContent = ""
     this.activeFillTarget.textContent = ""
-    this.nextLineTarget.textContent = ""
+    this.nextTextTarget.textContent = ""
     if (this.hasPartBadgeTarget) this.partBadgeTarget.hidden = true
     if (this.hasSkipTarget) { this.skipTarget.hidden = true; this.renderedSkip = false }
     this.activeLineTarget.classList.remove("karaoke-lyric--past")
@@ -241,7 +246,7 @@ export default class extends Controller {
 
     this.activeBaseTarget.textContent = line ? line.text : ""
     this.activeFillTarget.textContent = line ? line.text : ""
-    this.nextLineTarget.textContent = next ? next.text : ""
+    this.nextTextTarget.textContent = next ? next.text : ""
 
     // Who sings what, said three ways: the line is tinted, the line coming up
     // is tinted, and the singer is named over the top. One colour difference
@@ -263,16 +268,58 @@ export default class extends Controller {
     this.renderedLine = index
   }
 
-  // Long lines shrink rather than wrap: a wrapped line would put two rows of
-  // text under one horizontal wipe. Costs one layout read per line.
+  // Both lines are fitted, not just the one being sung: the line coming up is
+  // clipped by the same paint containment, and a next line with its end cut
+  // off is a cue you can't read.
   fitLine() {
-    const needed = this.activeBaseTarget.scrollWidth
-    const available = this.activeLineTarget.parentElement.clientWidth
-    if (!needed || !available) return
+    this.fitTo(this.activeLineTarget, this.activeBaseTarget)
+    this.fitTo(this.nextLineTarget, this.nextTextTarget)
+  }
 
-    const fit = Math.min(1, available / needed)
-    this.activeLineTarget.style.setProperty("--fit", Math.max(this.constructor.MIN_FIT, fit).toFixed(3))
-    this.activeLineTarget.style.whiteSpace = fit < this.constructor.MIN_FIT ? "normal" : "nowrap"
+  // Long lines shrink rather than wrap: a wrapped line would put two rows of
+  // text under one horizontal wipe. Costs one layout read per line, two on a
+  // line that actually had to shrink.
+  //
+  // `line` carries --fit, which is its type size (see _lyrics.scss); `text` is
+  // the span inside it that can be measured.
+  fitTo(line, text) {
+    // Measured on one row at full size, always. A line left wrapping — or left
+    // shrunk — by the last swap measures the size it was left at, which fits by
+    // definition: the fit that came out of that was 1, and the next long line
+    // was left at full size with its ends clipped off. That is the overflow
+    // you'd see on one line in ten, right after a line that had needed
+    // shrinking.
+    line.classList.remove("karaoke-lyric--wrapped")
+    line.style.setProperty("--fit", "1")
+
+    const available = this.lyricSpace()
+    const needed = text.scrollWidth
+    if (!needed || !available || needed <= available) return
+
+    const fit = Math.max(this.constructor.MIN_FIT, available / needed)
+    line.style.setProperty("--fit", fit.toFixed(3))
+
+    // Below the floor it wraps instead, and the lyric block's middle row grows
+    // to hold the second row of text rather than letting it spill over the lane.
+    if (fit === this.constructor.MIN_FIT) return line.classList.add("karaoke-lyric--wrapped")
+
+    // Type does not scale exactly linearly in width (hinting and kerning round
+    // per glyph), so a line can come back a few pixels over. One correction
+    // pass, on the handful of lines that were shrunk at all.
+    const settled = text.scrollWidth
+    if (settled > available) {
+      line.style.setProperty("--fit", Math.max(this.constructor.MIN_FIT, fit * (available / settled)).toFixed(3))
+    }
+  }
+
+  // The width a line has to fit into: the lyric block's content box, which is
+  // where its 3vw side padding is decided. Read off the element rather than
+  // hardcoded here, so the CSS stays the one place that says how much room a
+  // lyric gets.
+  lyricSpace() {
+    const block = this.activeLineTarget.parentElement
+    const styles = getComputedStyle(block)
+    return block.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight)
   }
 
   // Digit 0 is the "GO" beat the engine holds just past the line's start: the
@@ -424,23 +471,6 @@ export default class extends Controller {
     this.delegate?.stageSeek?.(this.seekTarget.value / 1000)
   }
 
-  changeVocalGuide() {
-    this.delegate?.stageVocalGuide?.(Number(this.faderInputTarget.value))
-  }
-
-  // The latency trim, adjustable without leaving the song — sync problems are
-  // noticed mid-line, not on the setup screen. The engine reads the setting
-  // every frame, so the change is heard immediately.
-  changeSync() {
-    const trim = Number(this.syncInputTarget.value)
-    this.syncValueTarget.textContent = this.formatTrim(trim)
-    this.delegate?.stageLatency?.(trim)
-  }
-
-  formatTrim(ms) {
-    return `${ms > 0 ? "+" : ""}${ms} ms`
-  }
-
   // How loud the singers hear themselves. Raised mid-song more often than not:
   // a level that sounded right in a quiet room is a different thing once the
   // backing track is under it.
@@ -454,10 +484,10 @@ export default class extends Controller {
     if (this.hasMonitorInputTarget) this.monitorInputTarget.value = percent
   }
 
-  toggleMelody() {
-    const on = this.melodyToggleTarget.getAttribute("aria-pressed") !== "true"
-    this.melodyToggleTarget.setAttribute("aria-pressed", String(on))
-    this.delegate?.stageGuideMelody?.(on)
+  // The control bar's Skip, as opposed to the lyric block's "Skip
+  // instrumental": this one is done with the whole song.
+  skipSong() {
+    this.delegate?.stageSkipSong?.()
   }
 
   exit() {

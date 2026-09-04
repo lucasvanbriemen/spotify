@@ -45,7 +45,7 @@ class KaraokeQueueTest < ApplicationSystemTestCase
   test "moving a song to the front reorders the queue for everyone" do
     visit root_path
 
-    within(".karaoke-queue__item", text: "Bohemian Rhapsody") { click_button "↑" }
+    within(".karaoke-queue__item", text: "Bohemian Rhapsody") { find("button[aria-label='Move up']").click }
 
     assert_selector ".karaoke-queue__item:first-child", text: "Bohemian Rhapsody"
     assert_equal "SYSQUEUE002", KaraokeQueueItem.waiting.first.song_isrc
@@ -67,15 +67,33 @@ class KaraokeQueueTest < ApplicationSystemTestCase
     assert_selector "input[aria-label='Join code']"
   end
 
-  test "a phone holding the code sees the queue and can drop its own song" do
+  test "shuffling from the screen reorders the queue for everyone" do
+    5.times do |index|
+      KaraokeQueueItem.create!(
+        song_isrc: "SYSSHUFFLE#{index}", title: "Filler #{index}", artist: "Various",
+        image_url: "/icon.png", added_by: "Sam", position: 10 + index
+      )
+    end
+
+    visit root_path
+    assert_selector ".karaoke-queue__item", count: 7
+
+    click_button "Shuffle"
+
+    # What was dealt is random, so what is pinned is what must hold either way:
+    # the same songs, still in one order, numbered 1..n.
+    assert_selector ".karaoke-queue__item", count: 7
+    assert_equal (1..7).to_a, KaraokeQueueItem.waiting.map(&:position)
+  end
+
+  test "a phone holding the code sees the queue and can drop any song" do
     visit karaoke_remote_path(code: KaraokeRemote.code)
 
     assert_selector ".karaoke-remote__queue-item", count: 2
     assert_text "Dancing Queen"
 
-    fill_in "Your name", with: "Sam"
-    # Only your own turn is yours to cancel, so the button appears with the
-    # name that put the song there.
+    # Whoever is holding a phone can fix the running order, their own song or
+    # not — the alternative is a song nobody in the room can take off.
     within(".karaoke-remote__queue-item", text: "Dancing Queen") { find("button[aria-label='Remove Dancing Queen']").click }
 
     assert_selector ".karaoke-remote__queue-item", count: 1

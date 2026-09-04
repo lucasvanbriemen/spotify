@@ -25,6 +25,15 @@ module TimedProcess
     status ? output : ""
   end
 
+  # The same bounded wait, for a caller that had to spawn the process itself.
+  # GpuHost does: it wires ssh's stdin to a pipe it writes the request into and
+  # ssh's stdout to the file the fetched artifact lands in, neither of which
+  # .run or .capture can express. Returns the exit status, or nil if the
+  # process had to be killed for outliving the timeout.
+  def self.wait_for(pid, timeout_seconds:)
+    wait(pid, timeout_seconds: timeout_seconds)
+  end
+
   def self.wait(pid, timeout_seconds:)
     deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout_seconds
 

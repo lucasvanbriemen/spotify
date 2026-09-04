@@ -30,7 +30,13 @@
       </section>
 
       <section class="karaoke-remote__section">
-        <h2>Up next <span class="karaoke-remote__count" data-karaoke-remote-target="count"></span></h2>
+        <div class="karaoke-remote__queue-header">
+          <h2>Up next <span class="karaoke-remote__count" data-karaoke-remote-target="count"></span></h2>
+          <%# The running order belongs to the room, so the phone can deal it
+              again as well as reorder it one row at a time. %>
+          <button type="button" class="karaoke-remote__tool" hidden
+                  data-karaoke-remote-target="shuffle" data-action="karaoke-remote#shuffle">Shuffle</button>
+        </div>
         <p class="karaoke-remote__empty" data-karaoke-remote-target="empty">Nothing queued yet — you're up.</p>
         <ol class="karaoke-remote__queue" data-karaoke-remote-target="queue"></ol>
       </section>

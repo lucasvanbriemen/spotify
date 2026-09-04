@@ -98,6 +98,20 @@ class KaraokeQueueControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "Second", "First" ], JSON.parse(response.body)["items"].map { |item| item["title"] }
   end
 
+  # The order comes back from the server rather than being dealt by whichever
+  # client pressed the button: every phone in the room has to agree on it.
+  test "shuffling answers with the reordered queue" do
+    titles = %w[First Second Third Fourth Fifth]
+    titles.each_with_index { |title, index| add_song("TESTQUEUE00#{index}", title: title) }
+
+    post "/api/karaoke/queue/shuffle"
+    assert_response :success
+
+    shuffled = JSON.parse(response.body)["items"].map { |item| item["title"] }
+    assert_equal titles.sort, shuffled.sort
+    assert_equal shuffled, KaraokeQueueItem.waiting.map(&:title)
+  end
+
   test "clearing takes out what is waiting and leaves what has been sung" do
     add_song(ISRC)
     add_song(OTHER_ISRC)

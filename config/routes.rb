@@ -20,6 +20,8 @@ Rails.application.routes.draw do
       post "queue", to: "karaoke_queue#create"
       delete "queue", to: "karaoke_queue#destroy_all"
       get "queue/search", to: "karaoke_queue#search", as: :karaoke_queue_search
+      # Before "queue/:id", or "shuffle" would be read as a row id.
+      post "queue/shuffle", to: "karaoke_queue#shuffle", as: :karaoke_queue_shuffle
       patch "queue/:id", to: "karaoke_queue#update", as: :karaoke_queue_item
       delete "queue/:id", to: "karaoke_queue#destroy"
       post "queue/:id/promote", to: "karaoke_queue#promote", as: :karaoke_queue_promote

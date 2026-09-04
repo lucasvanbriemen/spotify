@@ -15,20 +15,18 @@
   <%= render "karaoke/queue" %>
 
   <%# Filled from /api/karaoke-history, and hidden until there is anything to
-      show. Ready songs come first: they've already been separated, so they
-      start instantly instead of after a Demucs run. %>
+      show. Ready songs come first, and all of them: they are the downloaded
+      library — already separated, so they start instantly instead of after a
+      Demucs run — and it is the list you browse rather than search. %>
   <div class="karaoke-search__section" data-karaoke-target="readySection" hidden>
-    <p class="karaoke-search__section-title">Ready to sing</p>
+    <p class="karaoke-search__section-title">
+      Ready to sing <span class="karaoke-search__section-count" data-karaoke-target="readyCount"></span>
+    </p>
     <div class="karaoke-results" data-karaoke-target="readyList"></div>
   </div>
 
   <div class="karaoke-search__section" data-karaoke-target="recentSection" hidden>
     <p class="karaoke-search__section-title">Recently sung</p>
     <div class="karaoke-results" data-karaoke-target="recentList"></div>
-  </div>
-
-  <div class="karaoke-search__section" data-karaoke-target="popularSection" hidden>
-    <p class="karaoke-search__section-title">Most sung</p>
-    <div class="karaoke-results" data-karaoke-target="popularList"></div>
   </div>
 </section>

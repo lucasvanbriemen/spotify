@@ -6,24 +6,38 @@
   position: relative;
   z-index: $z-lyrics;
   display: grid;
+  // A line wider than this block must never be able to widen it — the block is
+  // what a line is measured against, and a column that grew with its content
+  // would make that measurement meaningless (and push the line off-screen).
+  min-width: 0;
   // Fixed rows: swapping a short line for a long one must never move anything.
-  grid-template-rows: 1.6rem calc(var(--lyric-size) * 1.3) calc(var(--lyric-next-size) * 1.4);
+  // The active row is a floor rather than a fixed height, which costs nothing
+  // on a normal line — one row of text is always shorter than the floor — and
+  // gives the rare line too long to shrink onto one row (see the stage
+  // controller's MIN_FIT) somewhere to put its second row, instead of spilling
+  // it up over the pitch lane.
+  grid-template-rows: 1.6rem minmax(calc(var(--lyric-size) * 1.3), auto) calc(var(--lyric-next-size) * 1.4);
   align-items: center;
   justify-items: center;
-  padding: 0 1.5rem 3.5rem;
+  // 3vw of side padding rather than a max-width on the line itself: this is the
+  // one place that decides how much room a lyric has, and the stage controller
+  // measures a line against this box (see fitTo).
+  padding: 0 3vw 3.5rem;
   text-align: center;
 }
 
 .karaoke-lyric {
   display: grid;
   width: fit-content;
-  max-width: 94vw;
+  max-width: 100%;
+  // Beats the grid item's automatic minimum size, which is the whole unwrapped
+  // line — without it max-width above cannot hold, and the box grows past the
+  // block however small the type gets.
+  min-width: 0;
   margin: 0;
   // One row, always. A wrapped line would put two visual rows under a single
   // horizontal wipe, and the fill would sweep both at once.
   white-space: nowrap;
-  // Measured once per line swap, not per frame.
-  transform: scale(var(--fit, 1));
   contain: layout paint;
 
   > * {
@@ -31,8 +45,29 @@
   }
 }
 
+// A long line is shrunk by *type size*, not by a transform on the box.
+// transform: scale() was the obvious way to do it and the wrong one: it scales
+// the box along with the text, so a line that overflowed its box by 13px still
+// overflowed it by 13px at any scale — and paint containment cut those 13px
+// off. Shrinking the font instead makes the text genuinely narrower, so the
+// fit-content box above ends up exactly as wide as the line and there is
+// nothing outside it to clip. --fit is written by the stage controller on a
+// line swap; both layers of a line share it, so the wipe stays aligned.
 .karaoke-lyric--active {
-  font-size: var(--lyric-size);
+  font-size: calc(var(--lyric-size) * var(--fit, 1));
+}
+
+.karaoke-lyric--next {
+  font-size: calc(var(--lyric-next-size) * var(--fit, 1));
+}
+
+// The fallback for a line too long to shrink onto one row and still be read
+// from a sofa (the stage controller's MIN_FIT): it wraps inside the same box.
+.karaoke-lyric--wrapped {
+  white-space: normal;
+}
+
+.karaoke-lyric--active {
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: -0.01em;
@@ -52,7 +87,6 @@
 // Deliberately dimmer than the active line's unsung half: what you are singing
 // now has to read as nearer than what comes next.
 .karaoke-lyric--next {
-  font-size: var(--lyric-next-size);
   font-weight: 700;
   line-height: 1.2;
   color: color-mix(in srgb, $fg 30%, transparent);
@@ -132,8 +166,8 @@
 }
 
 @keyframes karaoke-line-in {
-  from { opacity: 0; transform: scale(var(--fit, 1)) translateY(10px); }
-  to { opacity: 1; transform: scale(var(--fit, 1)) translateY(0); }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 // A note held longer than a beat: the word breathes so the singer knows to

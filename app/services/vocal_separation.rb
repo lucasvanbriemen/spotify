@@ -15,6 +15,14 @@
 # stage's vocal-guide fader plays back, quietly, over the instrumental. This
 # deliberately reverses the earlier guarantee that the stem never left a temp
 # directory (the script's docstring is updated to match).
+#
+# None of this necessarily happens on this machine. Every command runs through
+# a ComputeSession, which is a scratch directory either here or on a box with a
+# GPU — htdemucs is ~80% of a prepare and this server has no graphics card, so
+# the same song is ~205s here against ~38s there. The wav-to-mp3 encodes happen
+# wherever the separation did, so a 40MB stem never crosses the network; only
+# the ~4MB mp3 that is actually served comes back. Which host ran a given song
+# is in the log, tagged [compute].
 class VocalSeparation
   AUDIO_DIR = SongCache::AUDIO_DIR
   # Demucs on a CPU can take several minutes per song, and the first run
@@ -55,6 +63,24 @@ class VocalSeparation
   # v3 or newer, because v3 is exactly where the current extraction (the
   # rescue passes for loud harmonised sections) landed.
   PITCH_VERSION = 1
+  # Encoding an instrumental is seconds; the timeout is here to bound a
+  # wedged ffmpeg, not to trim a slow one.
+  ENCODE_TIMEOUT_SECONDS = 300
+
+  # Filenames inside a ComputeSession's scratch directory. Fixed rather than
+  # derived from the ISRC because nothing else is in there — and because a
+  # pseudo-ISRC for a pasted YouTube link then never reaches a command line.
+  ORIGINAL_NAME = "original.mp3".freeze
+  LRC_NAME = "lyrics.lrc".freeze
+  INSTRUMENTAL_WAV = "instrumental.wav".freeze
+  INSTRUMENTAL_MP3 = "instrumental.mp3".freeze
+  VOCALS_WAV = "vocals.wav".freeze
+  VOCALS_MP3 = "vocals.mp3".freeze
+  YOUTUBE_MP3 = "youtube.mp3".freeze
+  PITCH_NAME = "pitch.json".freeze
+  NOTES_NAME = "notes.json".freeze
+  WORDS_NAME = "words.json".freeze
+
   # Demucs is CPU-heavy enough that running several at once mostly just
   # makes all of them slower rather than finishing sooner (observed:
   # queuing several songs made an unrelated one appear to hang — it hadn't,
@@ -180,10 +206,6 @@ class VocalSeparation
       AUDIO_DIR.join("#{isrc}.lrc.tmp")
     end
 
-    def script_path
-      Rails.root.join("script/karaoke_separate.py")
-    end
-
     def with_lock(isrc)
       FileUtils.mkdir_p(AUDIO_DIR)
       File.open(AUDIO_DIR.join("#{isrc}.separate.lock"), File::RDWR | File::CREAT) do |lock|
@@ -205,56 +227,106 @@ class VocalSeparation
 
       previous = read_manifest(isrc) || {}
       lrc = write_lrc_file(isrc)
+      reextract = vocals_path(isrc).file? && stored_pitch_version(previous) != PITCH_VERSION
 
-      command = [ python_executable.to_s, script_path.to_s ]
-      if vocals_path(isrc).file? && stored_pitch_version(previous) != PITCH_VERSION
-        command.push("--reextract", vocals_path(isrc).to_s, "--pitch-out", pitch_path(isrc).to_s)
-        timeout = REEXTRACT_TIMEOUT_SECONDS
-      else
-        command.push("--reanalyze", pitch_path(isrc).to_s)
-        timeout = REANALYZE_TIMEOUT_SECONDS
+      ComputeSession.open("upgrade #{isrc}") do |session|
+        session.put(lrc, LRC_NAME) if lrc
+
+        command = [ session.python, session.script("karaoke_separate.py") ]
+        outputs = [ NOTES_NAME ]
+
+        if reextract
+          next false unless session.put(vocals_path(isrc), VOCALS_MP3)
+
+          command.push("--reextract", session.path(VOCALS_MP3), "--pitch-out", session.path(PITCH_NAME))
+          outputs.push(PITCH_NAME)
+          timeout = REEXTRACT_TIMEOUT_SECONDS
+        else
+          next false unless session.put(pitch_path(isrc), PITCH_NAME)
+
+          command.push("--reanalyze", session.path(PITCH_NAME))
+          timeout = REANALYZE_TIMEOUT_SECONDS
+        end
+
+        command.push("--notes-out", session.path(NOTES_NAME))
+        if lrc
+          command.push("--words-out", session.path(WORDS_NAME), "--lrc", session.path(LRC_NAME))
+          outputs.push(WORDS_NAME)
+        end
+
+        result = session.run(*command, outputs: outputs, timeout_seconds: timeout)
+        # Judged on the notes it produced in this session rather than on a
+        # notes.json being on disk, which an earlier version would have left
+        # there regardless.
+        next false unless result.produced?(NOTES_NAME)
+
+        session.fetch(PITCH_NAME, pitch_path(isrc)) if result.produced?(PITCH_NAME)
+        session.fetch(NOTES_NAME, notes_path(isrc))
+        session.fetch(WORDS_NAME, words_path(isrc)) if result.produced?(WORDS_NAME)
+
+        # The upgrade recomputes analysis, not provenance: whatever the original
+        # separation recorded about its instrumental still holds.
+        write_manifest(
+          isrc,
+          instrumental_source: previous["instrumental_source"] || "unknown",
+          alignment_offset_seconds: previous["alignment_offset_seconds"].to_f
+        )
+        true
       end
-      command.push("--notes-out", notes_path(isrc).to_s)
-      command.push("--words-out", words_path(isrc).to_s, "--lrc", lrc.to_s) if lrc
-
-      TimedProcess.run(*command, timeout_seconds: timeout)
-      return false unless notes_path(isrc).file?
-
-      # The upgrade recomputes analysis, not provenance: whatever the original
-      # separation recorded about its instrumental still holds.
-      write_manifest(
-        isrc,
-        instrumental_source: previous["instrumental_source"] || "unknown",
-        alignment_offset_seconds: previous["alignment_offset_seconds"].to_f
-      )
-      true
     ensure
       FileUtils.rm_f(lrc_path(isrc))
     end
 
     def separate(isrc)
       song = Song.find_by(isrc: isrc)
-      tmp_wav = AUDIO_DIR.join("#{isrc}.instrumental.wav.tmp")
-      tmp_vocals = AUDIO_DIR.join("#{isrc}.vocals.wav.tmp")
-      youtube_mp3 = AUDIO_DIR.join("#{isrc}.instrumental.youtube.mp3")
-
       # Fetched before the threads start so the analysis has it: LRCLIB
       # responses are cached for a week and the call is capped at 5s, which is
       # nothing against a Demucs run.
       lrc = write_lrc_file(isrc, song)
 
-      demucs_thread = Thread.new { run_demucs(isrc, tmp_wav, tmp_vocals, lrc) }
-      youtube_thread = song && Thread.new { find_youtube_instrumental(song, youtube_mp3) }
+      on_gpu = false
+      ComputeSession.open("separate #{isrc}") do |session|
+        on_gpu = session.remote?
+        separate_in(session, isrc, song, lrc)
+      end
+      return true if ready?(isrc)
 
-      demucs_thread.join
+      # The box answered its ping and then could not do the work: a driver that
+      # wants a reboot, a model file it never downloaded, VRAM a game is
+      # holding. One attempt here before the singer is told no — a slow song is
+      # a much better outcome than a missing one.
+      return false unless on_gpu
+
+      Rails.logger.warn("[gpu] separating #{isrc} failed on the GPU box; retrying on this host")
+      ComputeSession.open("separate #{isrc} (local retry)", prefer_gpu: false) do |session|
+        separate_in(session, isrc, song, lrc)
+      end
+      ready?(isrc)
+    ensure
+      FileUtils.rm_f(lrc_path(isrc))
+    end
+
+    # The pipeline itself, once somewhere to run it has been decided. Reads
+    # nothing from disk beyond the two inputs it stages, and writes nothing to
+    # storage/audio until a command has actually produced the artifact.
+    def separate_in(session, isrc, song, lrc)
+      return false unless session.put(SongCache.path(isrc), ORIGINAL_NAME)
+
+      session.put(lrc, LRC_NAME) if lrc
+
+      demucs_thread = Thread.new { run_demucs(session, lrc) }
+      youtube_thread = song && Thread.new { find_youtube_instrumental(session, song) }
+
+      separation = demucs_thread.value
       youtube_found = youtube_thread&.value || false
-      offset = youtube_found && tmp_wav.file? ? alignment_offset_of(tmp_wav, youtube_mp3) : nil
+      offset = youtube_found && separation.produced?(INSTRUMENTAL_WAV) ? alignment_offset_of(session) : nil
       youtube_found = !offset.nil? && offset.abs <= ALIGNMENT_TOLERANCE_SECONDS
 
       if youtube_found
-        FileUtils.mv(youtube_mp3, instrumental_path(isrc))
-      elsif tmp_wav.file?
-        encode_mp3(tmp_wav, instrumental_path(isrc))
+        session.fetch(YOUTUBE_MP3, instrumental_path(isrc))
+      elsif separation.produced?(INSTRUMENTAL_WAV)
+        encode(session, INSTRUMENTAL_WAV, INSTRUMENTAL_MP3) &&
+          session.fetch(INSTRUMENTAL_MP3, instrumental_path(isrc))
       end
 
       # The guide vocal is only usable when it and the instrumental are the two
@@ -264,9 +336,18 @@ class VocalSeparation
       # when demucs produced both sides.
       if youtube_found
         FileUtils.rm_f(vocals_path(isrc))
-      elsif tmp_vocals.file?
-        encode_mp3(tmp_vocals, vocals_path(isrc))
+      elsif separation.produced?(VOCALS_WAV)
+        encode(session, VOCALS_WAV, VOCALS_MP3) && session.fetch(VOCALS_MP3, vocals_path(isrc))
       end
+
+      session.fetch(PITCH_NAME, pitch_path(isrc)) if separation.produced?(PITCH_NAME)
+      session.fetch(NOTES_NAME, notes_path(isrc)) if separation.produced?(NOTES_NAME)
+      session.fetch(WORDS_NAME, words_path(isrc)) if separation.produced?(WORDS_NAME)
+
+      # Not written at all when the instrumental never arrived: the manifest is
+      # what readiness is judged on, so writing one now would serve a song that
+      # has nothing to play.
+      return false unless instrumental_path(isrc).file? && pitch_path(isrc).file? && notes_path(isrc).file?
 
       write_manifest(
         isrc,
@@ -275,26 +356,45 @@ class VocalSeparation
         # by this, so even the tolerated residue stops desyncing the lyrics.
         alignment_offset_seconds: youtube_found ? offset : 0.0
       )
-    ensure
-      FileUtils.rm_f(tmp_wav)
-      FileUtils.rm_f(tmp_vocals)
-      FileUtils.rm_f(youtube_mp3)
-      FileUtils.rm_f(lrc_path(isrc))
+      true
     end
 
-    def run_demucs(isrc, tmp_wav, tmp_vocals, lrc)
+    def run_demucs(session, lrc)
       command = [
-        python_executable.to_s,
-        script_path.to_s,
-        SongCache.path(isrc).to_s,
-        tmp_wav.to_s,
-        pitch_path(isrc).to_s,
-        "--vocals-out", tmp_vocals.to_s,
-        "--notes-out", notes_path(isrc).to_s
+        session.python,
+        session.script("karaoke_separate.py"),
+        session.path(ORIGINAL_NAME),
+        session.path(INSTRUMENTAL_WAV),
+        session.path(PITCH_NAME),
+        "--vocals-out", session.path(VOCALS_WAV),
+        "--notes-out", session.path(NOTES_NAME)
       ]
-      command.push("--words-out", words_path(isrc).to_s, "--lrc", lrc.to_s) if lrc
+      # Only a host with something better than its CPU names a device; on this
+      # server demucs's own default (one thread per physical core) is already
+      # the fastest thing available and raising it makes it slower.
+      command.push("--device", session.device) if session.device
+      command.push("--words-out", session.path(WORDS_NAME), "--lrc", session.path(LRC_NAME)) if lrc
 
-      DEMUCS_MUTEX.synchronize { TimedProcess.run(*command, timeout_seconds: SEPARATE_TIMEOUT_SECONDS) }
+      outputs = [ INSTRUMENTAL_WAV, VOCALS_WAV, PITCH_NAME, NOTES_NAME ]
+      outputs.push(WORDS_NAME) if lrc
+
+      # Still one at a time, and for the same reason it always was — except
+      # that the contended resource is now the GPU's memory rather than this
+      # box's cores. The lighter YouTube search still runs alongside it.
+      DEMUCS_MUTEX.synchronize do
+        session.run(*command, outputs: outputs, timeout_seconds: SEPARATE_TIMEOUT_SECONDS)
+      end
+    end
+
+    # Encoded wherever the separation happened, which is the point: demucs
+    # emits wavs, a 4:20 stereo one is ~45MB, and the mp3 that replaces it is
+    # ~4MB. Doing this before the fetch keeps the wavs off the network entirely.
+    def encode(session, wav_name, mp3_name)
+      session.run(
+        session.tool("ffmpeg"), "-y", "-i", session.path(wav_name),
+        "-b:a", "192k", session.path(mp3_name),
+        outputs: [ mp3_name ], timeout_seconds: ENCODE_TIMEOUT_SECONDS
+      ).produced?(mp3_name)
     end
 
     # The script takes the LRC as a file rather than fetching it: lyrics are
@@ -313,8 +413,14 @@ class VocalSeparation
       nil
     end
 
-    def find_youtube_instrumental(song, out_path)
-      YoutubeKaraokeFinder.download(artist: song.artist, title: song.title, duration: song.duration, out_path: out_path)
+    # Searched and downloaded on the same host as the separation, so the
+    # candidate is already sitting next to demucs's own accompaniment track
+    # when the alignment check compares the two.
+    def find_youtube_instrumental(session, song)
+      YoutubeKaraokeFinder.download(
+        session: session, artist: song.artist, title: song.title,
+        duration: song.duration, name: YOUTUBE_MP3
+      )
     rescue StandardError
       false
     end
@@ -324,20 +430,19 @@ class VocalSeparation
     # time-stretching) — so any offset found here is the YouTube upload's,
     # not measurement noise. Positive means the upload runs behind the
     # original. nil when the measurement itself failed.
-    def alignment_offset_of(reference_wav, candidate_mp3)
-      offset = TimedProcess.capture(
-        python_executable.to_s, Rails.root.join("script/check_audio_alignment.py").to_s,
-        reference_wav.to_s, candidate_mp3.to_s,
+    def alignment_offset_of(session)
+      result = session.run(
+        session.python, session.script("check_audio_alignment.py"),
+        session.path(INSTRUMENTAL_WAV), session.path(YOUTUBE_MP3),
         timeout_seconds: ALIGNMENT_CHECK_TIMEOUT_SECONDS
       )
-      offset.present? ? offset.to_f : nil
-    rescue StandardError
-      nil
-    end
+      return nil unless result.ok?
 
-    def encode_mp3(wav_path, mp3_path)
-      ffmpeg = ExecutablePath.resolve("ffmpeg")
-      system(ffmpeg.to_s, "-y", "-i", wav_path.to_s, "-b:a", "192k", mp3_path.to_s, out: File::NULL, err: File::NULL)
+      # The only command here whose answer is what it printed rather than what
+      # it wrote: one number, on the last line.
+      Float(result.last_line.to_s)
+    rescue ArgumentError, TypeError
+      nil
     end
 
     # Written last, and atomically: a crash partway through leaves no manifest
@@ -375,14 +480,6 @@ class VocalSeparation
       JSON.parse(path.read)
     rescue JSON::ParserError
       nil
-    end
-
-    # The dedicated venv at vendor/karaoke/ (see README.md's Notes section
-    # for setup) — mirrors vendor/kokoro/'s existing pattern for the TTS
-    # fallback rather than depending on a system Python.
-    def python_executable
-      windows = Rails.root.join("vendor/karaoke/Scripts/python.exe")
-      windows.exist? ? windows : Rails.root.join("vendor/karaoke/bin/python")
     end
   end
 end

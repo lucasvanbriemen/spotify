@@ -1,9 +1,20 @@
 # Downloads and caches song MP3s under storage/audio, one file per ISRC.
 # Used synchronously by the get-mp3 endpoint and asynchronously by
 # CacheSongJob to warm songs before they are requested.
+#
+# The download itself runs through a ComputeSession, so it happens on the GPU
+# box when that box is up. The reason is not its GPU — a download is not
+# CPU-bound — but its address: the whole YtDlp player-client walk exists
+# because YouTube serves this datacenter IP a blanket 403, and a home
+# connection is not treated that way. The file still lands here, in
+# storage/audio, because this is what serves it.
 class SongCache
   AUDIO_DIR = Rails.root.join("storage/audio")
   DOWNLOAD_TIMEOUT_SECONDS = 180
+  # What the download is called inside a session's scratch directory. Fixed,
+  # so an ISRC — or the pseudo-ISRC of a pasted link — never has to be a
+  # filename on another host.
+  DOWNLOAD_NAME = "download.mp3".freeze
   # YouTube carries single edits, radio edits, live takes and remasters under
   # the same title, and picking the wrong one puts the audio out of step with
   # everything timed against the real recording — most visibly the karaoke
@@ -53,7 +64,12 @@ class SongCache
     def cache_youtube(isrc)
       details = YoutubeTrack.track_details(isrc)
       return false unless details
-      return false unless YoutubeTrack.download(isrc, path(isrc))
+
+      downloaded = ComputeSession.open("download #{isrc}") do |session|
+        YoutubeTrack.download(session: session, isrc: isrc, name: DOWNLOAD_NAME) &&
+          session.fetch(DOWNLOAD_NAME, path(isrc))
+      end
+      return false unless downloaded
 
       create_song(isrc, details)
       true
@@ -84,46 +100,49 @@ class SongCache
     end
 
     def download(isrc, details, match_duration: true)
-      tmp_dir = Rails.root.join("tmp/yt-dlp")
-      FileUtils.mkdir_p(tmp_dir)
-      FileUtils.mkdir_p(AUDIO_DIR)
+      ComputeSession.open("download #{isrc}") do |session|
+        options = [
+          session.tool("yt-dlp"),
+          # Without a JavaScript runtime YouTube withholds every audio format
+          # and the search returns nothing downloadable — see YtDlp.
+          *YtDlp.media_options,
+          "--no-playlist",
+          # Audio-only formats and parallel fragment downloads: never pull the
+          # video track, and sidestep YouTube's per-connection throttling.
+          "--format", "bestaudio/best",
+          "--concurrent-fragments", "4",
+          "--extract-audio",
+          "--audio-format", "mp3",
+          "--audio-quality", "0",
+          "--restrict-filenames",
+          "--no-progress",
+          # yt-dlp walks the search results in order and --max-downloads stops at
+          # the first that passes, so the length window here is what keeps a
+          # different edit from being taken.
+          "--match-filter", match_filter(match_duration ? details["duration"] : nil),
+          "--max-downloads", "1",
+          "--ffmpeg-location", session.bin_dir,
+          # The extension is yt-dlp's to add, so the template goes without it.
+          "--output", session.path(DOWNLOAD_NAME.delete_suffix(".mp3"))
+        ]
+        search = "ytsearch5: #{details.dig("artist", "name")} #{details["title"]} audio"
 
-      env = { "TMP" => tmp_dir.to_s, "TEMP" => tmp_dir.to_s, "TMPDIR" => tmp_dir.to_s }
-      options = [
-        ExecutablePath.resolve("yt-dlp").to_s,
-        # Without a JavaScript runtime YouTube withholds every audio format
-        # and the search returns nothing downloadable — see YtDlp.
-        *YtDlp.media_options,
-        "--no-playlist",
-        # Audio-only formats and parallel fragment downloads: never pull the
-        # video track, and sidestep YouTube's per-connection throttling.
-        "--format", "bestaudio/best",
-        "--concurrent-fragments", "4",
-        "--extract-audio",
-        "--audio-format", "mp3",
-        "--audio-quality", "0",
-        "--restrict-filenames",
-        "--no-progress",
-        # yt-dlp walks the search results in order and --max-downloads stops at
-        # the first that passes, so the length window here is what keeps a
-        # different edit from being taken.
-        "--match-filter", match_filter(match_duration ? details["duration"] : nil),
-        "--max-downloads", "1",
-        "--ffmpeg-location", Rails.root.join("bin").to_s,
-        "--output", AUDIO_DIR.join(isrc).to_s
-      ]
-      search = "ytsearch5: #{details.dig("artist", "name")} #{details["title"]} audio"
-
-      # Once per player client, stopping at the first that actually produces the
-      # file — a client YouTube is 403ing fails every candidate in the search,
-      # so without this a downloadable song still reads as unavailable.
-      #
-      # The exit status is ignored, like in the Laravel app: callers respond
-      # with 404 when no file was produced, and that is also what decides here
-      # whether the next client is worth trying.
-      YtDlp.download_attempts.each do |client_options|
-        TimedProcess.run(*options, *client_options, search, env: env, timeout_seconds: DOWNLOAD_TIMEOUT_SECONDS)
-        break if cached?(isrc)
+        # Once per player client, stopping at the first that actually produces the
+        # file — a client YouTube is 403ing fails every candidate in the search,
+        # so without this a downloadable song still reads as unavailable.
+        #
+        # The exit status is ignored, like in the Laravel app: callers respond
+        # with 404 when no file was produced, and that is also what decides here
+        # whether the next client is worth trying. yt-dlp in particular exits
+        # non-zero when --max-downloads stops it, having produced exactly the
+        # file that was asked for.
+        YtDlp.download_attempts.each do |client_options|
+          result = session.run(
+            *options, *client_options, search,
+            outputs: [ DOWNLOAD_NAME ], timeout_seconds: DOWNLOAD_TIMEOUT_SECONDS
+          )
+          break if result.produced?(DOWNLOAD_NAME) && session.fetch(DOWNLOAD_NAME, path(isrc))
+        end
       end
     end
 

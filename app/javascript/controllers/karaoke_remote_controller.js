@@ -7,7 +7,7 @@ import { QueueApi } from "karaoke/queue_api"
 // little of its own — it searches, it adds, and it keeps showing what the room
 // has coming, which is the part that makes handing your phone back feel safe.
 export default class extends Controller {
-  static targets = [ "name", "query", "results", "queue", "empty", "count", "nowPlaying", "status" ]
+  static targets = [ "name", "query", "results", "queue", "empty", "count", "shuffle", "nowPlaying", "status" ]
   static values = { pollMs: { type: Number, default: 4000 } }
 
   // Remembered per phone: whoever is holding it is the same person all
@@ -85,23 +85,20 @@ export default class extends Controller {
   renderQueue() {
     this.countTarget.textContent = this.items.length === 0 ? "" : String(this.items.length)
     this.emptyTarget.hidden = this.items.length > 0
+    this.shuffleTarget.hidden = this.items.length < 2
 
     this.queueTarget.innerHTML = this.items.map((item, index) => this.queueRow(item, index)).join("")
   }
 
   queueRow(item, index) {
     const by = item.added_by ? `<span class="karaoke-remote__by">${this.escape(item.added_by)}</span>` : ""
-    // Only your own songs get a remove button: taking someone else's turn off
-    // the list from across the room is not a feature.
-    const mine = item.added_by && item.added_by === this.nameTarget.value.trim()
-    const remove = mine
-      ? `<button type="button" class="karaoke-rowbutton karaoke-remote__remove" data-id="${item.id}"
-                 data-action="karaoke-remote#remove" aria-label="Remove ${this.escapeAttribute(item.title)}">✕</button>`
-      : ""
 
-    // Reordering, unlike removing, is open to whoever is holding a phone —
-    // fixing the running order is the point, and a "my songs only" version of
-    // it wouldn't fix anything.
+    // Removing is open to whoever is holding a phone, the same as reordering.
+    // It used to be yours-only, matched on the name in the box above — which
+    // meant a song queued under a name that had since been retyped could not
+    // be taken off by anyone, and a song a phone had gone home with sat in the
+    // queue all evening. Fixing the running order is the point, and a
+    // "my songs only" version of it doesn't fix anything.
     //
     // A button with nothing to do at the end of the list keeps its place
     // (is-placeholder) instead of being dropped. On a phone that matters more
@@ -109,6 +106,8 @@ export default class extends Controller {
     // so the same glyph sits at a different spot on each row and a thumb aimed
     // at ▼ lands on ⇤ instead.
     const title = this.escapeAttribute(item.title)
+    const remove = `<button type="button" class="karaoke-rowbutton karaoke-remote__remove" data-id="${item.id}"
+                 data-action="karaoke-remote#remove" aria-label="Remove ${title}">✕</button>`
     const step = (direction, glyph, label, atEnd) =>
       `<button type="button" class="karaoke-rowbutton${atEnd ? " is-placeholder" : ""}" data-id="${item.id}"
                data-direction="${direction}" data-action="karaoke-remote#move"
@@ -136,6 +135,10 @@ export default class extends Controller {
 
   async remove(event) {
     this.apply(await QueueApi.remove(Number(event.currentTarget.dataset.id)))
+  }
+
+  async shuffle() {
+    this.apply(await QueueApi.shuffle())
   }
 
   async move(event) {
@@ -228,7 +231,9 @@ export default class extends Controller {
     } catch {
       // Private mode; the name just won't survive a reload.
     }
-    this.renderQueue() // which rows are "mine" changed with it
+    // Nothing to re-render: the name is only what new rows are queued under.
+    // It used to decide which rows showed a remove button, which is why
+    // retyping it had to redraw the list.
   }
 
   savedName() {

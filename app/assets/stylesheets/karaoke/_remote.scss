@@ -88,6 +88,30 @@
   &:empty { display: none; }
 }
 
+// The queue's own heading row: the count on the left, Shuffle on the right.
+.karaoke-remote__queue-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+// A full-height tap target, unlike the desktop panel's — a thumb needs more
+// than a hover-sized button.
+.karaoke-remote__tool {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--surface-at-3);
+  border-radius: $radius-pill;
+  background: var(--surface-at-1);
+  color: inherit;
+
+  &:active { background: var(--surface-at-3); }
+
+  &[hidden] { display: none; }
+}
+
 .karaoke-remote__empty {
   font-size: 0.9rem;
   color: var(--on-surface-variant);

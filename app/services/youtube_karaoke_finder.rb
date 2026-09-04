@@ -12,32 +12,47 @@ class YoutubeKaraokeFinder
   DOWNLOAD_TIMEOUT_SECONDS = 180
 
   class << self
-    # Downloads a matching karaoke/instrumental upload to out_path (as an
-    # mp3) and returns true, or returns false without touching out_path if
-    # no good-enough match exists.
-    def download(artist:, title:, duration:, out_path:)
-      video_id = find_matching_video(artist, title, duration)
+    # Stages a matching karaoke/instrumental upload in the session as `name`
+    # and returns true, or returns false having staged nothing if no
+    # good-enough match exists.
+    #
+    # The session is the caller's, not one of ours: VocalSeparation runs this
+    # concurrently with the separation and both want their results in the same
+    # scratch directory, so that the alignment check between them is a local
+    # read on whichever host did the work.
+    def download(session:, artist:, title:, duration:, name:)
+      video_id = find_matching_video(session, artist, title, duration)
       return false unless video_id
 
-      download_video(video_id, out_path)
-      out_path.file?
+      download_video(session, video_id, name)
     end
 
     private
 
-    def find_matching_video(artist, title, expected_duration)
-      search_candidates(artist, title).find { |candidate| duration_close_enough?(candidate["duration"], expected_duration) }&.fetch("id", nil)
+    def find_matching_video(session, artist, title, expected_duration)
+      search_candidates(session, artist, title)
+        .find { |candidate| duration_close_enough?(candidate["duration"], expected_duration) }
+        &.fetch("id", nil)
     end
 
-    def search_candidates(artist, title)
-      output = TimedProcess.capture(
-        ExecutablePath.resolve("yt-dlp").to_s,
-        "--dump-json", "--no-playlist", "--match-filter", "age_limit<18",
+    def search_candidates(session, artist, title)
+      result = session.run(
+        session.tool("yt-dlp"),
+        # The id and the length are the only two fields the match below reads,
+        # and --print answers in a line each. --dump-json answered with the
+        # whole extractor payload — tens of kilobytes per result — which does
+        # not survive the bounded output a session brings back from a remote
+        # host, and was never read.
+        "--print", "%(id)s\t%(duration)s",
+        "--no-playlist", "--match-filter", "age_limit<18",
         "ytsearch#{SEARCH_COUNT}:#{artist} #{title} karaoke instrumental",
         timeout_seconds: METADATA_TIMEOUT_SECONDS
       )
 
-      output.each_line.filter_map { |line| JSON.parse(line) rescue nil }
+      result.stdout.each_line.filter_map do |line|
+        id, duration = line.strip.split("\t")
+        { "id" => id, "duration" => duration.to_f } if id.present?
+      end
     end
 
     def duration_close_enough?(candidate_duration, expected_duration)
@@ -46,15 +61,17 @@ class YoutubeKaraokeFinder
       (candidate_duration.to_f - expected_duration.to_f).abs / expected_duration.to_f <= DURATION_TOLERANCE
     end
 
-    def download_video(video_id, out_path)
+    def download_video(session, video_id, name)
       options = [
-        ExecutablePath.resolve("yt-dlp").to_s,
+        session.tool("yt-dlp"),
         # See YtDlp: no JS runtime means no audio formats are offered at all.
         *YtDlp.media_options,
         "--no-playlist", "--format", "bestaudio/best", "--extract-audio",
         "--audio-format", "mp3", "--audio-quality", "0", "--restrict-filenames",
-        "--ffmpeg-location", Rails.root.join("bin").to_s,
-        "--output", out_path.to_s.delete_suffix(".mp3")
+        "--ffmpeg-location", session.bin_dir,
+        # yt-dlp appends the audio format's extension itself, so the template
+        # is the name without it.
+        "--output", session.path(name.delete_suffix(".mp3"))
       ]
       url = "https://www.youtube.com/watch?v=#{video_id}"
 
@@ -63,9 +80,14 @@ class YoutubeKaraokeFinder
       # worth retrying on another client rather than falling back to Demucs's
       # noisier instrumental.
       YtDlp.download_attempts.each do |client_options|
-        TimedProcess.run(*options, *client_options, url, timeout_seconds: DOWNLOAD_TIMEOUT_SECONDS)
-        break if out_path.file?
+        result = session.run(
+          *options, *client_options, url,
+          outputs: [ name ], timeout_seconds: DOWNLOAD_TIMEOUT_SECONDS
+        )
+        return true if result.produced?(name)
       end
+
+      false
     end
   end
 end

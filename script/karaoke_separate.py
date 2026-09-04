@@ -15,8 +15,8 @@ pitch.json in about a second, without re-running demucs.
 
 Usage:
     python karaoke_separate.py <input_audio> <instrumental_wav_out> <pitch_json_out>
-        [--model htdemucs] [--vocals-out out.wav] [--notes-out notes.json]
-        [--words-out words.json] [--lrc lyrics.lrc]
+        [--model htdemucs] [--device cuda] [--vocals-out out.wav]
+        [--notes-out notes.json] [--words-out words.json] [--lrc lyrics.lrc]
 
     python karaoke_separate.py --reanalyze pitch.json --notes-out notes.json
         [--words-out words.json --lrc lyrics.lrc]
@@ -118,9 +118,15 @@ SINGER_PREFIX_PATTERN = re.compile(r"^\s*\[?(?:v1|v2|m|f|male|female|duet|both)\
 
 # --- Separation & pitch extraction ---------------------------------------
 
-def separate(input_path, model, work_dir):
+def separate(input_path, model, work_dir, device=None):
+    # demucs picks its own device when told nothing, which on a CPU-only box is
+    # the only choice anyway. Naming one matters where there is something better
+    # to name: the same song is ~205s on prod's CPU and ~38s on an M4 via mps,
+    # so the GPU offload passes "cuda" through to here.
+    device_options = ["-d", device] if device else []
     subprocess.run(
-        [sys.executable, "-m", "demucs", "--two-stems", "vocals", "-n", model, "-o", str(work_dir), str(input_path)],
+        [sys.executable, "-m", "demucs", "--two-stems", "vocals", "-n", model,
+         *device_options, "-o", str(work_dir), str(input_path)],
         check=True, capture_output=True, text=True,
     )
 
@@ -600,6 +606,7 @@ def main():
     parser.add_argument("instrumental_out", nargs="?")
     parser.add_argument("pitch_out", nargs="?")
     parser.add_argument("--model", default="htdemucs", help="demucs model name")
+    parser.add_argument("--device", help="torch device for demucs (cuda, mps, cpu); demucs decides if omitted")
     parser.add_argument("--vocals-out", help="keep the isolated vocal stem here (wav)")
     parser.add_argument("--notes-out", help="write the quantized note list here")
     parser.add_argument("--words-out", help="write per-word timings here (needs --lrc)")
@@ -639,7 +646,7 @@ def main():
 
     with tempfile.TemporaryDirectory(prefix="karaoke-separate-") as tmp:
         work_dir = Path(tmp)
-        vocals_path, instrumental_path = separate(args.input_audio, args.model, work_dir)
+        vocals_path, instrumental_path = separate(args.input_audio, args.model, work_dir, args.device)
 
         hop_seconds, hz = extract_pitch(vocals_path)
         Path(args.pitch_out).write_text(json.dumps({"hop_seconds": hop_seconds, "hz": hz}))

@@ -28,7 +28,12 @@ export default class extends Controller {
   static REGISTER_MIN_SAMPLES = 40
 
   connect() {
-    this.delegate = null
+    // ??=, not =: the coordinator assigns this from its outlet callback, and
+    // Stimulus does not promise that callback runs after this controller has
+    // connected. When it ran first, connect() wiped the delegate — and every
+    // control here goes through it, so the screen came up with dead buttons
+    // about one load in ten.
+    this.delegate ??= null
     this.micSystem = null
     this.devices = []
     this.inputs = [ null, null ]

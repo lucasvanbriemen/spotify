@@ -69,6 +69,13 @@ export const QueueApi = {
     return request(`${BASE}/${id}`, { method: "PATCH", headers: JSON_HEADERS, body: JSON.stringify({ status }) })
   },
 
+  // Reorders the whole waiting list at random, server-side: the order has to
+  // be the same one every phone in the room is looking at, so it cannot be
+  // dealt out by whichever client happened to press the button.
+  shuffle() {
+    return request(`${BASE}/shuffle`, { method: "POST" })
+  },
+
   clear() {
     return request(BASE, { method: "DELETE" })
   },

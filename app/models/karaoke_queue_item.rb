@@ -75,6 +75,20 @@ class KaraokeQueueItem < ApplicationRecord
         end
       end
     end
+
+    # Deals the waiting list out again in a random order. What is on stage is
+    # left alone: shuffling is about who is up next, and a song already being
+    # sung is not up next.
+    #
+    # update_columns for the same reason as resequence!: a position is
+    # bookkeeping, and touching updated_at would read as activity to a phone.
+    def shuffle!
+      transaction do
+        rows = waiting.to_a
+        rows.shuffle.each_with_index { |row, index| row.update_columns(position: index + 1) }
+        rows.size
+      end
+    end
   end
 
   # Only one song can be on stage, so claiming this one releases whatever the

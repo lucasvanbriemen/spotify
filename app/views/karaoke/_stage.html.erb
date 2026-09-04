@@ -55,7 +55,12 @@
       <span class="karaoke-lyric__base" data-karaoke-stage-target="activeBase"></span>
       <span class="karaoke-lyric__fill" aria-hidden="true" data-karaoke-stage-target="activeFill"></span>
     </p>
-    <p class="karaoke-lyric karaoke-lyric--next" data-karaoke-stage-target="nextLine"></p>
+    <%# The text sits in a span of its own so it can be measured: the line
+        clips its content (contain: paint), and a clipped box does not report
+        how much wider than itself its text is. %>
+    <p class="karaoke-lyric karaoke-lyric--next" data-karaoke-stage-target="nextLine">
+      <span data-karaoke-stage-target="nextText"></span>
+    </p>
   </div>
 
   <%# Offered over a long instrumental stretch, the way a streaming service
@@ -79,30 +84,21 @@
            aria-label="Seek" data-karaoke-stage-target="seek" data-action="input->karaoke-stage#seek">
     <span class="karaoke-controlbar__time" data-karaoke-stage-target="duration">0:00</span>
 
-    <label class="karaoke-controlbar__fader" data-karaoke-stage-target="fader" hidden>
-      Guide vocal
-      <input type="range" min="0" max="100" value="20" aria-label="Guide vocal level"
-             data-karaoke-stage-target="faderInput" data-action="input->karaoke-stage#changeVocalGuide">
-    </label>
-
-    <%# The PA fader, here for the same reason as the sync trim below: you find
-        out you can't hear yourself while you are singing, not before. %>
+    <%# The PA fader: you find out you can't hear yourself while you are
+        singing, not before. The one knob worth carrying onto the stage — the
+        guide vocal, the guide melody and the sync trim were all dropped from
+        this bar, because a bar with seven controls on it is a bar somebody has
+        to read while a song is playing. Sync still lives on the setup screen. %>
     <label class="karaoke-controlbar__fader">
       Your voice
       <input type="range" min="0" max="100" step="5" value="0" aria-label="Hear your own voice"
              data-karaoke-stage-target="monitorInput" data-action="input->karaoke-stage#changeMonitor">
     </label>
 
-    <%# The same audio-delay trim as the setup screen: sync problems are
-        noticed while singing, so the knob has to be reachable here too. %>
-    <label class="karaoke-controlbar__sync">
-      Sync <span data-karaoke-stage-target="syncValue">0 ms</span>
-      <input type="range" min="-300" max="300" step="10" value="0" aria-label="Audio delay trim"
-             data-karaoke-stage-target="syncInput" data-action="input->karaoke-stage#changeSync">
-    </label>
-
-    <button type="button" class="karaoke-controlbar__toggle" aria-pressed="false"
-            data-karaoke-stage-target="melodyToggle" data-action="karaoke-stage#toggleMelody">Melody</button>
+    <%# Not this one, then. Ends the song without a score and hands the stage
+        to whatever the room has queued behind it. %>
+    <button type="button" class="karaoke-controlbar__toggle"
+            data-action="karaoke-stage#skipSong">Skip ⏭</button>
     <button type="button" class="karaoke-controlbar__toggle" data-karaoke-stage-target="fullscreenButton"
             data-action="karaoke-stage#toggleFullscreen" hidden>⛶ Full screen</button>
     <button type="button" class="karaoke-controlbar__toggle" data-action="karaoke-stage#exit">Exit</button>

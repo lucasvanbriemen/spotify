@@ -15,8 +15,8 @@ import { settings } from "karaoke/settings"
 export default class extends Controller {
   static targets = [
     "query", "results",
-    "readySection", "readyList",
-    "recentSection", "recentList", "popularSection", "popularList",
+    "readySection", "readyList", "readyCount",
+    "recentSection", "recentList",
     "art", "title", "artist", "playerStatus", "startButton", "retryButton",
     "stepDownload", "stepSeparate", "stepAnalyse"
   ]
@@ -160,11 +160,13 @@ export default class extends Controller {
 
     const ready = payload.ready || []
     this.readySectionTarget.hidden = ready.length === 0
+    // The whole downloaded library is in here, so it is worth saying how big
+    // it is — the number is the difference between "some songs" and "look
+    // what we already have".
+    this.readyCountTarget.textContent = ready.length === 0 ? "" : String(ready.length)
     this.recentSectionTarget.hidden = payload.recent.length === 0
-    this.popularSectionTarget.hidden = payload.most_sung.length === 0
     this.renderInto(this.readyListTarget, ready)
     this.renderInto(this.recentListTarget, payload.recent)
-    this.renderInto(this.popularListTarget, payload.most_sung)
   }
 
   renderInto(list, songs) {
@@ -510,15 +512,10 @@ export default class extends Controller {
     // Both of these must happen inside the click's own turn of the event loop:
     // requestFullscreen is only allowed while the gesture is live.
     this.showScreen("stage")
-    this.stage?.enter?.({
-      track,
-      singers,
-      hasVocals: Boolean(this.artifacts.vocals),
-      vocalPercent: settings.get("vocalGuidePercent"),
-      guideMelody: settings.get("guideMelody"),
-      latencyTrimMs: settings.get("latencyTrimMs"),
-      monitorPercent: settings.get("micMonitorPercent")
-    })
+    // The stage's only knob is the PA fader; the guide vocal, the guide melody
+    // and the latency trim are applied from stored settings below and set on
+    // the setup screen, which is where there is time to think about them.
+    this.stage?.enter?.({ track, singers, monitorPercent: settings.get("micMonitorPercent") })
 
     await this.preload(track.isrc)
     if (!this.transport || this.currentTrack?.isrc !== track.isrc) return
@@ -628,21 +625,23 @@ export default class extends Controller {
     this.transport.seek(fraction * this.transport.duration)
   }
 
-  stageVocalGuide(percent) {
-    settings.set("vocalGuidePercent", percent)
-    this.transport?.setVocalGain(percent / 100)
-  }
+  // The control bar's Skip: this song is not the one. It comes off the stage
+  // without a score — nobody wants a grade for the minute of it they sat
+  // through — and whatever the room has queued takes its place, starting
+  // itself the way it would after a song that ran to its end. With an empty
+  // queue there is nothing to hand over to, so the screen goes back to search.
+  async stageSkipSong() {
+    this.reportPlay()
+    this.stopPlayTimer()
+    this.teardownPlayback()
+    this.releaseQueueItem()
 
-  stageGuideMelody(on) {
-    settings.set("guideMelody", on)
-    this.engine?.setGuideMelody(on)
-  }
+    // Read after the row above was released, so the song being skipped cannot
+    // come back as its own successor.
+    const next = await this.queue?.peekNext?.()
+    if (!next) return this.stageExit()
 
-  // The engine reads the trim from settings every frame, so writing it is the
-  // whole job.
-  stageLatency(ms) {
-    settings.set("latencyTrimMs", ms)
-    this.setup?.renderLatency?.()
+    this.playNextInQueue({ autoStart: true })
   }
 
   // The PA fader on the control bar. The bus lives on the audio session, so

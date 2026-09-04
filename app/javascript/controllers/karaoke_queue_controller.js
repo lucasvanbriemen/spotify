@@ -12,7 +12,7 @@ import { QueueApi } from "karaoke/queue_api"
 // asks it for the next song and tells it what happened to the last one, rather
 // than fetching any of this itself.
 export default class extends Controller {
-  static targets = [ "list", "empty", "count", "clear", "copy" ]
+  static targets = [ "list", "empty", "count", "clear", "shuffle", "copy" ]
   static values = {
     pollMs: { type: Number, default: 4000 },
     link: String
@@ -23,7 +23,12 @@ export default class extends Controller {
   static SCREEN_NAME = "Screen"
 
   connect() {
-    this.delegate = null
+    // ??=, not =: the coordinator assigns this from its outlet callback, and
+    // Stimulus does not promise that callback runs after this controller has
+    // connected. When it ran first, connect() wiped the delegate — and every
+    // control here goes through it, so the screen came up with dead buttons
+    // about one load in ten.
+    this.delegate ??= null
     this.items = []
     this.nowPlaying = null
     this.pollTimer = null
@@ -163,6 +168,13 @@ export default class extends Controller {
     if (payload.ok) this.adopt(payload)
   }
 
+  // "Nobody pick, just play something." Dealt server-side so every phone in
+  // the room lands on the same order.
+  async shuffle() {
+    const payload = await QueueApi.shuffle()
+    if (payload.ok) this.adopt(payload)
+  }
+
   async clear() {
     const payload = await QueueApi.clear()
     if (payload.ok) this.adopt(payload)
@@ -191,6 +203,9 @@ export default class extends Controller {
     this.countTarget.textContent = count === 0 ? "" : String(count)
     this.emptyTarget.hidden = count > 0
     this.clearTarget.hidden = count === 0
+    // One song has no order to shuffle, and offering it anyway would be a
+    // button that visibly does nothing.
+    this.shuffleTarget.hidden = count < 2
 
     this.listTarget.innerHTML = this.items.map((item, index) => this.rowMarkup(item, index)).join("")
   }
