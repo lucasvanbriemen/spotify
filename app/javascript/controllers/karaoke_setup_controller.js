@@ -14,7 +14,8 @@ export default class extends Controller {
   static targets = [
     "countOption", "singerCard", "name", "swatch", "device", "level", "check", "enableMics",
     "latency", "latencyValue",
-    "monitor", "monitorValue", "monitorReverb", "monitorReverbValue"
+    "monitor", "monitorValue", "monitorReverb", "monitorReverbValue",
+    "guideVocal", "guideVocalValue"
   ]
 
   static DEFAULT_COLORS = [ "#22d3ee", "#a78bfa" ]
@@ -61,6 +62,7 @@ export default class extends Controller {
     if (this.separateColours()) this.persist()
     this.renderLatency()
     this.renderMonitor()
+    this.renderGuideVocal()
     this.render()
   }
 
@@ -136,6 +138,24 @@ export default class extends Controller {
     settings.set("micMonitorReverbPercent", percent)
     this.monitorBus?.setReverb(percent)
     this.renderMonitor()
+  }
+
+  // How loud the original singer is under the instrumental. Applied when the
+  // song loads (see the coordinator's setVocalGain), so there is nothing live
+  // to move here — this screen is always before the playback it configures.
+  changeGuideVocal() {
+    settings.set("vocalGuidePercent", Number(this.guideVocalTarget.value))
+    this.renderGuideVocal()
+  }
+
+  renderGuideVocal() {
+    if (!this.hasGuideVocalTarget) return
+
+    const level = settings.get("vocalGuidePercent")
+    this.guideVocalTarget.value = level
+    // "Off" rather than "0%", same as the monitor: at zero it is a state, and
+    // it is the one worth reading from across a room.
+    this.guideVocalValueTarget.textContent = level === 0 ? "Off" : `${level}%`
   }
 
   renderMonitor() {

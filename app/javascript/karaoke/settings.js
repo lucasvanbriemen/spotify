@@ -9,10 +9,12 @@ const DEFAULTS = {
   // browser cannot see, so this is the knob that actually lines scoring up
   // with what the singer hears.
   latencyTrimMs: 0,
-  // Off by default: the original singer coming through unasked is a surprise,
-  // and the point of karaoke is that the part is yours. Raise it on a song you
-  // only half know.
-  vocalGuidePercent: 0,
+  // Full by default. This used to be off, on the reasoning that the original
+  // singer coming through unasked is a surprise — but the fader that let you
+  // raise it lived on the stage control bar, and that bar is one knob now, so
+  // "off by default" had become "off, with nothing anywhere to turn it up".
+  // Lower it from the setup screen on a song you know well.
+  vocalGuidePercent: 100,
   guideMelody: false,
   // Chrome's echo cancellation treats page audio as the far end and will
   // genuinely suppress instrumental bleed — at the cost of mangling sung
@@ -47,12 +49,34 @@ function read(key) {
   }
 }
 
+function remove(key) {
+  try {
+    localStorage.removeItem(PREFIX + key)
+  } catch {
+    // Storage blocked: there was nothing persisted to clear anyway.
+  }
+}
+
 function write(key, value) {
   try {
     localStorage.setItem(PREFIX + key, JSON.stringify(value))
   } catch {
     // Private browsing or a full quota: preferences just don't persist.
   }
+}
+
+// One-time cleanup, not a general migration framework. A browser that used the
+// old stage fader has a vocalGuidePercent of its own in localStorage, and a
+// stored value always beats the default — so raising the default above would
+// have left exactly the returning singers it was meant for still silent, with
+// the control now on a screen they had already walked past. Dropping the
+// stored key hands them the new default once; anything they set afterwards on
+// the setup screen persists normally.
+const GUIDE_DEFAULT_MIGRATION = "vocalGuideDefaultedToFull"
+
+if (!read(GUIDE_DEFAULT_MIGRATION)) {
+  remove("vocalGuidePercent")
+  write(GUIDE_DEFAULT_MIGRATION, true)
 }
 
 export const settings = {

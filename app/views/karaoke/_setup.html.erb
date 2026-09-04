@@ -88,6 +88,17 @@
       </p>
     </div>
 
+    <%# The original singer, mixed under the instrumental. Full by default:
+        this is the part that tells you where the tune goes, and the stage bar
+        no longer carries a fader for it, so if it is wrong it has to be wrong
+        here where there is time to notice. Songs whose cache predates the kept
+        vocal stem have none, and then this does nothing. %>
+    <label class="karaoke-field karaoke-setup__guide">
+      Original singer <span data-karaoke-setup-target="guideVocalValue">100%</span>
+      <input type="range" min="0" max="100" step="5" value="100" aria-label="Original singer level"
+             data-karaoke-setup-target="guideVocal" data-action="input->karaoke-setup#changeGuideVocal">
+    </label>
+
     <%# A TV adds 30-150ms of audio delay the browser cannot measure. This
         shifts both the lyrics and the scoring: negative if the words land late
         against what you hear, positive if they run ahead of it. %>

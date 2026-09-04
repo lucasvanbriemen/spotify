@@ -229,7 +229,10 @@
   flex-wrap: wrap;
 }
 
-.karaoke-setup__latency {
+// The two numeric faders on this screen: the original singer's level and the
+// audio delay. Same shape, same tabular figures, so they read as a pair.
+.karaoke-setup__latency,
+.karaoke-setup__guide {
   max-width: 380px;
 
   input { accent-color: var(--primary); }
