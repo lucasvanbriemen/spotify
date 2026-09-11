@@ -256,6 +256,33 @@
 
 // --- Control bar ----------------------------------------------------------
 
+// The keyboard's readout: up over the bar's spot, gone again a second later.
+.karaoke-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 6rem;
+  transform: translateX(-50%) translateY(6px);
+  z-index: $z-controls;
+  margin: 0;
+  padding: 0.5rem 1.1rem;
+  border-radius: $radius-pill;
+  background: color-mix(in srgb, $bg 88%, transparent);
+  border: 1px solid color-mix(in srgb, $fg 12%, transparent);
+  backdrop-filter: blur(10px);
+  color: $fg;
+  font-size: 1.05rem;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+
+  &.is-shown {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 .karaoke-controlbar {
   position: fixed;
   left: 50%;

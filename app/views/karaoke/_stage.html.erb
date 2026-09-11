@@ -76,6 +76,10 @@
     <span class="karaoke-countin__digit" data-karaoke-stage-target="countDigit">3</span>
   </div>
 
+  <%# What a shortcut key did, since the bar it would have moved is hidden for
+      most of the song. See SHORTCUTS in karaoke_stage_controller.js. %>
+  <p class="karaoke-toast" data-karaoke-stage-target="toast" role="status" aria-live="polite" hidden></p>
+
   <footer class="karaoke-controlbar" data-karaoke-stage-target="controlbar">
     <button type="button" class="karaoke-controlbar__button" data-karaoke-stage-target="playButton"
             data-action="karaoke-stage#togglePlay" aria-label="Play or pause">⏸</button>

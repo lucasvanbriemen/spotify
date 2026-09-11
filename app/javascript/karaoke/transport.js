@@ -21,14 +21,14 @@
 const SCHEDULE_AHEAD_SECONDS = 0.03
 
 export class Transport extends EventTarget {
-  constructor(context) {
+  constructor(context, destination = context.destination) {
     super()
     this.context = context
     this.buffers = { instrumental: null, vocals: null }
     this.sources = { instrumental: null, vocals: null }
 
     this.masterGain = context.createGain()
-    this.masterGain.connect(context.destination)
+    this.masterGain.connect(destination)
 
     this.instrumentalGain = context.createGain()
     this.instrumentalGain.connect(this.masterGain)

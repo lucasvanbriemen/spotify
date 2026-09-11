@@ -34,7 +34,8 @@ const PREDELAY_SECONDS = 0.02
 const RAMP_SECONDS = 0.06
 
 export class MicMonitor {
-  constructor(context) {
+  constructor(context, destination = context.destination) {
+    this.destination = destination
     this.context = context
     this.connected = false
     this.disconnectTimer = null
@@ -122,7 +123,7 @@ export class MicMonitor {
     this.disconnectTimer = null
     if (this.connected) return
 
-    this.output.connect(this.context.destination)
+    this.output.connect(this.destination)
     this.connected = true
   }
 

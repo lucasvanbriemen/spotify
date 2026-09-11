@@ -442,7 +442,7 @@ export default class extends Controller {
     // nodes must not stay connected to the destination.
     this.transport?.destroy()
 
-    const transport = new Transport(this.session.context)
+    const transport = new Transport(this.session.context, this.session.master)
     transport.addEventListener("progress", (event) => {
       const { loaded, total } = event.detail
       if (total > 0 && this.currentTrack?.isrc === isrc) {
@@ -650,6 +650,60 @@ export default class extends Controller {
     settings.set("micMonitorPercent", percent)
     this.session?.monitor?.setLevel(percent)
     this.setup?.renderMonitor?.()
+  }
+
+  // The original singer, moved from the stage keyboard. Live on the transport
+  // and written back to the setting, so the setup screen's fader agrees when
+  // the song is over. Answers undefined with no vocal stem to move — old
+  // caches have none — so the stage can say so instead of showing a number
+  // that changes nothing.
+  stageGuideVocalNudge(delta) {
+    if (!this.artifacts?.vocals) return undefined
+
+    return this.#setGuideVocal(settings.get("vocalGuidePercent") + delta)
+  }
+
+  // Off, or back to where it was. A toggle from zero with nothing remembered
+  // comes back at the default rather than staying silent.
+  stageGuideVocalToggle() {
+    if (!this.artifacts?.vocals) return undefined
+
+    const current = settings.get("vocalGuidePercent")
+    if (current > 0) {
+      this.mutedGuideVocal = current
+      return this.#setGuideVocal(0)
+    }
+    return this.#setGuideVocal(this.mutedGuideVocal || 100)
+  }
+
+  #setGuideVocal(percent) {
+    const level = Math.max(0, Math.min(100, Math.round(percent)))
+    settings.set("vocalGuidePercent", level)
+    this.transport?.setVocalGain(level / 100)
+    this.setup?.renderGuideVocal?.()
+    return level
+  }
+
+  // Reverb on the monitor, moved by a step from the stage keyboard. A step of
+  // zero is a read: the stage asks that way to show where the fader stands.
+  stageReverbNudge(delta) {
+    if (!this.session?.monitor) return undefined
+
+    const level = Math.max(0, Math.min(100, Math.round(settings.get("micMonitorReverbPercent") + delta)))
+    settings.set("micMonitorReverbPercent", level)
+    this.session.monitor.setReverb(level)
+    this.setup?.renderMonitor?.()
+    return level
+  }
+
+  // The system fader, moved by a step from the stage keyboard. A step of zero
+  // is a read.
+  stageMasterNudge(delta) {
+    if (!this.session?.setMasterLevel) return undefined
+
+    const level = this.session.setMasterLevel(settings.get("masterPercent") + delta)
+    settings.set("masterPercent", level)
+    return level
   }
 
   stageExit() {

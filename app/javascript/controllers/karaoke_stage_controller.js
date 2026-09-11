@@ -34,7 +34,7 @@ export default class extends Controller {
     "dots", "partBadge", "skip", "activeLine", "activeBase", "activeFill", "nextLine", "nextText",
     "countIn", "countRing", "countDigit",
     "controlbar", "playButton", "currentTime", "duration", "seek",
-    "fullscreenButton", "monitorInput"
+    "fullscreenButton", "monitorInput", "toast"
   ]
 
   // How long the control bar stays up after the mouse stops moving.
@@ -43,6 +43,57 @@ export default class extends Controller {
   static MIN_FIT = 0.55
   // How long a finished line stays at full strength before fading back.
   static PAST_LINE_SECONDS = 1.5
+  // How long a shortcut's readout ("Your voice 40%") stays on screen.
+  static TOAST_MS = 1400
+  // One step of the arrow keys. Five would need too many presses to be felt
+  // over a backing track; twenty overshoots.
+  static LEVEL_STEP = 10
+
+  // THE KEYBOARD. Every shortcut on the stage, in one table, so a key can be
+  // read off here rather than found by playing the song and mashing.
+  //
+  //   Space             play / pause (only with no control focused)
+  //   Ctrl+S            skip this song, next in the queue takes the stage
+  //   Ctrl+I            skip the instrumental, when the button is offered
+  //   Ctrl+↑ / ↓        slider: your own voice in the monitor
+  //   Ctrl+← / →        slider: the original singer, down / up
+  //   Ctrl+Shift+↑ / ↓  slider: the whole system — everything the room hears
+  //   Ctrl+M            mute / restore the original singer
+  //   Ctrl+R + ↑ / ↓    knob: reverb on your voice (R held while the arrow lands)
+  //   Ctrl+P + ↑ / ↓    knob: placeholder, reserved for a job to come
+  //
+  // Each physical control on the desk is its own chord, nothing is shared or
+  // selected first: a knob turned is R (or P) held down with an arrow per
+  // click, a slider is the bare arrows. Ctrl+R by itself does nothing but keep
+  // the browser's reload off the key.
+  //
+  // Ctrl and not Cmd: a Cmd chord is the browser's (⌘S saves, ⌘M minimises,
+  // ⌘R reloads mid-song — that last one alone rules it out). Ctrl on a Mac
+  // touches nothing of the page's, and on Windows only Ctrl+S / Ctrl+P, which
+  // are stopped below before the dialog gets them. Every entry takes only the
+  // exact modifier set named: Ctrl+Shift+S is not Skip.
+  static SHIFT_SHORTCUTS = {
+    ArrowUp: "masterUp",
+    ArrowDown: "masterDown"
+  }
+
+  static SHORTCUTS = {
+    KeyS: "skipSong",
+    KeyI: "skipInstrumental",
+    KeyM: "toggleGuideVocal",
+    KeyR: "noop",
+    KeyP: "noop",
+    ArrowUp: "arrowUp",
+    ArrowDown: "arrowDown",
+    ArrowRight: "guideVocalUp",
+    ArrowLeft: "guideVocalDown"
+  }
+
+  // Which held letter turns the up/down arrows into which knob.
+  static KNOBS = {
+    KeyR: "nudgeReverb",
+    KeyP: "nudgePlaceholder"
+  }
 
   connect() {
     this.lines = []
@@ -57,6 +108,7 @@ export default class extends Controller {
     this.renderedScores = [ null, null ]
     this.renderedCombos = [ null, null ]
     this.controlsTimer = null
+    this.toastTimer = null
     this.lane = null
     this.singerColors = [ "#22d3ee", "#a78bfa" ]
     this.pointerDown = false
@@ -70,6 +122,11 @@ export default class extends Controller {
 
     this.boundPointerMove = () => this.showControls()
     this.boundKeydown = (event) => this.onKeydown(event)
+    this.boundKeyup = (event) => this.held.delete(event.code)
+    // A key released while the window was not focused never sends its keyup;
+    // without this a knob's letter could stay "held" for the rest of the song.
+    this.boundBlur = () => this.held.clear()
+    this.held = new Set()
     this.boundFullscreenChange = () => this.syncFullscreenButton()
     this.boundVisibility = () => this.reacquireWakeLock()
     // A line is fitted to the width it was swapped in at. Going full screen —
@@ -92,6 +149,8 @@ export default class extends Controller {
     window.addEventListener("pointerup", this.boundPointerRelease)
     window.addEventListener("pointercancel", this.boundPointerRelease)
     document.addEventListener("keydown", this.boundKeydown)
+    document.addEventListener("keyup", this.boundKeyup)
+    window.addEventListener("blur", this.boundBlur)
     document.addEventListener("fullscreenchange", this.boundFullscreenChange)
     document.addEventListener("visibilitychange", this.boundVisibility)
     window.addEventListener("resize", this.boundResize)
@@ -102,10 +161,13 @@ export default class extends Controller {
     window.removeEventListener("pointerup", this.boundPointerRelease)
     window.removeEventListener("pointercancel", this.boundPointerRelease)
     document.removeEventListener("keydown", this.boundKeydown)
+    document.removeEventListener("keyup", this.boundKeyup)
+    window.removeEventListener("blur", this.boundBlur)
     document.removeEventListener("fullscreenchange", this.boundFullscreenChange)
     document.removeEventListener("visibilitychange", this.boundVisibility)
     window.removeEventListener("resize", this.boundResize)
     clearTimeout(this.controlsTimer)
+    clearTimeout(this.toastTimer)
     this.lane?.dispose()
     this.lane = null
     this.releaseWakeLock()
@@ -494,15 +556,116 @@ export default class extends Controller {
     this.delegate?.stageExit?.()
   }
 
+  // --- Keyboard-only controls ----------------------------------------------
+  //
+  // Each move asks the coordinator and shows the level actually landed on: the
+  // coordinator clamps, and "110%" would be a lie.
+
+  noop() {}
+
+  arrowUp() { this.arrow(+this.constructor.LEVEL_STEP) }
+  arrowDown() { this.arrow(-this.constructor.LEVEL_STEP) }
+
+  // Up/down belongs to whichever knob's letter is down, and to the monitor
+  // slider when none is.
+  arrow(delta) {
+    const knob = Object.keys(this.constructor.KNOBS).find((code) => this.held.has(code))
+    if (knob) return this[this.constructor.KNOBS[knob]](delta)
+
+    this.nudgeMonitor(delta)
+  }
+
+  nudgeMonitor(delta) {
+    const current = this.hasMonitorInputTarget ? Number(this.monitorInputTarget.value) : 0
+    const percent = this.clampPercent(current + delta)
+    this.setMonitorPercent(percent)
+    this.delegate?.stageMicMonitor?.(percent)
+    this.toast("Your voice", this.levelLabel(percent))
+  }
+
+  masterUp() { this.nudgeMaster(+this.constructor.LEVEL_STEP) }
+  masterDown() { this.nudgeMaster(-this.constructor.LEVEL_STEP) }
+
+  nudgeMaster(delta) {
+    const percent = this.delegate?.stageMasterNudge?.(delta)
+    if (percent === undefined) return this.toast("System", "not available")
+
+    this.toast("System", this.levelLabel(percent))
+  }
+
+  guideVocalUp() { this.nudgeGuideVocal(+this.constructor.LEVEL_STEP) }
+  guideVocalDown() { this.nudgeGuideVocal(-this.constructor.LEVEL_STEP) }
+
+  nudgeGuideVocal(delta) {
+    const percent = this.delegate?.stageGuideVocalNudge?.(delta)
+    if (percent === undefined) return this.toast("Original singer", "not available")
+
+    this.toast("Original singer", this.levelLabel(percent))
+  }
+
+  nudgeReverb(delta) {
+    const percent = this.delegate?.stageReverbNudge?.(delta)
+    if (percent === undefined) return this.toast("Reverb", "not available")
+
+    this.toast("Reverb", this.levelLabel(percent))
+  }
+
+  toggleGuideVocal() {
+    const percent = this.delegate?.stageGuideVocalToggle?.()
+    if (percent === undefined) return this.toast("Original singer", "not available")
+
+    this.toast("Original singer", this.levelLabel(percent))
+  }
+
+  // Reserved. The knob turns, the toast says so, nothing else moves yet.
+  nudgePlaceholder(delta) {
+    this.toast("Ctrl+P knob", delta > 0 ? "up (nothing here yet)" : "down (nothing here yet)")
+  }
+
+  clampPercent(percent) {
+    return Math.max(0, Math.min(100, Math.round(percent)))
+  }
+
+  levelLabel(percent) {
+    return percent === 0 ? "Off" : `${percent}%`
+  }
+
+  // The readout for a key press. The control bar is hidden most of the song,
+  // and a fader that moved behind a hidden bar moved nowhere anyone could see.
+  toast(name, value) {
+    if (!this.hasToastTarget) return
+
+    this.toastTarget.textContent = `${name} ${value}`
+    this.toastTarget.hidden = false
+    this.toastTarget.classList.add("is-shown")
+    clearTimeout(this.toastTimer)
+    this.toastTimer = setTimeout(() => {
+      this.toastTarget.classList.remove("is-shown")
+    }, this.constructor.TOAST_MS)
+  }
+
   setPlaying(playing) {
     this.playButtonTarget.textContent = playing ? "⏸" : "▶"
   }
 
   onKeydown(event) {
+    // Tracked before any early return, so a letter pressed on the scoreboard
+    // and released on the stage is still accounted for.
+    this.held.add(event.code)
     if (this.element.offsetParent === null) return // stage isn't the visible screen
     // The scoreboard is over the stage; replaying from under it would run the
     // song to its end again and post a second score.
     if (this.element.closest(".karaoke")?.classList.contains("karaoke--results")) return
+
+    const table = event.shiftKey ? this.constructor.SHIFT_SHORTCUTS : this.constructor.SHORTCUTS
+    const shortcut = table[event.code]
+    if (shortcut && event.ctrlKey && !event.metaKey && !event.altKey) {
+      // Taken even with a control focused: nothing on the stage wants a Ctrl
+      // chord for itself, and the range inputs would otherwise eat the arrows.
+      event.preventDefault()
+      return this[shortcut]()
+    }
+
     if (event.code !== "Space") return
 
     const tag = document.activeElement?.tagName
