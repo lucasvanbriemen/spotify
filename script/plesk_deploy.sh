@@ -32,7 +32,13 @@ trap 'sudo /usr/bin/systemctl restart --no-block "${UNITS[@]}"' EXIT
 
 export RAILS_ENV=production
 export SECRET_KEY_BASE_DUMMY=1
-"$BIN/bundle" config unset --local without >/dev/null 2>&1 || true
+# Production needs neither the development nor the test group, and the test
+# group is the one that fails to build here (selenium's websocket gem, with
+# the gem dir root-owned). Leaving the groups in play is not harmless: once
+# Bundler has resolved a lockfile with all groups, `bundle exec` demands every
+# gem in it, so a failed install of a test gem took Puma and the worker down
+# with Bundler::GemNotFound on 2026-10-06.
+"$BIN/bundle" config set --local without "development test" >/dev/null
 "$BIN/bundle" install
 "$BIN/bundle" exec rails db:prepare
 "$BIN/bundle" exec rails assets:precompile

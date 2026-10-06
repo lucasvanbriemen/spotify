@@ -31,6 +31,10 @@ class YoutubeTrackTest < ActiveSupport::TestCase
     assert_equal "a_b-c1234XY", YoutubeTrack.video_id_from_isrc(isrc)
     # A real ISRC must never be mistaken for one of ours.
     assert_not YoutubeTrack.isrc?("USRC17607839")
+    # A bare video id, the form the shared database keys songs by since the
+    # all-in-one rekey; a twelve-character ISRC can never match it.
+    assert YoutubeTrack.isrc?("dQw4w9WgXcQ")
+    assert_equal "dQw4w9WgXcQ", YoutubeTrack.video_id_from_isrc("dQw4w9WgXcQ")
     assert_nil YoutubeTrack.video_id_from_isrc("yt-../../etc/passwd")
   end
 

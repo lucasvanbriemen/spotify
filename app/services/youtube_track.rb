@@ -15,6 +15,7 @@ class YoutubeTrack
   ISRC_PREFIX = "yt-"
   VIDEO_ID = /[A-Za-z0-9_-]{11}/
   ISRC_FORMAT = /\A#{ISRC_PREFIX}#{VIDEO_ID}\z/o
+  BARE_ID_FORMAT = /\A#{VIDEO_ID}\z/o
 
   # youtu.be/ID, youtube.com/watch?v=ID, /shorts/ID, /embed/ID, /live/ID, with
   # or without a scheme, "www." or "music.". Anchored at the host so a song
@@ -46,8 +47,13 @@ class YoutubeTrack
   TRAILING_NOISE = /\s*[|–-]\s*(?:official|lyrics?|audio|hd|4k)\b.*\z/i
 
   class << self
+    # Either form of YouTube key: this app's "yt-" pseudo-ISRC, or a bare
+    # video id. The bare form is what the shared database holds since the
+    # all-in-one app rekeyed songs by YouTube id (2026-09-21), so it is what a
+    # score or play from before then points at — and a real ISRC is twelve
+    # characters, so an eleven-character key cannot be one.
     def isrc?(isrc)
-      isrc.to_s.start_with?(ISRC_PREFIX)
+      isrc.to_s.start_with?(ISRC_PREFIX) || isrc.to_s.match?(BARE_ID_FORMAT)
     end
 
     def isrc_for(video_id)

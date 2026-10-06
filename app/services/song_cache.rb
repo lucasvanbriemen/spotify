@@ -55,6 +55,25 @@ class SongCache
       end
     end
 
+    # Writes the Song row for a cached track from its Deezer-shaped details,
+    # unless one exists. Public because KaraokeLibraryRestore rebuilds rows
+    # for tracks whose file is already on disk, which ensure_cached skips.
+    def create_song(isrc, details)
+      return if Song.exists?(id: isrc)
+
+      Song.create!(
+        id: isrc,
+        title: details["title"],
+        artist: details.dig("artist", "name"),
+        image_url: details.dig("album", "cover_medium") || Song::PLACEHOLDER_IMAGE,
+        album: details.dig("album", "title"),
+        duration: details["duration"],
+        genre: SongEnrichment.genre_for(details.dig("album", "id")),
+        enriched_at: Time.current,
+        **SongEnrichment.attributes_from_track(details)
+      )
+    end
+
     private
 
     # A pasted YouTube link names the upload outright, so there is no search
@@ -81,22 +100,6 @@ class SongCache
         lock.flock(File::LOCK_EX)
         yield
       end
-    end
-
-    def create_song(isrc, details)
-      return if Song.exists?(id: isrc)
-
-      Song.create!(
-        id: isrc,
-        title: details["title"],
-        artist: details.dig("artist", "name"),
-        image_url: details.dig("album", "cover_medium") || Song::PLACEHOLDER_IMAGE,
-        album: details.dig("album", "title"),
-        duration: details["duration"],
-        genre: SongEnrichment.genre_for(details.dig("album", "id")),
-        enriched_at: Time.current,
-        **SongEnrichment.attributes_from_track(details)
-      )
     end
 
     def download(isrc, details, match_duration: true)
