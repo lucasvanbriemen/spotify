@@ -75,7 +75,7 @@ class Station
 
   # Station artwork: borrow a cover from the station's own songs.
   def image_url
-    @image_url ||= candidate_songs.where.not(image_url: [ nil, "" ]).order(:isrc).limit(1).pluck(:image_url).first
+    @image_url ||= candidate_songs.where.not(image_url: [ nil, "" ]).order(:id).limit(1).pluck(:image_url).first
   end
 
   def language
@@ -122,15 +122,15 @@ class Station
   end
 
   def rarely_played_songs
-    played_repeatedly = Play.group(:song_isrc).having("COUNT(*) > 1").pluck(:song_isrc)
-    Song.where.not(isrc: played_repeatedly)
+    played_repeatedly = Play.group(:song_id).having("COUNT(*) > 1").pluck(:song_id)
+    Song.where.not(id: played_repeatedly)
   end
 
   # Boost songs that historically play in the morning hours. Hour-of-day must
   # be computed in local time, in Ruby: the app runs on UTC and MariaDB's
   # timezone tables are often unloaded (so no CONVERT_TZ).
   def morning_weights(songs)
-    morning_counts = Play.pluck(:song_isrc, :created_at).each_with_object(Hash.new(0)) do |(isrc, played_at), counts|
+    morning_counts = Play.pluck(:song_id, :created_at).each_with_object(Hash.new(0)) do |(isrc, played_at), counts|
       hour = played_at.in_time_zone(StationQueueBuilder::TIME_ZONE).hour
       counts[isrc] += 1 if (6..10).cover?(hour)
     end
@@ -141,7 +141,7 @@ class Station
 
   # Energy plus familiarity: fast songs the listener actually plays.
   def party_weights(songs)
-    play_counts = Play.group(:song_isrc).count
+    play_counts = Play.group(:song_id).count
 
     songs.index_with do |song|
       1.0 + (song.bpm.to_f / 40.0) + Math.log10(1 + play_counts[song.isrc].to_i)

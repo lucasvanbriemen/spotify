@@ -16,7 +16,7 @@ class KaraokeScoresControllerTest < ActionDispatch::IntegrationTest
 
   setup do
     @song = Song.create!(
-      isrc: ISRC, title: "Test Song", artist: "Tester", album: "Test Album",
+      id: ISRC, title: "Test Song", artist: "Tester", album: "Test Album",
       duration: 180, image_url: Song::PLACEHOLDER_IMAGE
     )
   end

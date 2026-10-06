@@ -1,7 +1,9 @@
 class KaraokeScore < ApplicationRecord
   # belongs_to is required by default, which also enforces that the ISRC
   # exists in songs — same as Play.
-  belongs_to :song, foreign_key: :song_isrc, inverse_of: :karaoke_scores
+  alias_attribute :song_isrc, :song_id
+
+  belongs_to :song, foreign_key: :song_id, inverse_of: :karaoke_scores
 
   # MariaDB backs json columns with longtext plus a json_valid check, which the
   # adapter reports as text — declaring the type keeps hashes round-tripping

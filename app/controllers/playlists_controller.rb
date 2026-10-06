@@ -26,7 +26,7 @@ class PlaylistsController < ApiController
     return head :ok unless params[:id].start_with?("local_")
 
     playlist = Playlist.find(params[:id].delete_prefix("local_"))
-    playlist.playlist_songs.pluck(:song_isrc)
+    playlist.playlist_songs.pluck(:song_id)
       .reject { |isrc| SongCache.cached?(isrc) }
       .each { |isrc| CacheSongJob.perform_later(isrc) }
 
@@ -36,7 +36,7 @@ class PlaylistsController < ApiController
   def add_song
     details = Deezer::Client.track_details(params[:isrc])
 
-    song = Song.find_or_initialize_by(isrc: params[:isrc])
+    song = Song.find_or_initialize_by(id: params[:isrc])
     song.update!(
       title: details["title"] || "",
       artist: details.dig("artist", "name") || "",
@@ -50,7 +50,7 @@ class PlaylistsController < ApiController
 
     playlist = Playlist.find(params[:id])
     # Attach without duplicating (the Laravel app used syncWithoutDetaching).
-    playlist.playlist_songs.find_or_create_by!(song_isrc: song.isrc)
+    playlist.playlist_songs.find_or_create_by!(song_id: song.isrc)
 
     render json: song
   end

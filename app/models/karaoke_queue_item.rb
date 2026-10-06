@@ -14,6 +14,8 @@ class KaraokeQueueItem < ApplicationRecord
 
   # A "playing" row is only trusted for this long: closing the browser mid-song
   # leaves one behind, and nothing else would ever clear it.
+  alias_attribute :song_isrc, :song_id
+
   PLAYING_TTL = 2.hours
   # Finished rows are kept only long enough to still be interesting on a phone
   # that was looking at the queue when the song ended.
@@ -22,7 +24,7 @@ class KaraokeQueueItem < ApplicationRecord
   normalizes :added_by, with: ->(name) { name.to_s.strip.presence }
   normalizes :title, :artist, with: ->(value) { value.to_s.strip }
 
-  validates :song_isrc, presence: true, format: { with: SONG_ISRC_FORMAT }
+  validates :song_id, presence: true, format: { with: SONG_ISRC_FORMAT }
   validates :title, :artist, presence: true
   validates :added_by, length: { maximum: 50 }
   validates :status, inclusion: { in: STATUSES }
@@ -34,7 +36,7 @@ class KaraokeQueueItem < ApplicationRecord
     # Adding a song already waiting is a double tap, not a request to sing it
     # twice — hand back the row that is already in the queue.
     def enqueue(attributes)
-      existing = waiting.find_by(song_isrc: attributes[:song_isrc])
+      existing = waiting.find_by(song_id: attributes[:song_id])
       return existing if existing
 
       create(attributes.merge(status: "pending", position: next_position))

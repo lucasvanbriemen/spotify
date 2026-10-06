@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_08_12_000001) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_06_000001) do
   create_table "cache", primary_key: "key", id: :string, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.text "value", size: :medium, null: false
     t.integer "expiration", null: false
@@ -56,7 +56,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_12_000001) do
   end
 
   create_table "karaoke_queue_items", charset: "utf8mb4", collation: "utf8mb4_general_ci", force: :cascade do |t|
-    t.string "song_isrc", null: false
+    t.string "song_id", null: false
     t.string "title", null: false
     t.string "artist", null: false
     t.string "image_url"
@@ -71,14 +71,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_12_000001) do
 
   create_table "karaoke_scores", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.string "singer_name", null: false
-    t.string "song_isrc", null: false
+    t.string "song_id", null: false
     t.integer "score", null: false
     t.float "accuracy"
     t.text "meta", size: :long, collation: "utf8mb4_bin"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["created_at"], name: "index_karaoke_scores_on_created_at"
-    t.index ["song_isrc", "singer_name", "score"], name: "index_karaoke_scores_on_song_isrc_and_singer_name_and_score"
+    t.index ["song_id", "singer_name", "score"], name: "index_karaoke_scores_on_song_id_and_singer_name_and_score"
     t.check_constraint "json_valid(`meta`)", name: "meta"
   end
 
@@ -108,12 +108,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_12_000001) do
   end
 
   create_table "playlist_songs", id: { type: :bigint, unsigned: true }, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
-    t.string "song_isrc", null: false
+    t.string "song_id", null: false
     t.timestamp "created_at"
     t.timestamp "updated_at"
     t.bigint "playlist_id", null: false, unsigned: true
     t.index ["playlist_id"], name: "playlist_songs_playlist_id_foreign"
-    t.index ["song_isrc"], name: "playlist_songs_song_isrc_foreign"
+    t.index ["song_id"], name: "playlist_songs_song_isrc_foreign"
   end
 
   create_table "playlists", id: { type: :bigint, unsigned: true }, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -126,11 +126,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_12_000001) do
   create_table "plays", id: { type: :bigint, unsigned: true }, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.timestamp "created_at"
     t.timestamp "updated_at"
-    t.string "song_isrc", null: false
+    t.string "song_id", null: false
     t.integer "seconds_played", null: false
     t.string "station_id"
     t.index ["created_at"], name: "index_plays_on_created_at"
-    t.index ["song_isrc"], name: "plays_song_isrc_foreign"
+    t.index ["song_id"], name: "plays_song_isrc_foreign"
   end
 
   create_table "sessions", id: :string, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -143,7 +143,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_12_000001) do
     t.index ["user_id"], name: "sessions_user_id_index"
   end
 
-  create_table "songs", primary_key: "isrc", id: :string, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+  create_table "songs", id: :string, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.timestamp "created_at"
     t.timestamp "updated_at"
     t.string "title", null: false
@@ -156,6 +156,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_12_000001) do
     t.float "bpm"
     t.integer "deezer_rank"
     t.datetime "enriched_at"
+    t.boolean "is_liked", default: false, null: false
     t.index ["genre"], name: "index_songs_on_genre"
     t.index ["release_year"], name: "index_songs_on_release_year"
   end
@@ -186,8 +187,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_12_000001) do
     t.index ["email"], name: "users_email_unique", unique: true
   end
 
-  add_foreign_key "karaoke_scores", "songs", column: "song_isrc", primary_key: "isrc", on_delete: :cascade
+  add_foreign_key "karaoke_scores", "songs", on_delete: :cascade
   add_foreign_key "playlist_songs", "playlists", name: "playlist_songs_playlist_id_foreign", on_delete: :cascade
-  add_foreign_key "playlist_songs", "songs", column: "song_isrc", primary_key: "isrc", name: "playlist_songs_song_isrc_foreign", on_delete: :cascade
-  add_foreign_key "plays", "songs", column: "song_isrc", primary_key: "isrc", name: "plays_song_isrc_foreign", on_delete: :cascade
+  add_foreign_key "playlist_songs", "songs", name: "playlist_songs_song_isrc_foreign", on_delete: :cascade
+  add_foreign_key "plays", "songs", name: "plays_song_isrc_foreign", on_delete: :cascade
 end

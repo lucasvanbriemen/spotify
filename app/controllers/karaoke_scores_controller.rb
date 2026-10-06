@@ -15,7 +15,7 @@ class KaraokeScoresController < ApiController
   # "new best" without a second round trip.
   def create
     score = KaraokeScore.new(
-      song_isrc: isrc,
+      song_id: isrc,
       singer_name: params[:singer_name],
       score: params[:score],
       accuracy: params[:accuracy],
@@ -25,7 +25,7 @@ class KaraokeScoresController < ApiController
     if score.save
       render json: score_json(score).merge(
         personal_best: personal_best?(score),
-        best_score: KaraokeScore.where(song_isrc: isrc, singer_name: score.singer_name).maximum(:score)
+        best_score: KaraokeScore.where(song_id: isrc, singer_name: score.singer_name).maximum(:score)
       ), status: :created
     else
       render json: { errors: score.errors }, status: :unprocessable_entity
@@ -34,7 +34,7 @@ class KaraokeScoresController < ApiController
 
   # GET /api/karaoke/:isrc/scores — the leaderboard for one song.
   def index
-    best = KaraokeScore.where(song_isrc: isrc)
+    best = KaraokeScore.where(song_id: isrc)
       .group(:singer_name)
       .select("singer_name, MAX(score) AS score, MAX(created_at) AS created_at")
       .order("score DESC")
@@ -42,7 +42,7 @@ class KaraokeScoresController < ApiController
 
     render json: {
       best: best.map { |row| { singer_name: row.singer_name, score: row.score.to_i, created_at: row.created_at } },
-      recent: KaraokeScore.where(song_isrc: isrc).order(created_at: :desc).limit(RECENT_LIMIT).map { |score| score_json(score) }
+      recent: KaraokeScore.where(song_id: isrc).order(created_at: :desc).limit(RECENT_LIMIT).map { |score| score_json(score) }
     }
   end
 
@@ -56,8 +56,8 @@ class KaraokeScoresController < ApiController
     recent = grouped_songs("MAX(created_at) DESC")
     ready_isrcs = VocalSeparation.prepared_isrcs
 
-    isrcs = (recent.map(&:song_isrc) + ready_isrcs).uniq
-    songs = Song.where(isrc: isrcs).index_by(&:isrc)
+    isrcs = (recent.map(&:song_id) + ready_isrcs).uniq
+    songs = Song.where(id: isrcs).index_by(&:isrc)
 
     render json: {
       # An artifact can outlive its Song row; a "ready" entry nobody can
@@ -70,15 +70,15 @@ class KaraokeScoresController < ApiController
   private
 
   def grouped_songs(order)
-    KaraokeScore.group(:song_isrc)
-      .select("song_isrc, COUNT(*) AS sing_count, MAX(created_at) AS last_sung_at")
+    KaraokeScore.group(:song_id)
+      .select("song_id, COUNT(*) AS sing_count, MAX(created_at) AS last_sung_at")
       .order(Arel.sql(order))
       .limit(SECTION_LIMIT)
       .to_a
   end
 
   def history_entry(row, songs)
-    song_entry(row.song_isrc, songs, ready: VocalSeparation.ready?(row.song_isrc))
+    song_entry(row.song_id, songs, ready: VocalSeparation.ready?(row.song_id))
       .merge(sing_count: row.sing_count.to_i)
   end
 
@@ -98,7 +98,7 @@ class KaraokeScoresController < ApiController
   end
 
   def personal_best?(score)
-    !KaraokeScore.where(song_isrc: score.song_isrc, singer_name: score.singer_name)
+    !KaraokeScore.where(song_id: score.song_id, singer_name: score.singer_name)
       .where.not(id: score.id)
       .where("score > ?", score.score)
       .exists?

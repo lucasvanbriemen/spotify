@@ -89,8 +89,8 @@ class SpotifyController < ApiController
     tracks = tracks.select { |track| track["isrc"].present? }
 
     all_playlists = Playlist.all
-    playlist_ids_by_isrc = PlaylistSong.where(song_isrc: tracks.map { |track| track["isrc"] })
-      .group_by(&:song_isrc)
+    playlist_ids_by_isrc = PlaylistSong.where(song_id: tracks.map { |track| track["isrc"] })
+      .group_by(&:song_id)
       .transform_values { |rows| rows.map(&:playlist_id).to_set }
 
     tracks.map do |track|
@@ -156,7 +156,7 @@ class SpotifyController < ApiController
   # that row is there yet; fall back to a live Deezer lookup for the same
   # artist/title/album/duration LRCLIB needs.
   def lyrics_lookup_attrs(isrc)
-    if (song = Song.find_by(isrc: isrc))
+    if (song = Song.find_by(id: isrc))
       { artist: song.artist, title: song.title, album: song.album, duration: song.duration }
     elsif YoutubeTrack.isrc?(isrc)
       # Deezer has never heard of a pasted video. LRCLIB might still know the

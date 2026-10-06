@@ -7,7 +7,7 @@ class StatsController < ApiController
     return head :no_content if TalkSegment.talk_id?(params[:isrc])
 
     play = Play.new(
-      song_isrc: params[:isrc],
+      song_id: params[:isrc],
       seconds_played: params[:seconds_played],
       station_id: params[:station_id].presence
     )
@@ -20,18 +20,18 @@ class StatsController < ApiController
   end
 
   def index
-    top = Play.group(:song_isrc)
-      .select("song_isrc, COUNT(*) AS play_count, SUM(seconds_played) AS seconds_played")
+    top = Play.group(:song_id)
+      .select("song_id, COUNT(*) AS play_count, SUM(seconds_played) AS seconds_played")
       .order("play_count DESC")
       .limit(5)
       .to_a
-    songs_by_isrc = Song.where(isrc: top.map(&:song_isrc)).index_by(&:isrc)
+    songs_by_isrc = Song.where(id: top.map(&:song_id)).index_by(&:isrc)
 
     top_songs = top.map do |row|
-      song = songs_by_isrc[row.song_isrc]
+      song = songs_by_isrc[row.song_id]
 
       {
-        isrc: row.song_isrc,
+        isrc: row.song_id,
         title: song&.title || "Unknown",
         artist: song&.artist || "Unknown Artist",
         image_url: song&.image_url,
@@ -42,7 +42,7 @@ class StatsController < ApiController
 
     render json: {
       total_plays: Play.count,
-      unique_songs: Play.distinct.count(:song_isrc),
+      unique_songs: Play.distinct.count(:song_id),
       total_seconds_played: Play.sum(:seconds_played).to_i,
       top_songs: top_songs,
       # Everything radio (news bulletins, warmups, enrichment) depends on the

@@ -278,7 +278,7 @@ class VocalSeparation
     end
 
     def separate(isrc)
-      song = Song.find_by(isrc: isrc)
+      song = Song.find_by(id: isrc)
       # Fetched before the threads start so the analysis has it: LRCLIB
       # responses are cached for a week and the call is capped at 5s, which is
       # nothing against a Demucs run.
@@ -399,7 +399,7 @@ class VocalSeparation
 
     # The script takes the LRC as a file rather than fetching it: lyrics are
     # already cached here, and Python has no business calling LRCLIB.
-    def write_lrc_file(isrc, song = Song.find_by(isrc: isrc))
+    def write_lrc_file(isrc, song = Song.find_by(id: isrc))
       return nil unless song
 
       synced = Lrclib::Client.fetch(

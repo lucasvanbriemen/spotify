@@ -10,7 +10,7 @@ class KaraokeQueueItemTest < ActiveSupport::TestCase
   end
 
   def enqueue(title)
-    KaraokeQueueItem.enqueue(song_isrc: "ISRC#{title}", title: title, artist: "Artist")
+    KaraokeQueueItem.enqueue(song_id: "ISRC#{title}", title: title, artist: "Artist")
   end
 
   def order

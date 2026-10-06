@@ -19,7 +19,7 @@ class KaraokeQueueController < ApiController
 
     KaraokeQueueItem.prune_played
     item = KaraokeQueueItem.enqueue(
-      song_isrc: params[:isrc],
+      song_id: params[:isrc],
       title: params[:title],
       artist: params[:artist],
       image_url: params[:image_url],
@@ -28,7 +28,7 @@ class KaraokeQueueController < ApiController
 
     return render json: { errors: item.errors }, status: :unprocessable_entity unless item.persisted?
 
-    start_separation(item.song_isrc)
+    start_separation(item.song_id)
     render json: queue_json.merge(item: item_json(item)), status: :created
   end
 
@@ -122,13 +122,13 @@ class KaraokeQueueController < ApiController
   def item_json(row)
     {
       id: row.id,
-      isrc: row.song_isrc,
+      isrc: row.song_id,
       title: row.title,
       artist: row.artist,
       image_url: row.image_url,
       added_by: row.added_by,
       status: row.status,
-      ready: VocalSeparation.ready?(row.song_isrc)
+      ready: VocalSeparation.ready?(row.song_id)
     }
   end
 end

@@ -105,8 +105,8 @@ class TalkScripts
     end
 
     def intro(segment)
-      prev_song = Song.find_by(isrc: segment.meta&.dig("prev_isrc"))
-      next_song = Song.find_by(isrc: segment.meta&.dig("next_isrc"))
+      prev_song = Song.find_by(id: segment.meta&.dig("prev_isrc"))
+      next_song = Song.find_by(id: segment.meta&.dig("next_isrc"))
       return station_id_line(segment.language) unless prev_song && next_song
 
       return duo_intro(prev_song, next_song) if segment.language == "en" && segment.meta&.dig("duo")

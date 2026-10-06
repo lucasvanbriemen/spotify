@@ -84,10 +84,10 @@ class SongCache
     end
 
     def create_song(isrc, details)
-      return if Song.exists?(isrc: isrc)
+      return if Song.exists?(id: isrc)
 
       Song.create!(
-        isrc: isrc,
+        id: isrc,
         title: details["title"],
         artist: details.dig("artist", "name"),
         image_url: details.dig("album", "cover_medium") || Song::PLACEHOLDER_IMAGE,

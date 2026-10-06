@@ -55,7 +55,7 @@ class StationQueueBuilder
   end
 
   def recent_isrcs
-    @recent_isrcs ||= Play.where(created_at: RECENT_WINDOW.ago..).distinct.pluck(:song_isrc).to_set
+    @recent_isrcs ||= Play.where(created_at: RECENT_WINDOW.ago..).distinct.pluck(:song_id).to_set
   end
 
   # Sampling without replacement, so a chunk never contains the same song
