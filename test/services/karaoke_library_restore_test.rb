@@ -58,6 +58,19 @@ class KaraokeLibraryRestoreTest < ActiveSupport::TestCase
     assert_not Song.exists?(ISRC)
   end
 
+  test "a pasted link's row comes back from the video and its scores from the bare id" do
+    yt_isrc = "yt-#{VIDEO_ID}"
+    result = YoutubeTrack.stub(:track_details, ->(isrc) { isrc == yt_isrc ? DETAILS.merge("isrc" => yt_isrc) : nil }) do
+      run_restore(prepared: [ yt_isrc ], deezer: {})
+    end
+
+    assert_equal 1, result.restored
+    assert_equal "Restored Song", Song.find(yt_isrc).title
+    assert_equal yt_isrc, @score.reload.song_id
+  ensure
+    Song.where(id: yt_isrc).destroy_all
+  end
+
   private
 
   def run_restore(prepared:, deezer:)

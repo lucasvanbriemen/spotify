@@ -59,20 +59,29 @@ class KaraokeLibraryRestore
 
   private
 
+  # Bare YouTube ids are the other app's keys and always have their row;
+  # "yt-" pseudo-ISRCs are this app's pasted links and lost theirs like any
+  # ISRC did.
   def prepared
-    VocalSeparation.prepared_isrcs.reject { |isrc| YoutubeTrack.isrc?(isrc) }
+    VocalSeparation.prepared_isrcs.reject { |isrc| bare_youtube_id?(isrc) }
   end
 
   def cached
     Dir.glob(SongCache::AUDIO_DIR.join("*.mp3"))
       .map { |path| File.basename(path, ".mp3") }
-      .reject { |name| name.end_with?(".instrumental", ".vocals") || YoutubeTrack.isrc?(name) || name.start_with?("talk-") }
+      .reject { |name| name.end_with?(".instrumental", ".vocals") || bare_youtube_id?(name) || name.start_with?("talk-") }
       .sort
   end
 
   # nil for an ISRC Deezer no longer resolves: it answers 200 with an error
   # body rather than a non-OK status (see SpotifyController#lyrics_lookup_attrs).
+  def bare_youtube_id?(key)
+    key.match?(YoutubeTrack::BARE_ID_FORMAT)
+  end
+
   def track_details(isrc)
+    return YoutubeTrack.track_details(isrc) if YoutubeTrack.isrc?(isrc)
+
     details = Deezer::Client.track_details(isrc)
     details if details["title"].present?
   rescue Deezer::Client::Error, JSON::ParserError, SocketError, Timeout::Error, Errno::ECONNRESET => e
@@ -83,11 +92,18 @@ class KaraokeLibraryRestore
   # Only on an unambiguous match: two YouTube rows with the same title and
   # artist means two editions were collapsed differently, and guessing would
   # hand one song's scores to another.
+  #
+  # A pasted link needs no guessing: the remap's YouTube Music search landed
+  # on the very video the link named, so its twin is the bare video id.
   def reunite_scores(isrc, details)
-    twins = Song.where(title: details["title"], artist: details.dig("artist", "name"))
-                .where.not(id: isrc)
-                .pluck(:id)
-                .select { |id| id.match?(YoutubeTrack::BARE_ID_FORMAT) }
+    twins = if YoutubeTrack.isrc?(isrc)
+      [ YoutubeTrack.video_id_from_isrc(isrc) ]
+    else
+      Song.where(title: details["title"], artist: details.dig("artist", "name"))
+          .where.not(id: isrc)
+          .pluck(:id)
+          .select { |id| bare_youtube_id?(id) }
+    end
     return 0 unless twins.size == 1
 
     KaraokeScore.where(song_id: twins.first).update_all(song_id: isrc)
