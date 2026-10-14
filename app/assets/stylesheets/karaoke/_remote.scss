@@ -148,10 +148,10 @@
   }
 }
 
+// The row itself isn't tappable any more: a My list row holds ✕ and Add, and
+// a whole-row target next to a small one is how the wrong one gets hit.
 .karaoke-remote__result {
-  cursor: pointer;
-
-  &:active { background: var(--surface-at-3); }
+  gap: 0.5rem;
 }
 
 .karaoke-remote__meta {
@@ -189,6 +189,11 @@
   border-radius: $radius-pill;
   color: var(--on-primary);
   background: var(--primary);
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+
+  &:active { filter: brightness(0.9); }
 }
 
 .karaoke-remote__preparing {

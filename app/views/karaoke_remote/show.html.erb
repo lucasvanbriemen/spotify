@@ -29,6 +29,18 @@
         <div class="karaoke-remote__results" data-karaoke-remote-target="results"></div>
       </section>
 
+      <%# Every song this phone has queued, kept on the phone only
+          (localStorage): the queue is the room's and forgets a song once it is
+          sung; this is yours, and it is still there the next time you scan
+          the code. %>
+      <section class="karaoke-remote__section">
+        <h2>My list <span class="karaoke-remote__count" data-karaoke-remote-target="listCount"></span></h2>
+        <p class="karaoke-remote__empty" data-karaoke-remote-target="listEmpty">
+          Songs you add to the queue show up here, so you can add them again later.
+        </p>
+        <div class="karaoke-remote__results" data-karaoke-remote-target="list"></div>
+      </section>
+
       <section class="karaoke-remote__section">
         <div class="karaoke-remote__queue-header">
           <h2>Up next <span class="karaoke-remote__count" data-karaoke-remote-target="count"></span></h2>

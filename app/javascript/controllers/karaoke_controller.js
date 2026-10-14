@@ -8,13 +8,12 @@ import { settings } from "karaoke/settings"
 
 // Coordinates the karaoke flow: search -> setup -> stage -> results.
 //
-// It owns the song (search, preparation, lyrics), the audio (transport,
+// It owns the song (picking, preparation, lyrics), the audio (transport,
 // engine) and the reporting, and hands rendering to the screen controllers it
 // outlets into. The stage is what the engine's frame loop draws into; this
 // controller never touches it per frame.
 export default class extends Controller {
   static targets = [
-    "query", "results",
     "readySection", "readyList", "readyCount",
     "recentSection", "recentList",
     "art", "title", "artist", "playerStatus", "startButton", "retryButton",
@@ -24,9 +23,6 @@ export default class extends Controller {
   static outlets = [ "karaoke-stage", "karaoke-setup", "karaoke-results", "karaoke-queue" ]
   static values = { workletUrl: String }
 
-  // Matches the iOS app: searches under 3 characters are noise, not signal.
-  static MIN_QUERY_LENGTH = 3
-  static SEARCH_DEBOUNCE_MS = 300
   // A play under 5s is a skip/preview, not a listen (mirrors PlayerManager).
   static MIN_REPORTABLE_SECONDS = 5
   static STATUS_POLL_MS = 2000
@@ -39,7 +35,6 @@ export default class extends Controller {
   static SESSION_TTL_MS = 6 * 60 * 60 * 1000
 
   connect() {
-    this.searchToken = 0
     this.secondsPlayed = 0
     this.playTimer = null
     this.pollTimer = null
@@ -117,43 +112,10 @@ export default class extends Controller {
     this.element.classList.remove("karaoke--results")
   }
 
-  // --- Search ---------------------------------------------------------
+  // --- The library ------------------------------------------------------
 
-  // The search form exists for semantics and the mobile keyboard's "search"
-  // key; results arrive live from the input events, so an actual submission
-  // has nowhere to go (there is no karaoke turbo frame) and would show
-  // "content missing".
-  suppressSubmit(event) {
-    event.preventDefault()
-  }
-
-  search() {
-    clearTimeout(this.searchDebounce)
-    const query = this.queryTarget.value.trim()
-
-    if (query.length < this.constructor.MIN_QUERY_LENGTH) {
-      this.resultsTarget.innerHTML = ""
-      return
-    }
-
-    this.searchDebounce = setTimeout(() => this.runSearch(query), this.constructor.SEARCH_DEBOUNCE_MS)
-  }
-
-  async runSearch(query) {
-    const token = ++this.searchToken
-    const payload = await this.fetchJson(`/api/karaoke-search?q=${encodeURIComponent(query)}`)
-
-    if (token !== this.searchToken) return // a newer keystroke already superseded this request
-
-    if (!payload) {
-      this.resultsTarget.innerHTML = ""
-      return
-    }
-
-    this.renderInto(this.resultsTarget, payload.songs)
-    this.rememberSession()
-  }
-
+  // There is no search box on this screen — phones search, through the
+  // remote — so what it offers is the songs it already knows about.
   async loadHistory() {
     const payload = await this.fetchJson("/api/karaoke-history")
     if (!payload) return
@@ -265,7 +227,7 @@ export default class extends Controller {
 
   // A refresh in the middle of an evening used to land the room back on an
   // empty search box, with a song that had been separating for two minutes
-  // forgotten. The song and the search that found it are remembered instead.
+  // forgotten. The song is remembered instead.
   //
   // The stage is deliberately not: audio and full screen both need the click
   // that a reload threw away, so a reloaded performance comes back as the
@@ -275,7 +237,6 @@ export default class extends Controller {
 
     settings.set("session", {
       at: Date.now(),
-      query: this.queryTarget.value.trim() || null,
       // Only what a result row needs to draw and to be re-selected; everything
       // else about the song is re-fetched on the way back in.
       track: track ? { isrc: track.isrc, title: track.title, artist: track.artist, image_url: track.image_url } : null
@@ -289,11 +250,6 @@ export default class extends Controller {
     if (Date.now() - (saved.at || 0) > this.constructor.SESSION_TTL_MS) {
       settings.set("session", null)
       return
-    }
-
-    if (saved.query) {
-      this.queryTarget.value = saved.query
-      this.runSearch(saved.query)
     }
 
     // Re-selecting re-runs preparation, which is the point: a song that was
@@ -315,7 +271,6 @@ export default class extends Controller {
     this.releaseQueueItem()
 
     this.showScreen("search")
-    this.queryTarget.focus()
     this.rememberSession()
     this.loadHistory()
   }
@@ -760,7 +715,7 @@ export default class extends Controller {
   //
   // It does NOT start itself. Pressing Play is someone choosing this song to
   // sing, and they need the setup screen the same as anyone who picked it out
-  // of the search — it is where 1 or 2 singers is chosen, and who is on which
+  // of the library — it is where 1 or 2 singers is chosen, and who is on which
   // mic. Auto-starting straight past it let the screen show for about a second
   // before the song took over, which read as the choice not being offered.
   queuePlay(item) {

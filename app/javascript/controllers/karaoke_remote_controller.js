@@ -7,13 +7,17 @@ import { QueueApi } from "karaoke/queue_api"
 // little of its own — it searches, it adds, and it keeps showing what the room
 // has coming, which is the part that makes handing your phone back feel safe.
 export default class extends Controller {
-  static targets = [ "name", "query", "results", "queue", "empty", "count", "shuffle", "nowPlaying", "status" ]
+  static targets = [ "name", "query", "results", "queue", "empty", "count", "shuffle", "nowPlaying", "status", "list", "listEmpty", "listCount" ]
   static values = { pollMs: { type: Number, default: 4000 } }
 
   // Remembered per phone: whoever is holding it is the same person all
   // evening, and typing a name once per song would be the reason nobody used
   // this.
   static NAME_KEY = "karaoke.remote.name"
+  // Everything this phone has queued. Per phone, like the name: it is one
+  // person's history, not the room's.
+  static LIST_KEY = "karaoke.remote.list"
+  static LIST_LIMIT = 100
   static MIN_QUERY_LENGTH = 3
   static SEARCH_DEBOUNCE_MS = 350
 
@@ -24,6 +28,8 @@ export default class extends Controller {
     this.items = []
 
     this.nameTarget.value = this.savedName()
+    this.saved = this.loadList()
+    this.renderList()
 
     this.boundVisibility = () => this.onVisibilityChange()
     document.addEventListener("visibilitychange", this.boundVisibility)
@@ -190,26 +196,47 @@ export default class extends Controller {
 
   renderResults(songs) {
     this.resultsTarget.innerHTML = ""
-
-    for (const song of songs) {
-      const row = document.createElement("button")
-      row.type = "button"
-      row.className = "karaoke-remote__result"
-      row.innerHTML = `
-        <img src="${this.escapeAttribute(song.image_url)}" alt="">
-        <span class="karaoke-remote__meta">
-          <strong>${this.escape(song.title)}</strong>
-          <span>${this.escape(song.artist)}</span>
-        </span>
-        <span class="karaoke-remote__add">${song.ready ? "Add" : "Add ⏳"}</span>
-      `
-      row.addEventListener("click", () => this.add(song, row))
-      this.resultsTarget.appendChild(row)
-    }
+    for (const song of songs) this.resultsTarget.appendChild(this.songRow(song))
   }
 
-  async add(song, row) {
-    const label = row.querySelector(".karaoke-remote__add")
+  // A search result and a My list row are the same row; the list's also gets
+  // a ✕ to drop it. A div rather than the button it used to be, since a list
+  // row holds two.
+  songRow(song, { removable = false } = {}) {
+    const row = document.createElement("div")
+    row.className = "karaoke-remote__result"
+    row.innerHTML = `
+      <img src="${this.escapeAttribute(song.image_url)}" alt="">
+      <span class="karaoke-remote__meta">
+        <strong>${this.escape(song.title)}</strong>
+        <span>${this.escape(song.artist)}</span>
+      </span>
+    `
+
+    const title = song.title || ""
+
+    if (removable) {
+      const remove = document.createElement("button")
+      remove.type = "button"
+      remove.className = "karaoke-rowbutton"
+      remove.textContent = "✕"
+      remove.setAttribute("aria-label", `Remove ${title} from my list`)
+      remove.addEventListener("click", () => this.forget(song))
+      row.append(remove)
+    }
+
+    const add = document.createElement("button")
+    add.type = "button"
+    add.className = "karaoke-remote__add"
+    add.textContent = song.ready ? "Add" : "Add ⏳"
+    add.setAttribute("aria-label", `Add ${title} to the queue`)
+    add.addEventListener("click", () => this.add(song, add))
+
+    row.append(add)
+    return row
+  }
+
+  async add(song, label) {
     label.textContent = "…"
 
     const payload = await QueueApi.add(song, this.nameTarget.value.trim())
@@ -220,7 +247,56 @@ export default class extends Controller {
       return
     }
 
+    this.remember(song)
     this.apply(payload)
+  }
+
+  // --- My list --------------------------------------------------------------
+
+  // Every song this phone has put in the queue, most recent first — what you
+  // sang last time is the likeliest thing you will want again. It is kept
+  // on the phone rather than the server: there are no accounts, and the
+  // queue itself forgets a song once it has been sung.
+  remember(song) {
+    const { isrc, title, artist, image_url, ready } = song
+    this.saved = [ { isrc, title, artist, image_url, ready },
+                   ...this.saved.filter((entry) => entry.isrc !== isrc) ]
+      .slice(0, this.constructor.LIST_LIMIT)
+    this.storeList()
+
+    // Re-queued from the list itself, the row has just been redrawn at the
+    // top; give it back the acknowledgement its old button was showing.
+    const top = this.listTarget.querySelector(".karaoke-remote__add")
+    if (top) top.textContent = "Queued ✓"
+  }
+
+  forget(song) {
+    this.saved = this.saved.filter((entry) => entry.isrc !== song.isrc)
+    this.storeList()
+  }
+
+  storeList() {
+    try {
+      localStorage.setItem(this.constructor.LIST_KEY, JSON.stringify(this.saved))
+    } catch {
+      // Private mode; the list lasts as long as the page does.
+    }
+    this.renderList()
+  }
+
+  loadList() {
+    try {
+      const list = JSON.parse(localStorage.getItem(this.constructor.LIST_KEY) || "[]")
+      return Array.isArray(list) ? list.filter((entry) => entry?.isrc) : []
+    } catch {
+      return []
+    }
+  }
+
+  renderList() {
+    this.listCountTarget.textContent = this.saved.length === 0 ? "" : String(this.saved.length)
+    this.listEmptyTarget.hidden = this.saved.length > 0
+    this.listTarget.replaceChildren(...this.saved.map((song) => this.songRow(song, { removable: true })))
   }
 
   // --- Name -----------------------------------------------------------------
