@@ -15,7 +15,6 @@ const DEFAULTS = {
   // "off by default" had become "off, with nothing anywhere to turn it up".
   // Lower it from the setup screen on a song you know well.
   vocalGuidePercent: 100,
-  guideMelody: false,
   // Chrome's echo cancellation treats page audio as the far end and will
   // genuinely suppress instrumental bleed — at the cost of mangling sung
   // pitch. Off by default; worth it only for a mic far from the singer.
@@ -82,6 +81,13 @@ if (!read(GUIDE_DEFAULT_MIGRATION)) {
   remove("vocalGuidePercent")
   write(GUIDE_DEFAULT_MIGRATION, true)
 }
+
+// The guide-melody toggle left the stage control bar (66ae445) while its
+// stored value kept being read, so a browser that had it on was stuck playing a
+// triangle-wave tone — it sounds like a flute — over every song, with nothing
+// anywhere to turn it off. Nothing reads the key any more; clear it so it
+// cannot come back if the control ever does.
+remove("guideMelody")
 
 export const settings = {
   get(key) {

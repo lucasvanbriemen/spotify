@@ -484,7 +484,6 @@ export default class extends Controller {
     // loadSong already handed the stage its lines and notes — including the
     // scorers the pitch lane needs to fill hit notes in. Repeating setNotes
     // here without them would leave the lane unable to show anything but grey.
-    this.engine.setGuideMelody(settings.get("guideMelody"))
     this.engine.start()
 
     // Songs that start singing almost immediately get a run-up: the clock
